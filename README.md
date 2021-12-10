@@ -1,6 +1,8 @@
 这个是我多因子学习的沙盒，各种尝试，学习和练习，都放到里面。
 
-rqalpha，是rqalpha的练习代码
+rqalpha，是rqalpha的练习代码，源自[rqalpha中的例子](https://rqalpha.readthedocs.io/zh_CN/latest/intro/tutorial.html)。
+
+
 
 # 参考
 - [tushare的api文档](https://tushare.pro/document/2?doc_id=95)

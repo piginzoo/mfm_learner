@@ -1,21 +1,41 @@
 import logging
-
-import jqdatasdk
-
+import tushare as ts
 import utils
 
 logger = logging.getLogger(__name__)
 
 
-def data_provider(name):
-    pass
+def get(name):
+    if name == "tushare":
+        return Tushare()
+    raise ValueError("unrecognized name: " + name)
+
 
 class DataProvider():
     def bar(pro, code, start, end, adj='hfq'):
         pass
 
+    def index_stocks(self, code):
+        pass
+
+    def basic(self, code, start, end):
+        pass
+
 
 class Tushare(DataProvider):
+    def __init__(self):
+        conf = utils.load_config()
+        ts.set_token(conf['tushare']['token'])
+        self.pro = ts.pro_api()
+
+    def index_stocks(self, code, date):
+        # https://tushare.pro/document/2?doc_id=96
+        df = self.pro.index_weight(index_code=code, trade_date=date)
+        return df['con_code']
+
+    def basic(self, code, start, end):
+        df = self.pro.daily_basic(ts_code=code, start_date=start, end_date=end)
+        return df
 
     def bar(self, code, start, end, adj='hfq'):
         """
@@ -29,13 +49,14 @@ class Tushare(DataProvider):
         # if os.path.exist(bar_data_path):
         # df = pd.read_csv(bar_data_path,parse_dates=True,infer_datetime_format=True)
 
-        return pro.pro_bar(ts_code=code, adj=adj, start_date=start, end_date=end)
+        return self.pro.daily(ts_code=code, adj=adj, start_date=start, end_date=end,
+                              field='ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount')
+
 
 class JQdata(DataProvider):
-
     def __init__(self):
         conf = utils.load_config()
-        auth(conf['pid'],conf['pwd'])
+        auth(conf['pid'], conf['pwd'])
 
     def bar(self, code, start, end, adj='hfq'):
         """
@@ -53,8 +74,7 @@ class JQdata(DataProvider):
         - pre_close 前一个单位时间结束时的价格, 按天则是前一天的收盘价, 按分钟这是前一分钟的结束价格
         - paused 布尔值, 这只股票是否停牌, 停牌时open/close/low/high/pre_close依然有值,都等于停牌前的收盘价, volume=money=0
         """
+        import jqdatasdk
         df = jqdatasdk.get_price(code, start_date=start, end_date=end, frequency='daily',
-                            fields="trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount",
-                            fields="ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount",
-                            skip_paused=False, fq='post', panel=True)
-        df
+                                 fields="trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount",
+                                 skip_paused=False, fq='post', panel=True)

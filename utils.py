@@ -2,6 +2,7 @@ import conf
 import yaml
 import logging
 import os
+
 logger = logging.getLogger(__name__)
 
 
@@ -14,3 +15,11 @@ def load_config():
     data = yaml.load(result, Loader=yaml.FullLoader)
     logger.info("读取配置文件:%r", conf.CONF_PATH)
     return data
+
+
+def init_logger():
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:%(levelname)s : %(message)s',
+                        level=logging.DEBUG,
+                        handlers=[logging.StreamHandler()])

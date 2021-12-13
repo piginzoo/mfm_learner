@@ -1,3 +1,5 @@
+import warnings
+
 import conf
 import yaml
 import logging
@@ -20,6 +22,10 @@ def load_config():
 def init_logger():
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger('matplotlib.font_manager').disabled = True
+    logging.getLogger('matplotlib').disabled = True
+    warnings.filterwarnings("ignore")
+    warnings.filterwarnings("ignore", module="matplotlib")
     logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:%(levelname)s : %(message)s',
                         level=logging.DEBUG,
                         handlers=[logging.StreamHandler()])

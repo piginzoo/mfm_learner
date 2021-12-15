@@ -78,7 +78,7 @@ start_date = '20210601'  # 开始日期
 end_date = '20211201'  # 结束日期
 universe = data_provider.index_stocks('000300.SH', date=end_date)  # 股票池
 logger.debug("获得【%s】成分股%d只", '000300.SH', len(universe))
-universe = universe[0:10]  # 计算速度缓慢，仅以部分股票池作为sample
+universe = universe[0:50]  # 计算速度缓慢，仅以部分股票池作为sample
 logger.debug("只保留50只用于简化计算")
 
 # 开始日~结束日，50只股票，计算这个因子，这个因子是，每天对应1个股票1个数，比如 2019-1-2，000001.XSHE股票，对应一个因子值，
@@ -215,7 +215,7 @@ assert len(CLVneutralizedfactor) > 0, str(len(CLVneutralizedfactor))
 
 def getForwardReturns(universe, start, end, window, file_name):
     """
-    每天都计算一下从当日，到当日+5日后的收益率，所以最后5天没有值
+    每天都计算一下从当日，到当日+5日后的股票的收益率，所以最后5天没有值
     """
     # 计算个股历史区间前瞻回报率，未来windows天的回报率
     start_time = time.time()
@@ -241,6 +241,7 @@ def getForwardReturns(universe, start, end, window, file_name):
 
 
 window_return = 5
+# 获得每天往后看5日的预期收益率
 forward_5d_return_data = getForwardReturns(
     universe=universe,
     start=start_date,
@@ -275,6 +276,10 @@ for date in ic_data.index:
     """
     #
     neutralized_factor_expose = CLVneutralizedfactor_stk.loc[date]  # 得到日期的clv因子暴露，20只股票的
+
+    if date not in forward_5d_return_data.index:
+        logger.warning("5日回报率数据中没有日期 %s 的信息",date)
+        continue
     return_5_days = forward_5d_return_data.loc[date]  # 得到日期的5天后的收益率
 
     corr = pd.DataFrame(neutralized_factor_expose)
@@ -292,7 +297,7 @@ for date in ic_data.index:
     ic_data['IC'][date] = ic
     ic_data['pValue'][date] = p_value
     index += 1
-    # print("finish Rank_IC/spearman for date: %r, %d/%d" % (date,index,len(ic_data)))
+
 
 logger.debug("计算出 %d 个相关系数（每日1个）", len(ic_data))
 
@@ -397,48 +402,47 @@ plt.savefig("debug/CLV因子累计收益率.jpg")
 """
 这个有正、有负，说明其是风险因子，而不是alpha因子，
 """
-
-# In[ ]:
-
 # 分层法检测
-
 n_quantile = 5
 # 统计十分位数
-cols_mean = [i + 1 for i in range(n_quantile)]
-cols = cols_mean
-
+cols = [i + 1 for i in range(n_quantile)]
 excess_returns_means = pd.DataFrame(index=CLVfactor.index, columns=cols)
-
-
-
-
 # 计算ILLIQ分组的超额收益平均值
 # excess_returns_means，是每天一个数，各个5分位的收益率均值（减去了总的平均收益率）
 for date in excess_returns_means.index:
     qt_mean_results = []
 
+    factor_CLV = CLVfactor.loc[date].dropna() # 删除clv中的nan
 
-    tmp_CLV = CLVfactor.loc[date].dropna() # 删除clv中的nan
-    tmp_return = forward_5d_return_data.loc[date].dropna() # 删除5日回报率的nan
-    tmp_return_mean = tmp_return.mean() # 5日回报率的均值
+    if date not in forward_5d_return_data.index:
+        logger.warning("5日回报率数据中没有日期 %s 的信息",date)
+        continue
+    stock_5days_return = forward_5d_return_data.loc[date].dropna() # 删除股票5日回报率的nan
+    stock_5days_return_mean = stock_5days_return.mean() # 5日回报率的均值
 
     pct_quantiles = 1.0 / n_quantile # n_quantile = 5
     for i in range(n_quantile):
-        down = tmp_CLV.quantile(pct_quantiles * i) # quantile - 分位数
-        up = tmp_CLV.quantile(pct_quantiles * (i + 1))
-        i_quantile_index = tmp_CLV[(tmp_CLV <= up) & (tmp_CLV > down)].index # 在clv中找到对应分位数的股票代码
-        if not i_quantile_index.isin(tmp_return.index).all():
-            logger.warning("Key[%s]不在当前5日汇报率中：%r",i_quantile_index,tmp_return)
+        clv_factor_down = factor_CLV.quantile(pct_quantiles * i) # quantile - 分位数
+        clv_factor_up = factor_CLV.quantile(pct_quantiles * (i + 1))
+        i_quantile_index = factor_CLV[(factor_CLV <= clv_factor_up) & (factor_CLV > clv_factor_down)].index # 在clv中找到对应分位数的股票代码
+        if not i_quantile_index.isin(stock_5days_return.index).all():
+            # logger.warning("Key[%s]不在当前5日汇报率中：%r",i_quantile_index,stock_5days_return)
             continue
-        mean_tmp = tmp_return.loc[i_quantile_index].mean() - tmp_return_mean # 计算这些股票的5天收益率的平均值 - 总体均值
-        qt_mean_results.append(mean_tmp)
+        stock_return_mean = stock_5days_return.loc[i_quantile_index].mean() - stock_5days_return_mean # 计算这些股票的5天收益率的平均值 - 总体均值
+        # logger.debug("第%d组:因子值在 %.2f ~ %.2f 之间的股票%d只", i+1, clv_factor_down, clv_factor_up, len(i_quantile_index))
 
-    if len(qt_mean_results)>0:
+        qt_mean_results.append(stock_return_mean)
+
+    if len(qt_mean_results)==n_quantile:
         excess_returns_means.loc[date] = qt_mean_results
 
 excess_returns_means.dropna(inplace=True)
-excess_returns_means.tail()
+
+excess_returns_means.info()
+logger.debug(excess_returns_means)
 logger.debug("一共耗时 ： %.2f 秒" , (time.time() - start_time))
+
+excess_returns_means.to_csv("data/excess_returns_means.csv")
 
 # 画图
 plt.clf()
@@ -462,11 +466,28 @@ ax1.set_title("CLV factor return interest", fontproperties=font, fontsize=16)
 ax1.grid()
 plt.savefig("debug/CLV5分位股票收益率.jpg")
 
-
 logger.debug("一 共耗时 ： %.2f 秒" % (time.time() - start_time))
 
-# 使用rqalpha来替代优矿的框架
 
+# 画不同分位的累计收益率
+excess_returns_means_cum = excess_returns_means.iloc[:,1:n_quantile].apply(lambda x: (1 + x).cumprod().values - 1)
+
+plt.clf()
+from matplotlib.font_manager import FontProperties
+font = FontProperties()
+fig = plt.figure(figsize=(16, 6))
+ax1 = fig.add_subplot(111)
+ax1.set_ylabel("return", fontproperties=font, fontsize=16)
+ax1.set_yticklabels([str(x * 100) + "0%" for x in ax1.get_yticks()], fontproperties=font, fontsize=14)
+ax1.set_title("{} quantiles accumulated return".format(n_quantile), fontproperties=font, fontsize=16)
+ax1.grid()
+plt.plot(excess_returns_means_cum.iloc[:,:])
+plt.legend(excess_returns_means_cum.columns.to_list())
+plt.savefig("debug/{}分位，累计收益图.jpg".format(n_quantile))
+
+exit()
+
+# 使用rqalpha来替代优矿的框架
 
 # 例子中的使用的优矿的回测框架，不够目前不可以用了，都闭源了
 # 下面我们使用有矿里面的回测模块使用因子讲股票分组回测

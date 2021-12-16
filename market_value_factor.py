@@ -66,15 +66,27 @@ def LNCAP(universe, start, end, file_name="LNCAP.csv"):
         for i, column_name in enumerate(factor.columns):
             ax1 = fig.add_subplot(row, 3, i + 1)
             ax1.set_title(column_name)
-            ax1.hist(factor.iloc[:, i], bins=50)
+            ax1.hist(factor.iloc[:, i], bins=100)
         plt.savefig("debug/原始因子值直方图.jpg")
 
     return factor
 
 
-# 去极值和标准化方法
 def __winsorize_series(se):
+    """
+    把分数为97.5%和2.5%之外的异常值替换成分位数值
+    :param se:
+    :return:
+    """
     q = se.quantile([0.025, 0.975])
+    """
+    quantile：
+        >>> s = pd.Series([1, 2, 3, 4])
+        >>> s.quantile([.25, .5, .75])
+        0.25    1.75
+        0.50    2.50
+        0.75    3.25    
+    """
     if isinstance(q, pd.Series) and len(q) == 2:
         se[se < q.iloc[0]] = q.iloc[0]
         se[se > q.iloc[1]] = q.iloc[1]
@@ -82,6 +94,7 @@ def __winsorize_series(se):
 
 
 def __standardize_series(se):
+    """标准化"""
     se_std = se.std()
     se_mean = se.mean()
     return (se - se_mean) / se_std
@@ -103,7 +116,7 @@ def proprocess(factors):
         for i, column_name in enumerate(factors.columns):
             ax1 = fig.add_subplot(row, 3, i + 1)
             ax1.set_title(column_name)
-            ax1.hist(factors.iloc[:, i], bins=50)
+            ax1.hist(factors.iloc[:, i], bins=100)
         plt.savefig("debug/预处理后的因子值直方图.jpg")
 
     return factors
@@ -238,14 +251,15 @@ def calc_factor_returns(factors, stock_returns):
     factors = factors.stack()
     combineMatrix = pd.concat([factors, stock_returns], axis=1, join='inner')
     combineMatrix.columns = ['factor', 'stock_return']
-    combineMatrix1 = combineMatrix.reset_index()
+    combineMatrix1 = combineMatrix.reset_index()  # 去掉联合索引['trade_date', 'stockID']，使之变成列
     combineMatrix1.columns = ['trade_date', 'stockID', 'factor', 'stock_return']
 
     # 按天回归，回归系数作为因子收益率
     unidate = factors.reset_index().trade_date.drop_duplicates()
     unidate = list(unidate)
-    factor_returns = pd.DataFrame(columns=['factor_return', 't_values'], index=unidate)
+    factor_returns = pd.DataFrame(columns=['factor_return', 't_value'], index=unidate)
 
+    # 按照日期的横截面，做回归，Y是5日股票收率，X是因子暴露值，系数β为因子收益率，t_value为系数为0的置信度
     for d in unidate:
         tempdata = combineMatrix1.loc[combineMatrix1['trade_date'] == d, :]
         tempdata = tempdata.dropna()
@@ -253,8 +267,8 @@ def calc_factor_returns(factors, stock_returns):
             model = sm.OLS(np.array(tempdata.stock_return),
                            np.array(tempdata.factor))
             results = model.fit()
-            factor_returns.loc[d, 'factorfactorRtn'] = results.params[0]
-            factor_returns.loc[d, 't_values'] = results.tvalues[0]
+            factor_returns.loc[d, 'return_value'] = results.params[0]
+            factor_returns.loc[d, 't_value'] = results.tvalues[0]
 
     """
     回归法因子检测
@@ -263,15 +277,15 @@ def calc_factor_returns(factors, stock_returns):
     3.计算因子收益率的时间序列上的t值,是不是显著不为0 -- 风险因子？alpha因子？
     """
     # 1.计算t值绝对值的均值，看t值是不是显著不为0，--- 有效性
-    logger.debug("T值绝对值均值: %.4f", factor_returns.t_values.abs().mean())
+    logger.debug("T值绝对值均值: %.4f", factor_returns.t_value.abs().mean())
     # 2.t值绝对值序列大于2的比例 --- 稳定性
-    logger.debug(
-        "显著比例(abs(T)>2的比例：%.4f" % len(factor_returns[factor_returns.t_values.abs() > 2] / float(len(factor_returns))))
+    logger.debug("显著比例(abs(T)>2的比例：%.2f%%",
+                 len(factor_returns[factor_returns.t_value.abs() > 2]) / len(factor_returns) * 100)
     # 3.计算因子收益率的时间序列上的t值,是不是显著不为0 -- 风险因子？alpha因子？
-    logger.debug("因子收益率均值: %.4f" % factor_returns.factorfactorRtn.mean())
-    logger.debug("因子收益率方差：%.4f" % factor_returns.factorfactorRtn.std())
+    logger.debug("因子收益率均值: %.4f" % factor_returns.return_value.mean())
+    logger.debug("因子收益率方差：%.4f" % factor_returns.return_value.std())
     logger.debug("因子收益率夏普指数%.4f" % (
-            factor_returns.factorfactorRtn.mean().item() / (factor_returns.factorfactorRtn.std().item() + 0.0000001)))
+            factor_returns.return_value.mean().item() / (factor_returns.return_value.std().item() + 0.0000001)))
 
     if __IS_PLOT:
         # 画图
@@ -279,7 +293,7 @@ def calc_factor_returns(factors, stock_returns):
         font = FontProperties()
         fig = plt.figure(figsize=(16, 6))
         ax1 = fig.add_subplot(111)
-        lns1 = ax1.plot(np.array(factor_returns.factorfactorRtn.cumsum()), label='IC')
+        lns1 = ax1.plot(np.array(factor_returns.return_value), label='Factor Return')
         lns = lns1
         labs = [l.get_label() for l in lns]
         ax1.legend(lns, labs,
@@ -289,11 +303,11 @@ def calc_factor_returns(factors, stock_returns):
                    mode='',
                    borderaxespad=0.,
                    fontsize=12)
-        ax1.set_xlabel("return intesest", fontproperties=font, fontsize=16)
-        ax1.set_ylabel("date", fontproperties=font, fontsize=16)
-        ax1.set_title("factor return accumulation", fontproperties=font, fontsize=16)
+        ax1.set_xlabel("Date", fontproperties=font, fontsize=16)
+        ax1.set_ylabel("Return", fontproperties=font, fontsize=16)
+        ax1.set_title("Factor Return", fontproperties=font, fontsize=16)
         ax1.grid()
-        plt.savefig("debug/因子累计收益率.jpg")
+        plt.savefig("debug/因子收益率.jpg")
 
 
 def layerize_analyze(factors, stock_returns):
@@ -385,7 +399,7 @@ def get_universe(name, start, num):
     end = datetime.datetime.now().strftime("%Y%m%d")
     universe = __data_provider.index_stocks(name, start=start, end=end)  # 股票池
     logger.debug("获得【%s】成分股%d只", name, len(universe))
-    np.random.shuffle(universe) # 计算速度缓慢，仅以部分股票池作为sample
+    np.random.shuffle(universe)  # 计算速度缓慢，仅以部分股票池作为sample
     universe = universe[0:num]
     logger.debug("只保留%d只用于简化计算", num)
     return universe
@@ -437,6 +451,6 @@ if __name__ == '__main__':
     end = "20211201"
     day_window = 5
     stock_pool = '000300.SH'
-    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     main(start, end, day_window, stock_pool, stock_num)

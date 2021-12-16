@@ -2,6 +2,9 @@
 
 rqalpha，是rqalpha的练习代码，源自[rqalpha中的例子](https://rqalpha.readthedocs.io/zh_CN/latest/intro/tutorial.html)。
 
+# 开发日志
+- 2021.12.16 实现了一个新的因子，LNCAP市值因子的验证
+- 2021.12.14 实现了CLV因子的所有的验证
 
 
 # 参考

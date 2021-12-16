@@ -1,3 +1,4 @@
+# 参考：https://jishuin.proginn.com/p/763bfbd6cf7d
 import pandas as pd
 import tushare as ts
 from alphalens.tears import create_returns_tear_sheet, create_information_tear_sheet, \

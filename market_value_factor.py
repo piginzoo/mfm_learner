@@ -30,7 +30,7 @@ __data_provider = data_provider.get("tushare")
 __IS_PLOT = True
 
 
-def LNCAP(universe, start, end, file_name="LNCAP.csv"):
+def LNCAP(universe, start, end, file_name="data/LNCAP.csv"):
     """
     市值因子
     :param universe:

@@ -15,7 +15,7 @@ class DataProvider():
     def bar(pro, code, start, end, adj='hfq'):
         pass
 
-    def index_stocks(self, code):
+    def index_stocks(self, code,start,end):
         pass
 
     def basic(self, code, start, end):
@@ -27,11 +27,14 @@ class Tushare(DataProvider):
         conf = utils.load_config()
         ts.set_token(conf['tushare']['token'])
         self.pro = ts.pro_api()
+        logger.info("设置Tushare token: %s",conf['tushare']['token'][:10] + "......" )
 
-    def index_stocks(self, code, date):
+    def index_stocks(self, code, start, end):
         # https://tushare.pro/document/2?doc_id=96
-        df = self.pro.index_weight(index_code=code, trade_date=date)
-        return df['con_code']
+        df = self.pro.index_weight(index_code=code, start_date=start,end_date = end)
+        df = df['con_code'].unique()
+        logger.debug("获得日期%s~%s的指数%s的成分股：%d 个",start,end,code, len(df))
+        return df
 
     def basic(self, code, start, end):
         df = self.pro.daily_basic(ts_code=code, start_date=start, end_date=end)

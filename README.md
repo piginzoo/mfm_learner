@@ -6,6 +6,8 @@ rqalpha，是rqalpha的练习代码，源自[rqalpha中的例子](https://rqalph
 - 2021.12.16 实现了一个新的因子，LNCAP市值因子的验证
 - 2021.12.14 实现了CLV因子的所有的验证
 
+# 依赖
+使用我自己的alphalens：`pip install git+https://github.com/piginzoo/alphalens.git`
 
 # 参考
 - [tushare的api文档](https://tushare.pro/document/2?doc_id=95)

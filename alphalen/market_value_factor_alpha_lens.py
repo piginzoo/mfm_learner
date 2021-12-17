@@ -7,7 +7,8 @@ import pandas as pd
 import tushare
 import tushare as ts
 import market_value_factor
-from alphalens.tears import create_returns_tear_sheet, create_information_tear_sheet,create_turnover_tear_sheet
+from alphalens.tears import create_returns_tear_sheet, create_information_tear_sheet, create_turnover_tear_sheet, \
+    create_full_tear_sheet
 from alphalens.tears import plotting
 from alphalens.utils import get_clean_factor_and_forward_returns
 
@@ -27,10 +28,18 @@ def main(stock_pool, start, end, stock_num):
     universe = market_value_factor.get_universe(stock_pool, start, stock_num)
     assert len(universe) > 0, str(len(universe))
 
-    # 市值因子，按照日期
+    """
+    第一个输入变量是股票的因子值，它是一个序列(Series)并且具有多重索引(Mult iIndex)，
+    该多重索引的两个索引分别是日期(date)和股票代码(asset)，而且日期的索引层级(level 0)优先级高于股票代码的索引层级(level 1)。
+    Series 的第三列(前两列是索引)才是股票的因子值，如苹果公司 (AAPL)的因子值是 0.5。
+    实现多重索引的方法是 df.set_index([„date‟,‟asset‟])。
+    """
     factors = market_value_factor.LNCAP(universe=universe, start=start, end=end)
     factors = market_value_factor.proprocess(factors)
-
+    factors.index = pd.to_datetime(factors.index) # 时间为日期格式，tushare是str
+    factors = factors.unstack() # 将LNCAP的因子格式从列为股票名，转变成，日期+股票的联合索引，注意，unstack导致股票名称在前
+    factors.index.names=['ts_code','trade_date']
+    factors = factors.reorder_levels(['trade_date','ts_code'])
 
     # 此接口获取的数据为未复权数据，回测建议使用复权数据，这里为批量获取股票数据做了简化
     logger.debug("股票池：%r",universe)

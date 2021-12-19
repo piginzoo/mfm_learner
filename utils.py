@@ -1,5 +1,7 @@
 import warnings
 
+import tushare
+
 import conf
 import yaml
 import logging
@@ -17,6 +19,12 @@ def load_config():
     data = yaml.load(result, Loader=yaml.FullLoader)
     logger.info("读取配置文件:%r", conf.CONF_PATH)
     return data
+
+
+def tushare_login():
+    conf = load_config()
+    tushare.set_token(conf['tushare']['token'])
+    return tushare.pro_api()
 
 
 def init_logger():

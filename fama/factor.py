@@ -5,21 +5,16 @@ https://www.cxyzjd.com/article/nv_144/108891000
 @author: 12767
 """
 import utils
-
 utils.init_logger()
 import pandas as pd
-import tushare as ts
 import seaborn as sns
 import matplotlib as mpl
-
 import logging
 
 logger = logging.getLogger(__name__)
-
 sns.set()
 mpl.rcParams['font.sans-serif'] = 'WenQuanYi Micro Hei'
-pro = ts.pro_api()
-
+pro = utils.tushare_login()
 
 # %%定义计算函数
 def cal_smb_hml(df):
@@ -54,7 +49,7 @@ def cal_smb_hml(df):
     return smb, hml, R_SL, R_SM, R_SH, R_BL, R_BM, R_BH
 
 
-def calculate_factors(index_code="000905.SH", start_date='20190101', end_date='20200801'):
+def calculate_factors(index_code="000905.SH", stock_num = 50, start_date='20190101', end_date='20200801'):
     # %%计算并存储数据
     data = []
 
@@ -62,12 +57,18 @@ def calculate_factors(index_code="000905.SH", start_date='20190101', end_date='2
     df_cal = pro.trade_cal(start_date=start_date, end_date=end_date)
     df_cal = df_cal.query('(exchange=="SSE") & (is_open==1)')  # 筛选，清除非交易日，SSE上交所/SZSE深交所，0休市，1交易
     trade_dates = df_cal.cal_date.tolist()
+    logger.debug("得到 %r~%r %d 个交易日",start_date,end_date,len(df_cal))
 
     # 获得股票池
     df = pro.index_weight(index_code=index_code, start_date=start_date, end_date=end_date)
+    logger.debug("获得股票池%d个股票",len(df))
+    df = df.sample(frac=1) # shuffle
+    df = df[:stock_num]
     stocks = ",".join(df['con_code'].unique().tolist())
+    logger.debug("保留股票池%d个股票分析使用", len(df))
 
     # # %%挑选出需要的时间跨度交易日
+    # 原代码，不知做什么用的，暂作保留
     # month_trade_days = []
     # i0 = 0
     # while i0 < len(trade_dates) - 1:
@@ -79,9 +80,9 @@ def calculate_factors(index_code="000905.SH", start_date='20190101', end_date='2
     # %%开始获取数据
     for date in trade_dates:
         # 获取月线行情
-        df_daily = pro.daily(trade_date=date) #, ts_code=stocks)
+        df_daily = pro.daily(trade_date=date, ts_code=stocks) # ts_code不能超过50个股票
         # 获取该日期所有股票的基本面指标
-        df_basic = pro.daily_basic(trade_date=date) #, ts_code=stocks)
+        df_basic = pro.daily_basic(trade_date=date, ts_code=stocks)
         # 数据融合——只保留两个表中公共部分的信息
         df = pd.merge(df_daily, df_basic, on='ts_code', how='inner')
         smb, hml, sl, sm, sh, bl, bm, bh = cal_smb_hml(df)
@@ -97,5 +98,7 @@ def calculate_factors(index_code="000905.SH", start_date='20190101', end_date='2
 
 # python -m fama.factor
 if __name__ == '__main__':
-    utils.init_logger()
-    calculate_factors(start_date='20200101', end_date='20200201')
+    calculate_factors(index_code="000905.SH",
+                      stock_num = 10,
+                      start_date='20200101',
+                      end_date='20200201')

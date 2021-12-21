@@ -1,13 +1,11 @@
 import warnings
-
-import tushare
-
 import conf
 import yaml
 import logging
 import os
 
 logger = logging.getLogger(__name__)
+
 
 
 def load_config():
@@ -22,18 +20,20 @@ def load_config():
 
 
 def tushare_login():
+    import tushare
     conf = load_config()
     tushare.set_token(conf['tushare']['token'])
     return tushare.pro_api()
 
 
 def init_logger():
+    logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:%(levelname)s : %(message)s',
+                        level=logging.DEBUG,
+                        handlers=[logging.StreamHandler()])
+
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger('matplotlib.font_manager').disabled = True
     logging.getLogger('matplotlib').disabled = True
     warnings.filterwarnings("ignore")
     warnings.filterwarnings("ignore", module="matplotlib")
-    logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:%(levelname)s : %(message)s',
-                        level=logging.DEBUG,
-                        handlers=[logging.StreamHandler()])

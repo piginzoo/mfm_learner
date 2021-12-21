@@ -6,6 +6,9 @@ import sys  # 获取当前运行脚本的路径 (in argv[0])
 import backtrader as bt
 
 # 创建策略继承bt.Strategy
+from torch.nn import CTCLoss
+
+
 class TestStrategy(bt.Strategy):
     """
     通过self.data访问self.datas[0]

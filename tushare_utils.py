@@ -43,7 +43,11 @@ def __get_cache(func, stock_code, start_date, end_date):
     logger.debug("使用%s~%s，股票[%s]的[%s]缓存数据", start_date, end_date, stock_code, func)
     df = pd.read_csv(file_path)
     # 'Unnamed: 0'，是观察出来的，第一列设置成index，原始的tushare就是这样的index结构
-    return df.set_index("Unnamed: 0")
+    df = df.set_index("Unnamed: 0")
+    if 'trade_date' in df.columns: df.trade_date = df.trade_date.astype(str)
+    if 'ann_date' in df.columns: df.ann_date = df.ann_date.astype(str)
+    if 'ts_code' in df.columns:  df.ts_code = df.ts_code.astype(str)
+    return df
 
 
 def __set_cache(func, df, stock_code, start_date, end_date):
@@ -57,30 +61,44 @@ def __set_cache(func, df, stock_code, start_date, end_date):
 # ------------------------------------------------------------------------------------------------
 
 # 返回每日行情数据，不限字段
-def daily(stock_code, start_date, end_date):
+# https://tushare.pro/document/2?doc_id=27
+def daily(stock_code, start_date, end_date, fields=None):
     df = __get_cache('daily', stock_code, start_date, end_date)
     if df is not None: return df
     __random_sleep()
-    df = pro.daily(ts_code=stock_code, start_date=start_date, end_date=end_date)
+    df = pro.daily(ts_code=stock_code, start_date=start_date, end_date=end_date, fields=fields)
     __set_cache('daily', df, stock_code, start_date, end_date)
     __check_lenght(df)
     return df
 
 
 # 返回每日的其他信息，主要是市值啥的
-def daily_basic(stock_code, start_date, end_date):
+# https://tushare.pro/document/2?doc_id=32
+def daily_basic(stock_code, start_date, end_date, fields=None):
     df = __get_cache('daily_basic', stock_code, start_date, end_date)
     if df is not None: return df
     __random_sleep()
-    df = pro.daily_basic(ts_code=stock_code, start_date=start_date, end_date=end_date)
+    df = pro.daily_basic(ts_code=stock_code, start_date=start_date, end_date=end_date, fields=fields)
     __set_cache('daily_basic', df, stock_code, start_date, end_date)
+    __check_lenght(df)
+    return df
+
+
+# 获得财务数据， TODO：没有按照出财务报表的时间来query
+# https://tushare.pro/document/2?doc_id=79
+def fina_indicator(stock_code, start_date, end_date, fields=None):
+    df = __get_cache('fina_indicator', stock_code, start_date, end_date)
+    if df is not None: return df
+    __random_sleep()
+    df = pro.fina_indicator(ts_code=stock_code, start_date=start_date, end_date=end_date, fields=fields)
+    __set_cache('fina_indicator', df, stock_code, start_date, end_date)
     __check_lenght(df)
     return df
 
 
 # 获得指数包含的股票，从开始日期找1年
 # https://tushare.pro/document/2?doc_id=96
-def index_weight(index_code, trade_date):
+def index_weight(index_code, trade_date, fields=None):
     """
     这个返回数据量太大，每天300条，10天就300条，常常触发5000条限制，
     所以我的办法就是用start_date，去取，如果没有，就去取下个月的这个日子的，直到取得
@@ -90,6 +108,7 @@ def index_weight(index_code, trade_date):
     """
     count = 0
     df = None
+    original_trade_date = trade_date
     while count < 12:  # 尝试1年的（12个30天）
 
         # 看有缓存么？如果有返回
@@ -97,9 +116,8 @@ def index_weight(index_code, trade_date):
         if df is not None:
             return df['con_code'].unique()
 
-        # 去访问
         __random_sleep()
-        df = pro.index_weight(index_code=index_code, start_date=trade_date, end_date=trade_date)
+        df = pro.index_weight(index_code=index_code, start_date=trade_date, end_date=trade_date, fields=fields)
         logger.debug("获得日期%s的指数%s的成分股：%d 个", trade_date, index_code, len(df))
         if len(df) > 0:
             break
@@ -112,5 +130,5 @@ def index_weight(index_code, trade_date):
 
     logger.debug("获得日期%s的指数%s的成分股：%d 个", trade_date, index_code, len(df))
     __check_lenght(df)
-    __set_cache('index_weight', df, index_code, trade_date, trade_date)
+    __set_cache('index_weight', df, index_code, original_trade_date, original_trade_date)
     return df['con_code'].unique()

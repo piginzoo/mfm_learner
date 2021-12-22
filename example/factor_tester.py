@@ -5,7 +5,7 @@ import utils
 
 utils.init_logger()
 from example import factor_utils
-from example.factors import market_value, momentum
+from example.factors import market_value, momentum, peg
 import tushare_utils
 import matplotlib
 import pandas as pd
@@ -25,28 +25,13 @@ def get_stock_names(stock_pool, start, stock_num):
     return universe
 
 
-def load_stock_data(stock_codes, start, end):
-    df_merge = None
-    for stock_code in stock_codes:
-        df_daily = tushare_utils.daily(stock_code=stock_code, start_date=start, end_date=end)
-        df_basic = tushare_utils.daily_basic(stock_code=stock_code, start_date=start, end_date=end)
-        df_basic.drop(['close'], axis=1, inplace=True)  # close 字段重复
-        # import pdb; pdb.set_trace()
-        df_merge_temp = df_daily.merge(df_basic, on=['ts_code', 'trade_date'], how='left')
-        if df_merge is None:
-            df_merge = df_merge_temp
-        else:
-            df_merge = df_merge.append(df_merge_temp)
-        logger.debug("加载%s~%s的股票[%s]的%d条交易和基本信息的合并数据", start, end, stock_code, len(df_merge))
-    logger.debug("一共加载%s~%s %d条数据", start, end, len(df_merge))
-    return df_merge
-
-
-def get_factors(name, data):
+def get_factors(name, stock_codes, start_date, end_date):
     if name == "market_value":
-        factors = market_value.get_factor(data)
+        factors = market_value.get_factor(stock_codes, start_date, end_date)
     elif name == "momentum":
-        factors = momentum.get_factor(data)
+        factors = momentum.get_factor(stock_codes, start_date, end_date)
+    elif name == "peg":
+        factors = peg.get_factor(stock_codes, start_date, end_date)
     else:
         raise ValueError("无法识别的因子名称：" + name)
     if not os.path.exists("data/factors"): os.makedirs("data/factors")
@@ -66,10 +51,9 @@ def test(factor_name, stock_pool, start_date, end_date, adjustment_days, stock_n
     stock_codes = tushare_utils.index_weight(stock_pool, start_date)
     assert stock_codes is not None and len(stock_codes) > 0, stock_codes
     stock_codes = stock_codes[:stock_num]
-    stock_data = load_stock_data(stock_codes, start_date, end_date)
-    logger.debug("获得%s~%s %d 条交易数据", start_date, end_date, len(stock_data))
+    logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
 
-    factors = get_factors(factor_name, stock_data)
+    factors = get_factors(factor_name, stock_codes, start_date, end_date)
 
     factors = factor_utils.proprocess(factors)
 
@@ -105,11 +89,12 @@ if __name__ == '__main__':
     conf = utils.load_config()
     tushare.set_token(conf['tushare']['token'])
 
-    start = "20201101"
+    start = "20200101"
     end = "20201201"
     adjustment_days = 5
     stock_pool = '000300.SH'
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
-    factor_name = "momentum"
 
-    test(factor_name, stock_pool, start, end, adjustment_days, stock_num)
+    # test("momentum", stock_pool, start, end, adjustment_days, stock_num)
+    # test("market_value", stock_pool, start, end, adjustment_days, stock_num)
+    test("peg", stock_pool, start, end, adjustment_days, stock_num)

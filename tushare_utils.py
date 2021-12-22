@@ -44,7 +44,9 @@ def __get_cache(func, stock_code, start_date, end_date):
     df = pd.read_csv(file_path)
     # 'Unnamed: 0'，是观察出来的，第一列设置成index，原始的tushare就是这样的index结构
     df = df.set_index("Unnamed: 0")
-    if 'trade_date' in df.columns: df.trade_date = df.trade_date.astype(str)
+    if 'trade_date' in df.columns:
+        logger.debug("设置列[trade_date]为str类型")
+        df.trade_date = df.trade_date.astype(str)
     if 'ann_date' in df.columns: df.ann_date = df.ann_date.astype(str)
     if 'ts_code' in df.columns:  df.ts_code = df.ts_code.astype(str)
     return df

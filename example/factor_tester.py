@@ -95,6 +95,6 @@ if __name__ == '__main__':
     stock_pool = '000300.SH'
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
-    # test("momentum", stock_pool, start, end, adjustment_days, stock_num)
-    # test("market_value", stock_pool, start, end, adjustment_days, stock_num)
+    test("momentum", stock_pool, start, end, adjustment_days, stock_num)
+    test("market_value", stock_pool, start, end, adjustment_days, stock_num)
     test("peg", stock_pool, start, end, adjustment_days, stock_num)

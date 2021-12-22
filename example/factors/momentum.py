@@ -61,6 +61,7 @@ def load_stock_data(stock_codes, start, end):
     for stock_code in stock_codes:
         df_daily = tushare_utils.daily(stock_code=stock_code, start_date=start, end_date=end)
         df_basic = tushare_utils.daily_basic(stock_code=stock_code, start_date=start, end_date=end)
+        df_basic.info()
         df_basic.drop(['close'], axis=1, inplace=True)  # close 字段重复
         # import pdb; pdb.set_trace()
         df_merge_temp = df_daily.merge(df_basic, on=['ts_code', 'trade_date'], how='left')
@@ -105,9 +106,6 @@ def main(stock_pool, start_date, end_date, adjustment_days, stock_num):
     # column为股票代码，index为日期，值为收盘价
     close = df.pivot_table(index='trade_date', columns='ts_code', values='close')
     close.index = pd.to_datetime(close.index)
-
-    print(factors)
-    print(close)
 
     factor_data = get_clean_factor_and_forward_returns(factors, close, periods=[adjustment_days])
 

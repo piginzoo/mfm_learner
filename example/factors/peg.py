@@ -29,6 +29,7 @@ import math
 
 import tushare_utils
 from example import factor_utils
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -44,17 +45,19 @@ def load_stock_data(stock_codes, start_date, end_date):
         df_finance = tushare_utils.fina_indicator(stock_code=stock_code, start_date=start_date, end_date=end_date,
                                                   fields='ann_date,ts_code,netprofit_yoy')
 
-        # 报告日期在
         df_finance = df_finance.sort_values('ann_date')
         df_finance['ann_date_next'] = df_finance['ann_date'].shift(-1)
+        df_basic['netprofit_yoy'] = np.NaN
         for index, finance in df_finance.iterrows():
             next_date = finance['ann_date_next']
             current_date = finance['ann_date']
             netprofit_yoy = finance['netprofit_yoy']
-            if next_date is None or math.isnan(next_date): # bugfix,太诡异了，如果是nan，其实nan是一个float类型的,type(nan)==<float>
-                df_basic[df_basic['trade_date'] > current_date] = netprofit_yoy
+            # bugfix,太诡异了，如果是nan，其实nan是一个float类型的,type(nan)==<float>
+            if next_date is None or (type(next_date) == float and math.isnan(next_date)):
+                df_basic.loc[df_basic.trade_date > current_date,'netprofit_yoy'] = netprofit_yoy
             else:
-                df_basic[(df_basic['trade_date'] > current_date) & (df_basic['trade_date'] <= next_date)] = netprofit_yoy
+                df_basic.loc[(df_basic.trade_date > current_date) &
+                             (df_basic.trade_date <= next_date),'netprofit_yoy'] = netprofit_yoy
 
         if df_merge is None:
             df_merge = df_basic
@@ -75,8 +78,9 @@ def get_factor(stock_codes, start_date, end_date):
     # 去除PE或G值为非数字的股票所在行
     df_stock_data = df_stock_data.dropna()
     logger.debug("删除掉NAN后，剩余数据行数：%d 条", len(df_stock_data))
+    assert len(df_stock_data)>0, str(len(df_stock_data))
 
     df_stock_data['PEG'] = df_stock_data['pe'] / df_stock_data['netprofit_yoy']
-    factors = df_stock_data['trade_date', 'ts_code', 'PEG']
+    factors = df_stock_data[['trade_date', 'ts_code', 'PEG']]
 
     return factor_utils.reset_index(factors)

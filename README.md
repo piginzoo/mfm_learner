@@ -3,6 +3,7 @@
 rqalpha，是rqalpha的练习代码，源自[rqalpha中的例子](https://rqalpha.readthedocs.io/zh_CN/latest/intro/tutorial.html)。
 
 # 开发日志
+- 2021.12.22 example/ 实现一个[完整的例子](example/README.md)
 - 2021.12.20 btrader/，backtrader学习实践
 - 2021.12.18 fama/，尝试复现fama三因子模型
 - 2021.12.17 讲LNCAP因子使用alphales做了一遍，market_value_factor_alpha_lens.py

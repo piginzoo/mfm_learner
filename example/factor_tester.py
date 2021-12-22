@@ -1,11 +1,12 @@
 import logging
+import os
 
 import utils
-from example import factor_utils
 
 utils.init_logger()
+from example import factor_utils
+from example.factors import market_value, momentum
 import tushare_utils
-
 import matplotlib
 import pandas as pd
 import tushare
@@ -14,25 +15,8 @@ import market_value_factor
 from alphalens.tears import create_returns_tear_sheet, create_information_tear_sheet, create_turnover_tear_sheet
 from alphalens.tears import plotting
 from alphalens.utils import get_clean_factor_and_forward_returns
-import numpy as np
 
 logger = logging.getLogger(__name__)
-period_window = 5
-
-def get_factor(df):
-    """
-    计算动量，动量，就是往前回溯period个周期，然后算收益，
-    但是，为了防止有的价格高低，所以用log方法，更接近，参考：https://zhuanlan.zhihu.com/p/96888358
-    :param period_window: 
-    :param df:
-    :return:
-    """
-    adj_close = (df['close'] + df['high'] + df['low']) / 3
-    df['momentum'] = np.log(adj_close / adj_close.shift(period_window))  # shift(1) 往后移，就变成上个月的了
-    df = df[['trade_date','ts_code','momentum']]
-    df['trade_date'] = pd.to_datetime(df['trade_date'],format="%Y%m%d")  # 时间为日期格式，tushare是str
-    df = df.set_index(['trade_date','ts_code'])
-    return df
 
 
 def get_stock_names(stock_pool, start, stock_num):
@@ -58,7 +42,20 @@ def load_stock_data(stock_codes, start, end):
     return df_merge
 
 
-def main(stock_pool, start_date, end_date, adjustment_days, stock_num):
+def get_factors(name, data):
+    if name == "market_value":
+        factors = market_value.get_factor(data)
+    elif name == "momentum":
+        factors = momentum.get_factor(data)
+    else:
+        raise ValueError("无法识别的因子名称：" + name)
+    if not os.path.exists("data/factors"): os.makedirs("data/factors")
+    factor_path = os.path.join("data/factors", name + ".csv")
+    factors.to_csv(factor_path)
+    return factors
+
+
+def test(factor_name, stock_pool, start_date, end_date, adjustment_days, stock_num):
     """
     用AlphaLens有个细节，就是你要防止未来函数，
 
@@ -72,13 +69,8 @@ def main(stock_pool, start_date, end_date, adjustment_days, stock_num):
     stock_data = load_stock_data(stock_codes, start_date, end_date)
     logger.debug("获得%s~%s %d 条交易数据", start_date, end_date, len(stock_data))
 
-    """
-    第一个输入变量是股票的因子值，它是一个序列(Series)并且具有多重索引(Mult iIndex)，
-    该多重索引的两个索引分别是日期(date)和股票代码(asset)，而且日期的索引层级(level 0)优先级高于股票代码的索引层级(level 1)。
-    Series 的第三列(前两列是索引)才是股票的因子值，如苹果公司 (AAPL)的因子值是 0.5。
-    实现多重索引的方法是 df.set_index([„date‟,‟asset‟])。
-    """
-    factors = get_factor(period_window=adjustment_days, df=stock_data)
+    factors = get_factors(factor_name, stock_data)
+
     factors = factor_utils.proprocess(factors)
 
     # 此接口获取的数据为未复权数据，回测建议使用复权数据，这里为批量获取股票数据做了简化
@@ -90,9 +82,6 @@ def main(stock_pool, start_date, end_date, adjustment_days, stock_num):
     # column为股票代码，index为日期，值为收盘价
     close = df.pivot_table(index='trade_date', columns='ts_code', values='close')
     close.index = pd.to_datetime(close.index)
-
-    print(factors)
-    print(close)
 
     factor_data = get_clean_factor_and_forward_returns(factors, close, periods=[adjustment_days])
 
@@ -108,7 +97,7 @@ def main(stock_pool, start_date, end_date, adjustment_days, stock_num):
     create_turnover_tear_sheet(factor_data, set_context=False)
 
 
-# python -m example.factors.momentum
+# python -m example.factor_tester
 if __name__ == '__main__':
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
     matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号
@@ -121,5 +110,6 @@ if __name__ == '__main__':
     adjustment_days = 5
     stock_pool = '000300.SH'
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    factor_name = "momentum"
 
-    main(stock_pool, start, end, adjustment_days, stock_num)
+    test(factor_name, stock_pool, start, end, adjustment_days, stock_num)

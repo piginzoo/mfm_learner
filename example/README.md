@@ -24,8 +24,9 @@
 
 - 可以用来预测股票的因子库
 
+# 实现的因子
 
-## 动量因子
-
+**动量因子**
 - [https://www.windquant.com/qntcloud/article?3aef2d11-8fab-427b-a6b5-ef50cdbe997b](https://www.windquant.com/qntcloud/article?3aef2d11-8fab-427b-a6b5-ef50cdbe997b)
 - [https://zhuanlan.zhihu.com/p/379269953](https://zhuanlan.zhihu.com/p/379269953)
+

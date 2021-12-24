@@ -11,6 +11,9 @@ import tushare_utils
 
 logger = logging.getLogger(__name__)
 
+"""
+# 规模因子 - 市值因子Market Value
+"""
 
 def load_stock_data(stock_codes, start, end):
     df_merge = None

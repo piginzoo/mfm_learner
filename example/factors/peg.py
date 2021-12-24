@@ -1,4 +1,6 @@
 """
+#  估值因子 - PEG
+
 参考：
 - https://zhuanlan.zhihu.com/p/29144485
 - https://www.joinquant.com/help/api/help#factor_values:%E6%88%90%E9%95%BF%E5%9B%A0%E5%AD%90
@@ -38,12 +40,10 @@ def load_stock_data(stock_codes, start_date, end_date):
     df_merge = None
     for stock_code in stock_codes:
         # 基本数据，包含：PE
-        df_basic = tushare_utils.daily_basic(stock_code=stock_code, start_date=start_date, end_date=end_date,
-                                             fields='trade_date,ts_code,pe')
+        df_basic = tushare_utils.daily_basic(stock_code=stock_code, start_date=start_date, end_date=end_date)
 
         # 财务数据，包含：归母公司净利润(TTM)增长率
-        df_finance = tushare_utils.fina_indicator(stock_code=stock_code, start_date=start_date, end_date=end_date,
-                                                  fields='ann_date,ts_code,netprofit_yoy')
+        df_finance = tushare_utils.fina_indicator(stock_code=stock_code, start_date=start_date, end_date=end_date)
 
         df_finance = df_finance.sort_values('ann_date')
         df_finance['ann_date_next'] = df_finance['ann_date'].shift(-1)

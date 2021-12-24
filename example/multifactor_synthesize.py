@@ -20,7 +20,7 @@ def synthesize(factors: list):
                                 # 输入因子标准化方法，有"rank"（排序标准化）,"z_score"(z-score标准化)两种（"rank"/"z_score"）
                                 winsorization=False,  # 是否对输入因子去极值
                                 index_member=index_member)  # 是否只处理指数成分股
-    
+
 
 
 # 因子间存在较强同质性时，使用施密特正交化方法对因子做正交化处理，用得到的正交化残差作为因子
@@ -56,6 +56,7 @@ def orthogonalize(factors_dict=None, standardize_type="z_score", winsorization=F
 
     factor_name_list = list(factors_dict.keys())
     factor_value_list = list(factors_dict.values())
+
     # 施密特正交
     for date in factor_value_list[0].index:
         data = list(map(partial(get_vector, date), factor_value_list))

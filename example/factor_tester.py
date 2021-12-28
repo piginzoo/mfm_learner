@@ -4,40 +4,44 @@ import os
 import utils
 
 utils.init_logger()
-from example import factor_utils
-from example.factors import market_value, momentum, peg
+utils.tushare_login()
+from example import factor_utils, multifactor_synthesize
+from example.factors import momentum, peg, clv, market_value
 import tushare_utils
 import matplotlib
 import pandas as pd
-import tushare
 import tushare as ts
-import market_value_factor
 from alphalens.tears import create_returns_tear_sheet, create_information_tear_sheet, create_turnover_tear_sheet
 from alphalens.tears import plotting
 from alphalens.utils import get_clean_factor_and_forward_returns
 
 logger = logging.getLogger(__name__)
 
-
-def get_stock_names(stock_pool, start, stock_num):
-    universe = market_value_factor.get_universe(stock_pool, start, stock_num)
-    assert len(universe) > 0, str(len(universe))
-    return universe
+FACTORS = {
+    'market_value': market_value,
+    "momentum": momentum,
+    "peg": peg,
+    "clv": clv
+}
 
 
 def get_factors(name, stock_codes, start_date, end_date):
-    if name == "market_value":
-        factors = market_value.get_factor(stock_codes, start_date, end_date)
-    elif name == "momentum":
-        factors = momentum.get_factor(stock_codes, start_date, end_date)
-    elif name == "peg":
-        factors = peg.get_factor(stock_codes, start_date, end_date)
+    if name in FACTORS:
+        factors = FACTORS[name].get_factor(stock_codes, start_date, end_date)
     else:
         raise ValueError("无法识别的因子名称：" + name)
     if not os.path.exists("data/factors"): os.makedirs("data/factors")
     factor_path = os.path.join("data/factors", name + ".csv")
     factors.to_csv(factor_path)
     return factors
+
+
+def get_stocks(stock_pool, start_date, end_date):
+    stock_codes = tushare_utils.index_weight(stock_pool, start_date)
+    assert stock_codes is not None and len(stock_codes) > 0, stock_codes
+    stock_codes = stock_codes[:stock_num]
+    logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
+    return stock_codes
 
 
 def test(factor_name, stock_pool, start_date, end_date, adjustment_days, stock_num):
@@ -48,11 +52,7 @@ def test(factor_name, stock_pool, start_date, end_date, adjustment_days, stock_n
     第一是输入的价格数据必须是正确的， 必须是按照信号发出进行回测的，否则会产生前视偏差(lookahead bias)或者使用 到“未来函数”，
     可以加一个缓冲窗口递延交易来解决。例如，通常按照收盘价的回测其实就包含了这样的前视偏差，所以递延到第二天开盘价回测。
     """
-    stock_codes = tushare_utils.index_weight(stock_pool, start_date)
-    assert stock_codes is not None and len(stock_codes) > 0, stock_codes
-    stock_codes = stock_codes[:stock_num]
-    logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
-
+    stock_codes = get_stocks(stock_pool, start_date, end_date)
     factors = get_factors(factor_name, stock_codes, start_date, end_date)
 
     factors = factor_utils.proprocess(factors)
@@ -81,20 +81,33 @@ def test(factor_name, stock_pool, start_date, end_date, adjustment_days, stock_n
     create_turnover_tear_sheet(factor_data, set_context=False)
 
 
+def synthesize(stock_pool, start_date, end_date):
+    """测试因子合成"""
+    stock_codes = get_stocks(stock_pool, start_date, end_date)
+    factors = {}
+    for factor_key in FACTORS.keys():
+        factors[factor_key] = get_factors(factor_key, stock_codes, start_date, end_date)
+    logger.debug("开始合成因子：%r",factors.keys())
+    combined_factor = multifactor_synthesize.synthesize(factors,None)
+    return combined_factor
+
+
 # python -m example.factor_tester
 if __name__ == '__main__':
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
     matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号
     matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号'-'显示为方块的问题
-    conf = utils.load_config()
-    tushare.set_token(conf['tushare']['token'])
-
     start = "20200101"
     end = "20201201"
     adjustment_days = 5
     stock_pool = '000300.SH'
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
-    test("momentum", stock_pool, start, end, adjustment_days, stock_num)
-    test("market_value", stock_pool, start, end, adjustment_days, stock_num)
-    test("peg", stock_pool, start, end, adjustment_days, stock_num)
+    # 测试单因子
+    # test("clv", stock_pool, start, end, adjustment_days, stock_num)
+    # test("momentum", stock_pool, start, end, adjustment_days, stock_num)
+    # test("market_value", stock_pool, start, end, adjustment_days, stock_num)
+    # test("peg", stock_pool, start, end, adjustment_days, stock_num)
+
+    # 测试多因子合成
+    combinefactor = synthesize(stock_pool, start, end)

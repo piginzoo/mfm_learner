@@ -26,6 +26,18 @@
 所以，报告期end_date其实没啥用，因为他是滞后的，外界是无法提前知道的。
 这样处理也简单粗暴，不知道业界是怎么处理的？我感觉应该很普遍的一个问题。
 
+            shift(-1)
+current     next
+            2021.1.1
+---------------------
+2021.1.1    2021.3.1
+2021.3.1    2021.6.30
+2021.6.30   2021.9.30
+2021.9.30
+---------------------
+2021.1.1之前的，不应该用2021.1.1去填充，但是，没办法，无法获得再之前的数据，只好用他了
+2021.9.30之后的，都用2021.9.30来填充
+
 季报应该是累计数，为了可比性，所以应该做一个处理
 研报上的指标用的都是TTM
 PE-TTM 也称之为 滚动市盈率
@@ -36,9 +48,10 @@ TTM英文本意是Trailing Twelve Months，也就是过去12个月，非常好�
 import logging
 import math
 
+import numpy as np
+
 import tushare_utils
 from example import factor_utils
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -52,19 +65,35 @@ def load_stock_data(stock_codes, start_date, end_date):
         # 财务数据，包含：归母公司净利润(TTM)增长率
         df_finance = tushare_utils.fina_indicator(stock_code=stock_code, start_date=start_date, end_date=end_date)
 
-        df_finance = df_finance.sort_values('ann_date')
+        df_finance = df_finance.sort_values('ann_date', ascending=True)  # 从早到晚排序
+        df_finance = df_finance.reset_index()
+
         df_finance['ann_date_next'] = df_finance['ann_date'].shift(-1)
         df_basic['netprofit_yoy'] = np.NaN
+        logger.debug("股票[%s] %s~%s 有%d条财务数据，但有%d条基础数据", stock_code, start_date, end_date, len(df_finance),
+                     len(df_basic))
         for index, finance in df_finance.iterrows():
+
             next_date = finance['ann_date_next']
             current_date = finance['ann_date']
             netprofit_yoy = finance['netprofit_yoy']
+
+            # 第一个区间，只能"2021.1.1之前的，不应该用2021.1.1去填充，但是，没办法，无法获得再之前的数据，只好用他了"
+            if index == 0:
+                logger.debug("开始 -> %s , 过滤条数 %d", current_date,
+                             len(df_basic.loc[(df_basic.trade_date <= current_date)]))
+                df_basic.loc[df_basic.trade_date <= current_date, 'netprofit_yoy'] = netprofit_yoy
+
             # bugfix,太诡异了，如果是nan，其实nan是一个float类型的,type(nan)==<float>
             if next_date is None or (type(next_date) == float and math.isnan(next_date)):
-                df_basic.loc[df_basic.trade_date > current_date,'netprofit_yoy'] = netprofit_yoy
+                df_basic.loc[df_basic.trade_date > current_date, 'netprofit_yoy'] = netprofit_yoy
+                logger.debug("%s -> 结束 , 过滤条数 %d", current_date,
+                             len(df_basic.loc[(df_basic.trade_date > current_date)]))
             else:
                 df_basic.loc[(df_basic.trade_date > current_date) &
-                             (df_basic.trade_date <= next_date),'netprofit_yoy'] = netprofit_yoy
+                             (df_basic.trade_date <= next_date), 'netprofit_yoy'] = netprofit_yoy
+                logger.debug("%s -> %s , 过滤条数 %d", current_date, next_date, len(
+                    df_basic.loc[(df_basic.trade_date > current_date) & (df_basic.trade_date <= next_date)]))
 
         if df_merge is None:
             df_merge = df_basic
@@ -83,9 +112,10 @@ def get_factor(stock_codes, start_date, end_date):
     df_stock_data = load_stock_data(stock_codes, start_date, end_date)
 
     # 去除PE或G值为非数字的股票所在行
+    df_stock_data = df_stock_data[['ts_code', 'trade_date', 'pe', 'netprofit_yoy']]
     df_stock_data = df_stock_data.dropna()
     logger.debug("删除掉NAN后，剩余数据行数：%d 条", len(df_stock_data))
-    assert len(df_stock_data)>0, str(len(df_stock_data))
+    assert len(df_stock_data) > 0, str(len(df_stock_data))
 
     df_stock_data['PEG'] = df_stock_data['pe'] / df_stock_data['netprofit_yoy']
     factors = df_stock_data[['trade_date', 'ts_code', 'PEG']]

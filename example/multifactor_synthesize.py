@@ -233,6 +233,20 @@ def get_factors_ic_df(factors_dict,
             2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691	0.122554	0.042489
             2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805	0.053339	0.079592
             2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902	0.077293	-0.050667
+
+    一个因子形如：
+        date        stock       factor_value
+        2012-06-24  000001.SH   0.1234
+        2012-06-27  000001.SH   0.5678
+    计算IC：
+        需要将其和股票的收益率计算相关系数，即IC
+        这个时候需要确定调仓周期，从而得到股票对应调仓周期的收益率，
+        但是需要做对齐，比如调仓周期为10天，需要用2012-06-14的因子暴露值，
+        和2012-06-24的累计收益率做相关性计算，即计算当前因子和下期资产收益的相关性，
+        这样可以得到相关的IC值。
+        IC Rank也大同小异。
+        IR，则是用IC值/IC方差。
+        另外，还需要计算平稳性，即用
     """
     if ret_type is None:
         ret_type = "return"
@@ -466,10 +480,13 @@ def orthogonalize(factors_dict=None, standardize_type="z_score", winsorization=F
                        　每个因子值格式为一个pd.DataFrame，索引(index)为date,column为asset
     :param standardize_type: 标准化方法，有"rank"（排序标准化）,"z_score"(z-score标准化)两种（"rank"/"z_score"）
     :return: factors_dict（new) 正交化处理后所得的一系列新因子。
+
     """
 
     def Schmidt(data):
-        return linalg.orth(data)
+        # return linalg.orth(data)
+        # TODO: 网上说，orth是基于SVD分解，不是施密特分解。先不搞了，回头再说。
+        return data
 
     def get_vector(date, factor):
         return factor.loc[date]
@@ -484,13 +501,22 @@ def orthogonalize(factors_dict=None, standardize_type="z_score", winsorization=F
         factors_dict[factor_name] = utils.fillinf(factors_dict[factor_name])
         factors_dict[factor_name] = utils._mask_non_index_member(factors_dict[factor_name],
                                                                  index_member=index_member)
-        if winsorization:
-            factors_dict[factor_name] = utils.winsorize(factors_dict[factor_name])
+        if winsorization:factors_dict[factor_name] = utils.winsorize(factors_dict[factor_name])
+    logger.debug("完成因子")
 
     factor_name_list = list(factors_dict.keys())
     factor_value_list = list(factors_dict.values())
 
-    # 施密特正交
+    """
+    施密特正交: 多因子之间做正交，比如 
+    输入是[100天, 20只股票，4个因子]，
+    那么得一天一天的数据，某一天的时候，4个因子，每个因子的因子暴露是一个20维（20只股票）的向量，
+    所以，要对这个4个20维向量，做施密特正交，得到的是4个正交化后的20维坐标（如果将来用上千只股票做回归，不得恐怖死？！）
+    最终得到的还是[100天, 20只股票，4个因子]，但是是正交化之后的结果了。
+    参考：
+     - https://book.piginzoo.com/mfm/first_example.html
+     - https://face2ai.com/Math-Linear-Algebra-Chapter-4-4/
+    """
     for date in factor_value_list[0].index:
         data = list(map(partial(get_vector, date), factor_value_list))
         data = pd.concat(data, axis=1, join="inner")
@@ -503,9 +529,11 @@ def orthogonalize(factors_dict=None, standardize_type="z_score", winsorization=F
             row = pd.DataFrame(data[factor_name]).T
             row.index = [date, ]
             new_factors_dict[factor_name].append(row)
+    logger.debug("完成因子的施密特正交：%r ，每个因子%d条",len(new_factors_dict.keys()), len(new_factors.values()[0]))
 
     # 因子标准化
     for factor_name in factor_name_list:
+        import pdb;pdb.set_trace()
         factor_value = pd.concat(new_factors_dict[factor_name])
         # 恢复在正交化过程中剔除的行和列
         factor_value = factor_value.reindex(index=factor_value_list[0].index, columns=factor_value_list[0].columns)
@@ -665,6 +693,9 @@ def combine_factors(factors_dict=None,
 
 
 def synthesize(factor_dict, index_member):
+    # 必须使用 日期+股票 的双索引
+    assert list(factor_dict.values())[0].index.nlevels == 2, factor_dict.values()[0].index
+
     # 因子间存在较强同质性时，使用施密特正交化方法对因子做正交化处理，用得到的正交化残差作为因子
     new_factors = orthogonalize(factors_dict=factor_dict,
                                 standardize_type="rank",

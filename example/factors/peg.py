@@ -87,13 +87,13 @@ def load_stock_data(stock_codes, start_date, end_date):
             # bugfix,太诡异了，如果是nan，其实nan是一个float类型的,type(nan)==<float>
             if next_date is None or (type(next_date) == float and math.isnan(next_date)):
                 df_basic.loc[df_basic.trade_date > current_date, 'netprofit_yoy'] = netprofit_yoy
-                logger.debug("%s -> 结束 , 过滤条数 %d", current_date,
-                             len(df_basic.loc[(df_basic.trade_date > current_date)]))
+                # logger.debug("%s -> 结束 , 过滤条数 %d", current_date,
+                #              len(df_basic.loc[(df_basic.trade_date > current_date)]))
             else:
                 df_basic.loc[(df_basic.trade_date > current_date) &
                              (df_basic.trade_date <= next_date), 'netprofit_yoy'] = netprofit_yoy
-                logger.debug("%s -> %s , 过滤条数 %d", current_date, next_date, len(
-                    df_basic.loc[(df_basic.trade_date > current_date) & (df_basic.trade_date <= next_date)]))
+                # logger.debug("%s -> %s , 过滤条数 %d", current_date, next_date, len(
+                #     df_basic.loc[(df_basic.trade_date > current_date) & (df_basic.trade_date <= next_date)]))
 
         if df_merge is None:
             df_merge = df_basic

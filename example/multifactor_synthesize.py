@@ -602,7 +602,9 @@ def combine_factors(factors_dict=None,
         return props
 
     def standarize_factors(factors):
-        """标准化因子"""
+        """
+        标准化因子，多因子合成的时候，最主要的是要做归一化，否则，彼此不再一个基准之上啊，
+        """
 
         if isinstance(factors, pd.DataFrame):
             factors_dict = {"factor": factors}

@@ -2,7 +2,7 @@ import logging
 import os
 
 import utils
-
+from example import utils as example_utils
 utils.init_logger()
 utils.tushare_login()
 from example import factor_utils, multifactor_synthesize
@@ -44,7 +44,7 @@ def get_stocks(stock_pool, start_date, end_date):
     return stock_codes
 
 
-def test(factor_name, stock_pool, start_date, end_date, adjustment_days, stock_num):
+def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_days, stock_num):
     """
     用AlphaLens有个细节，就是你要防止未来函数，
 
@@ -67,7 +67,7 @@ def test(factor_name, stock_pool, start_date, end_date, adjustment_days, stock_n
     close = df.pivot_table(index='trade_date', columns='ts_code', values='close')
     close.index = pd.to_datetime(close.index)
 
-    factor_data = get_clean_factor_and_forward_returns(factors, close, periods=[adjustment_days])
+    factor_data = get_clean_factor_and_forward_returns(factors, close, periods=adjustment_days)
 
     # Alphalens 有一个特别强大的功能叫 tears 模块，它会生成一张很大的表图，
     # 里面是一张张被称之为撕页(tear sheet)的图片，记录所有与回测相关的 结果
@@ -81,15 +81,73 @@ def test(factor_name, stock_pool, start_date, end_date, adjustment_days, stock_n
     create_turnover_tear_sheet(factor_data, set_context=False)
 
 
+def test_by_jqfactor_analyzer():
+    import jqfactor_analyzer
+    jqfactor_analyzer.analyze()
+
+
+def test_by_jaqs():
+    pass
+
+
 def synthesize(stock_pool, start_date, end_date):
     """测试因子合成"""
     stock_codes = get_stocks(stock_pool, start_date, end_date)
     factors = {}
     for factor_key in FACTORS.keys():
         factors[factor_key] = get_factors(factor_key, stock_codes, start_date, end_date)
-    logger.debug("开始合成因子：%r",factors.keys())
-    combined_factor = multifactor_synthesize.synthesize(factors,None)
+    logger.debug("开始合成因子：%r", factors.keys())
+    combined_factor = multifactor_synthesize.synthesize(factors, None)
     return combined_factor
+
+
+def synthesize_by_jaqs(stock_pool, start_date, end_date):
+    from jaqs_fxdayu.research.signaldigger import multi_factor
+
+    """测试因子合成"""
+    stock_codes = get_stocks(stock_pool, start_date, end_date)
+    factor_dict = {}
+    for factor_key in FACTORS.keys():
+        factors = get_factors(factor_key, stock_codes, start_date, end_date)
+        factor_dict[factor_key] = example_utils.to_panel_of_stock_columns(factors)
+    logger.debug("开始合成因子：%r , 条数：%r",
+                 list(factor_dict.keys()),
+                 ",".join([str(len(x)) for x in list(factor_dict.values())]))
+
+    df_stocks = tushare_utils.daily(list(stock_codes),start_date,end_date)
+    df_stocks = factor_utils.reset_index(df_stocks)
+    __prices = df_stocks[['close']].unstack()
+    __highs = df_stocks[['high']].unstack()
+    __lows = df_stocks[['low']].unstack()
+
+    zz500 = tushare_utils.daily('000905.SH', start_date, end_date)
+    zz500 = factor_utils.reset_index(zz500)
+    zz500 = zz500['close'].pct_change(1)
+
+    logger.debug("close价格：%d 条",len(__prices))
+    logger.debug("high价格：%d 条", len(__highs))
+    logger.debug("low价格：%d 条", len(__lows))
+    logger.debug("中证价格：%d 条", len(zz500))
+
+    props = {
+        'price': __prices,
+        'high': __highs,  # 可为空
+        'low': __lows,  # 可为空
+        'ret_type': 'return',  # 可选参数还有upside_ret/downside_ret 则组合因子将以优化潜在上行、下行空间为目标
+        'daily_benchmark_ret': zz500,  # 为空计算的是绝对收益　不为空计算相对收益
+        'period': [1, 5, 10],  # 30天的持有期
+        'forward': True,
+        'commission': 0.0008,
+        "covariance_type": "shrink",  # 协方差矩阵估算方法 还可以为"simple"
+        "rollback_period": 10}  # 滚动窗口天数
+
+    comb_factor = multi_factor.combine_factors(factor_dict,
+                                               standardize_type="z_score",
+                                               winsorization=False,
+                                               weighted_method="ic_weight",
+                                               props=props)
+
+    comb_factor.dropna(how="all").head()
 
 
 # python -m example.factor_tester
@@ -99,15 +157,20 @@ if __name__ == '__main__':
     matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号'-'显示为方块的问题
     start = "20200101"
     end = "20201201"
-    adjustment_days = 5
+    adjustment_days = [1, 5, 10, 30]
     stock_pool = '000300.SH'
+    stock_pool = '000905.SH'  # 中证500
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 测试单因子
-    # test("clv", stock_pool, start, end, adjustment_days, stock_num)
+    # test_by_alphalens("clv", stock_pool, start, end, adjustment_days, stock_num)
     # test("momentum", stock_pool, start, end, adjustment_days, stock_num)
     # test("market_value", stock_pool, start, end, adjustment_days, stock_num)
     # test("peg", stock_pool, start, end, adjustment_days, stock_num)
 
     # 测试多因子合成
-    combinefactor = synthesize(stock_pool, start, end)
+    # combinefactor = synthesize(stock_pool, start, end)
+
+    # 测试JAQS多因子合成
+    combinefactor = synthesize_by_jaqs(stock_pool, start, end)
+    print(combinefactor)

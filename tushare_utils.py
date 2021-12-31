@@ -64,7 +64,7 @@ def __set_cache(func, df, stock_code, start_date, end_date):
 
 # 返回每日行情数据，不限字段
 # https://tushare.pro/document/2?doc_id=27
-def daily(stock_code, start_date, end_date, fields=None):
+def daliy_one(stock_code, start_date, end_date, fields=None):
     df = __get_cache('daily', stock_code, start_date, end_date)
     if df is not None: return df
     __random_sleep()
@@ -72,6 +72,20 @@ def daily(stock_code, start_date, end_date, fields=None):
     __set_cache('daily', df, stock_code, start_date, end_date)
     __check_lenght(df)
     return df
+
+def daily(stock_code, start_date, end_date, fields=None):
+    if type(stock_code)==list:
+        df_all = None
+        for stock in stock_code:
+            df_daily = daliy_one(stock,start_date,end_date,fields)
+            if df_all is None:
+                df_all = df_daily
+            else:
+                df_all.append(df_daily)
+        return df_all
+    else:
+        return daliy_one(stock_code,start_date,end_date,fields)
+
 
 
 # 返回每日的其他信息，主要是市值啥的

@@ -45,7 +45,7 @@ def __get_cache(func, stock_code, start_date, end_date):
     # 'Unnamed: 0'，是观察出来的，第一列设置成index，原始的tushare就是这样的index结构
     df = df.set_index("Unnamed: 0")
     if 'trade_date' in df.columns:
-        logger.debug("设置列[trade_date]为str类型")
+        # logger.debug("设置列[trade_date]为str类型")
         df.trade_date = df.trade_date.astype(str)
     if 'ann_date' in df.columns: df.ann_date = df.ann_date.astype(str)
     if 'ts_code' in df.columns:  df.ts_code = df.ts_code.astype(str)
@@ -73,19 +73,23 @@ def daliy_one(stock_code, start_date, end_date, fields=None):
     __check_lenght(df)
     return df
 
+
 def daily(stock_code, start_date, end_date, fields=None):
-    if type(stock_code)==list:
+    if type(stock_code) == list:
+        logger.debug("获取多只股票的交易数据：%r", ",".join(stock_code))
         df_all = None
         for stock in stock_code:
-            df_daily = daliy_one(stock,start_date,end_date,fields)
+            df_daily = daliy_one(stock, start_date, end_date, fields)
             if df_all is None:
                 df_all = df_daily
             else:
-                df_all.append(df_daily)
+                df_all = df_all.append(df_daily)
+        logger.debug("获取 %s ~ %s 多只股票的交易数据：%d 条", start_date, end_date, len(df_all))
         return df_all
     else:
-        return daliy_one(stock_code,start_date,end_date,fields)
-
+        df_one = daliy_one(stock_code, start_date, end_date, fields)
+        logger.debug("获取 %s ~ %s 股票[%s]的交易数据：%d 条", start_date, end_date, stock_code, len(df_one))
+        return df_one
 
 
 # 返回每日的其他信息，主要是市值啥的
@@ -96,6 +100,18 @@ def daily_basic(stock_code, start_date, end_date, fields=None):
     __random_sleep()
     df = pro.daily_basic(ts_code=stock_code, start_date=start_date, end_date=end_date, fields=fields)
     __set_cache('daily_basic', df, stock_code, start_date, end_date)
+    __check_lenght(df)
+    return df
+
+
+# 指数日线行情
+# https://tushare.pro/document/2?doc_id=95
+def index_daily(index_code, start_date, end_date, fields=None):
+    df = __get_cache('index_daily', index_code, start_date, end_date)
+    if df is not None: return df
+    __random_sleep()
+    df = pro.index_daily(ts_code=index_code, start_date=start_date, end_date=end_date, fields=fields)
+    __set_cache('index_daily', df, index_code, start_date, end_date)
     __check_lenght(df)
     return df
 

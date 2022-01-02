@@ -80,8 +80,8 @@ def load_stock_data(stock_codes, start_date, end_date):
 
             # 第一个区间，只能"2021.1.1之前的，不应该用2021.1.1去填充，但是，没办法，无法获得再之前的数据，只好用他了"
             if index == 0:
-                logger.debug("开始 -> %s , 过滤条数 %d", current_date,
-                             len(df_basic.loc[(df_basic.trade_date <= current_date)]))
+                # logger.debug("开始 -> %s , 过滤条数 %d", current_date,
+                #              len(df_basic.loc[(df_basic.trade_date <= current_date)]))
                 df_basic.loc[df_basic.trade_date <= current_date, 'netprofit_yoy'] = netprofit_yoy
 
             # bugfix,太诡异了，如果是nan，其实nan是一个float类型的,type(nan)==<float>
@@ -99,8 +99,8 @@ def load_stock_data(stock_codes, start_date, end_date):
             df_merge = df_basic
         else:
             df_merge = df_merge.append(df_basic)
-        logger.debug("加载%s~%s的股票[%s]的%d条PE和归母公司净利润(TTM)增长率的合并数据", start_date, end_date, stock_code, len(df_merge))
-    logger.debug("一共加载%s~%s %d条数据", start_date, end_date, len(df_merge))
+        # logger.debug("加载%s~%s的股票[%s]的%d条PE和归母公司净利润(TTM)增长率的合并数据", start_date, end_date, stock_code, len(df_merge))
+    logger.debug("一共加载%s~%s %d条 PEG 数据", start_date, end_date, len(df_merge))
     return df_merge
 
 
@@ -114,10 +114,10 @@ def get_factor(stock_codes, start_date, end_date):
     # 去除PE或G值为非数字的股票所在行
     df_stock_data = df_stock_data[['ts_code', 'trade_date', 'pe', 'netprofit_yoy']]
     df_stock_data = df_stock_data.dropna()
-    logger.debug("删除掉NAN后，剩余数据行数：%d 条", len(df_stock_data))
+    logger.debug("删除掉NAN后，剩余 PEG 数据行数：%d 条", len(df_stock_data))
     assert len(df_stock_data) > 0, str(len(df_stock_data))
 
     df_stock_data['PEG'] = df_stock_data['pe'] / df_stock_data['netprofit_yoy']
-    factors = df_stock_data[['trade_date', 'ts_code', 'PEG']]
 
+    factors = df_stock_data[['trade_date', 'ts_code', 'PEG']]
     return factor_utils.reset_index(factors)

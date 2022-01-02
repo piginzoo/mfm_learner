@@ -39,12 +39,12 @@ def get_factor(stock_codes, start_date, end_date):
         data.loc[(data['high'] == data['low']) & (data['open'] > data['pre_close']), 'CLV'] = 1
         data.loc[(data['high'] == data['low']) & (data['open'] < data['pre_close']), 'CLV'] = -1
 
+        # logger.debug("加载%s~%s的股票[%s]的 %d 条CLV数据", start_date, end_date, stock_code, len(data))
         if df_merge is None:
             df_merge = data
         else:
             df_merge = df_merge.append(data)
-        logger.debug("加载%s~%s的股票[%s]的%d条PE和归母公司净利润(TTM)增长率的合并数据", start_date, end_date, stock_code, len(df_merge))
-    logger.debug("一共加载%s~%s %d条数据", start_date, end_date, len(df_merge))
+    logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(df_merge))
 
     factors = df_merge[['trade_date', 'ts_code', 'CLV']]
 

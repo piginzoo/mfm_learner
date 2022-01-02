@@ -33,8 +33,8 @@ def load_stock_data(stock_codes, start, end):
             df_merge = df_daily
         else:
             df_merge = df_merge.append(df_daily)
-        logger.debug("加载%s~%s的股票[%s]的%d条交易和基本信息的合并数据", start, end, stock_code, len(df_merge))
-    logger.debug("一共加载%s~%s %d条数据", start, end, len(df_merge))
+        # logger.debug("加载%s~%s的股票[%s]的 %d 条动量数据", start, end, stock_code, len(df_merge))
+    logger.debug("一共加载%s~%s %d 条动量（momentum）数据", start, end, len(df_merge))
     return df_merge
 
 
@@ -54,6 +54,4 @@ def get_factor(stock_codes, start_date, end_date):
     adj_close = (df['close'] + df['high'] + df['low']) / 3
     df['momentum'] = np.log(adj_close / adj_close.shift(period_window))  # shift(1) 往后移，就变成上个月的了
     df = df[['trade_date', 'ts_code', 'momentum']]
-    df['trade_date'] = pd.to_datetime(df['trade_date'], format="%Y%m%d")  # 时间为日期格式，tushare是str
-    df = df.set_index(['trade_date', 'ts_code'])
-    return df
+    return factor_utils.reset_index(df)

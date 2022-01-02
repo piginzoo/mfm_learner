@@ -14,7 +14,7 @@ import tushare as ts
 from alphalens.tears import create_returns_tear_sheet, create_information_tear_sheet, create_turnover_tear_sheet
 from alphalens.tears import plotting
 from alphalens.utils import get_clean_factor_and_forward_returns
-
+from jaqs_fxdayu.research.signaldigger import multi_factor
 logger = logging.getLogger(__name__)
 
 FACTORS = {
@@ -102,9 +102,9 @@ def synthesize(stock_pool, start_date, end_date):
 
 
 def synthesize_by_jaqs(stock_pool, start_date, end_date):
-    from jaqs_fxdayu.research.signaldigger import multi_factor
-
-    """测试因子合成"""
+    """
+    测试因子合成，要求数据得是panel格式的，[trade_date,stock1,stock2,....]
+    """
     stock_codes = get_stocks(stock_pool, start_date, end_date)
     factor_dict = {}
     for factor_key in FACTORS.keys():
@@ -116,18 +116,21 @@ def synthesize_by_jaqs(stock_pool, start_date, end_date):
 
     df_stocks = tushare_utils.daily(list(stock_codes),start_date,end_date)
     df_stocks = factor_utils.reset_index(df_stocks)
-    __prices = df_stocks[['close']].unstack()
-    __highs = df_stocks[['high']].unstack()
-    __lows = df_stocks[['low']].unstack()
+    # unstack将行转化成列
+    __prices = df_stocks['close'].unstack()
+    __highs = df_stocks['high'].unstack()
+    __lows = df_stocks['low'].unstack()
 
-    zz500 = tushare_utils.daily('000905.SH', start_date, end_date)
+    zz500 = tushare_utils.index_daily('000905.SH', start_date, end_date)
     zz500 = factor_utils.reset_index(zz500)
     zz500 = zz500['close'].pct_change(1)
+    zz500 = example_utils.to_panel_of_stock_columns(zz500)
+    assert len(zz500)!=0
 
-    logger.debug("close价格：%d 条",len(__prices))
-    logger.debug("high价格：%d 条", len(__highs))
-    logger.debug("low价格：%d 条", len(__lows))
-    logger.debug("中证价格：%d 条", len(zz500))
+    logger.debug("close价格：%d 条,索引：%r",len(__prices),list(__prices.index.names))
+    logger.debug("high价格：%d 条,索引：%r", len(__highs),__highs.index.names)
+    logger.debug("low价格：%d 条,索引：%r", len(__lows),__lows.index.names)
+    logger.debug("中证价格：%d 条,索引：%r", len(zz500),zz500.index.names)
 
     props = {
         'price': __prices,
@@ -135,7 +138,7 @@ def synthesize_by_jaqs(stock_pool, start_date, end_date):
         'low': __lows,  # 可为空
         'ret_type': 'return',  # 可选参数还有upside_ret/downside_ret 则组合因子将以优化潜在上行、下行空间为目标
         'daily_benchmark_ret': zz500,  # 为空计算的是绝对收益　不为空计算相对收益
-        'period': [1, 5, 10],  # 30天的持有期
+        'period': 10,  # 30天的持有期
         'forward': True,
         'commission': 0.0008,
         "covariance_type": "shrink",  # 协方差矩阵估算方法 还可以为"simple"
@@ -147,7 +150,7 @@ def synthesize_by_jaqs(stock_pool, start_date, end_date):
                                                weighted_method="ic_weight",
                                                props=props)
 
-    comb_factor.dropna(how="all").head()
+    return comb_factor
 
 
 # python -m example.factor_tester
@@ -173,4 +176,6 @@ if __name__ == '__main__':
 
     # 测试JAQS多因子合成
     combinefactor = synthesize_by_jaqs(stock_pool, start, end)
-    print(combinefactor)
+    logger.debug("合成因子：")
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        print(combinefactor)#.dropna(how="all").head())

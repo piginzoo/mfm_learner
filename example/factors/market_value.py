@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 import tushare_utils
+from example import factor_utils
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +41,6 @@ def get_factor(stock_codes, start, end):
     stock_data = load_stock_data(stock_codes, start=start, end=end)
     factors = stock_data
     factors['LNCAP'] = np.log(stock_data['total_mv'])
-    factors = factors[['trade_date', 'ts_code', 'LNCAP']]
-    factors['trade_date'] = pd.to_datetime(factors['trade_date'], format="%Y%m%d")  # 时间为日期格式，tushare是str
-    factors = factors.set_index(['trade_date', 'ts_code'])
     logger.debug("计算完市值因子(LNCAP)，%d 条因子值", len(factors))
-    return factors
+    factors = factors[['trade_date', 'ts_code', 'LNCAP']]
+    return factor_utils.reset_index(factors)

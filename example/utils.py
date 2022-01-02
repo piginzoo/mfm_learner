@@ -3,6 +3,7 @@
 
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 
 
 def to_panel_of_stock_columns(df):
@@ -30,7 +31,10 @@ def to_panel_of_stock_columns(df):
 
     的Panel数据
     """
-    return df.unstack()
+    if type(df)==DataFrame:
+        df = df.iloc[:, 0]  # 把dataframe转成series，这样做的缘故是，unstack的时候，可以避免复合列名，如 ['clv','003859.SH']
+    df = df.unstack()
+    return df
 
 
 def fillinf(df):
@@ -219,7 +223,8 @@ def nan_sum(df):
     df.isnull().sum()
 
 def nan_count(df,fields):
-    df[fields].
+    # df[fields].
+    pass
 
 # 行业、市值中性化 - 对Dataframe数据
 def neutralize(factor_df,

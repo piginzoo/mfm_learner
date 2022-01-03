@@ -50,8 +50,7 @@ import math
 
 import numpy as np
 
-import tushare_utils
-from example import factor_utils
+from utils import tushare_utils, factor_utils
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,10 @@
 import logging
 
 import utils
-from example import factor_utils
 
 utils.init_logger()
-import tushare_utils
+from utils import tushare_utils, factor_utils
 
-import pandas as pd
 import numpy as np
 
 logger = logging.getLogger(__name__)

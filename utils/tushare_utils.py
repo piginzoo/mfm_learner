@@ -10,7 +10,7 @@ import tushare
 logger = logging.getLogger(__name__)
 pro = tushare.pro_api()
 
-BASE_DIR = "data/tushare/"
+BASE_DIR = "../data/tushare/"
 MAX_ROWS = 1000
 
 if not os.path.exists(BASE_DIR): os.makedirs(BASE_DIR)

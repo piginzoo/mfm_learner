@@ -6,7 +6,6 @@ import sys  # 获取当前运行脚本的路径 (in argv[0])
 import backtrader as bt
 
 # 创建策略继承bt.Strategy
-from torch.nn import CTCLoss
 
 
 class TestStrategy(bt.Strategy):
@@ -112,7 +111,7 @@ class TestStrategy(bt.Strategy):
     def stop(self):
         self.log('(均线周期 %2d)期末资金 %.2f' % (self.params.maperiod, self.broker.getvalue()), doprint=True)
 
-
+# python test4.py
 if __name__ == '__main__':
     # 创建Cerebro引擎
     cerebro = bt.Cerebro()
@@ -130,6 +129,7 @@ if __name__ == '__main__':
     # 获取当前运行脚本所在目录
     modpath = os.path.dirname(os.path.abspath(sys.argv[0]))
     # 拼接加载路径
+    # https://raw.githubusercontent.com/jackvip/backtrader/master/orcl-1995-2014.txt
     datapath = os.path.join(modpath, '../data/orcl-1995-2014.txt')
 
     # 创建交易数据集

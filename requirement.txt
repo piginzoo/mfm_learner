@@ -1,0 +1,13 @@
+tushare
+async_generator
+matplotlib
+git+https://github.com/piginzoo/alphalens.git
+git+https://github.com/piginzoo/jaqs_fxdayu.git
+jqdatasdk
+statsmodels
+pandas
+tqdm
+pyyaml
+scikit-learn
+backtrader
+pymysql

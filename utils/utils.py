@@ -6,6 +6,10 @@ import os
 
 logger = logging.getLogger(__name__)
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+DB_FILE = "../data/tushare.db"
 
 
 def load_config():
@@ -24,6 +28,13 @@ def tushare_login():
     conf = load_config()
     tushare.set_token(conf['tushare']['token'])
     return tushare.pro_api()
+
+
+def connect_db():
+    engine = create_engine(
+        "mysql+pymysql://{}:{}@{}/{}?charset={}".format('root', 'Welcome1', '127.0.0.1:3306', 'tushare', 'utf8'))
+    # engine = create_engine('sqlite:///' + DB_FILE + '?check_same_thread=False', echo=echo)  # 是否显示SQL：, echo=True)
+    return engine
 
 
 def init_logger():

@@ -5,9 +5,9 @@ import utils
 from example import utils as example_utils
 utils.init_logger()
 utils.tushare_login()
-from example import factor_utils, multifactor_synthesize
+from example import multifactor_synthesize
 from example.factors import momentum, peg, clv, market_value
-import tushare_utils
+from utils import tushare_utils, factor_utils
 import matplotlib
 import pandas as pd
 import tushare as ts
@@ -114,7 +114,7 @@ def synthesize_by_jaqs(stock_pool, start_date, end_date):
                  list(factor_dict.keys()),
                  ",".join([str(len(x)) for x in list(factor_dict.values())]))
 
-    df_stocks = tushare_utils.daily(list(stock_codes),start_date,end_date)
+    df_stocks = tushare_utils.daily(list(stock_codes), start_date, end_date)
     df_stocks = factor_utils.reset_index(df_stocks)
     # unstack将行转化成列
     __prices = df_stocks['close'].unstack()

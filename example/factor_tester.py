@@ -5,7 +5,7 @@ import utils
 from example import utils as example_utils
 utils.init_logger()
 utils.tushare_login()
-from example import multifactor_synthesize
+from temp import multifactor_synthesize
 from example.factors import momentum, peg, clv, market_value
 from utils import tushare_utils, factor_utils
 import matplotlib

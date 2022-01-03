@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import time
 
-import utils
+from utils import utils
 
 TUSHARE_DATA_DIR="data/tushare_data/data"
 
@@ -18,10 +18,10 @@ def daily(fuquan="hfq"):
 # python -m test.test_tushare_data
 if __name__ == '__main__':
     start_time = time.time()
-    df = daily()
-    print("从文件加载",str(time.time()-start_time), " s")
-    print(df.info())
-    print(df.head(2))
+    # df = daily()
+    # print("从文件加载",str(time.time()-start_time), " s")
+    # print(df.info())
+    # print(df.head(2))
 
     # start_time = time.time()
     #
@@ -36,8 +36,9 @@ if __name__ == '__main__':
     # print("从数据库中加载",str(time.time()-start_time), " s")
     # start_time = time.time()
 
-    # db_engine = utils.connect_db()
-    # df = pd.read_sql('select * from daily where ts_code="000300.SH"', db_engine)
-    #
-    # print("从数据库中加载", str(time.time() - start_time), " s")
+    db_engine = utils.connect_db()
+    df = pd.read_sql('select * from daily where ts_code="000001.SZ"', db_engine)
+
+    print("从数据库中加载", str(time.time() - start_time), " s")
+    print(df.head(1))
     # start_time = time.time()

@@ -1,6 +1,8 @@
 这个是我多因子学习的沙盒，各种尝试，学习和练习，都放到里面。
 
 # 开发日志
+- 2022.1.3 utils/db_creater，将["致敬大神"](https://www.bilibili.com/video/BV1564y1b7PR?p=5)的csv数据导入到数据库
+- 2022.1.3 example/testback.py，使用backtrader做回测
 - 2021.12.22 example/ 实现一个[完整的例子](example/README.md)
 - 2021.12.20 btrader/，backtrader学习实践
 - 2021.12.18 fama/，尝试复现fama三因子模型

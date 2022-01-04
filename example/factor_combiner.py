@@ -27,6 +27,15 @@ FACTORS = {
 
 
 def get_factors(name, stock_codes, start_date, end_date):
+    """
+    获得所有的单因子，目前是4个，在FACTORS中定义
+    :param name:
+    :param stock_codes:
+    :param start_date:
+    :param end_date:
+    :return:
+    """
+
     if name in FACTORS:
         factors = FACTORS[name].get_factor(stock_codes, start_date, end_date)
     else:

@@ -6,11 +6,13 @@ import backtrader.analyzers as btay  # 添加分析函数
 import pandas as pd
 import tushare as ts
 
+from example import factor_combiner
 from utils import tushare_utils
 
 """
-用factor_tester.py中合成的多因子，做选择股票的策略 ，去选择中证500的股票，跑收益率回测。
-使用backtrader来做回测框架。
+用factor_tester.py中合成的多因子，做选择股票的策略 ，去选择中证500的股票，跑收益率回测。使用backtrader来做回测框架。
+参考：
+- https://zhuanlan.zhihu.com/p/351751730
 """
 
 
@@ -58,10 +60,8 @@ class CombineFactorStrategy(bt.Strategy):
         stake=100,  # 单笔交易股票数目
     )
 
-    def __init__(self):
-        self.inds = dict()
-        for i, d in enumerate(self.datas):
-            self.inds[d] = bt.ind.SMA(d.close, period=self.p.period)
+    def __init__(self,stock_index):
+        self.stock_index = stock_index
 
     def next(self):
         """
@@ -78,8 +78,14 @@ class CombineFactorStrategy(bt.Strategy):
         - 每次都是满仓，即用卖出的股票头寸，全部购入新的股票，头寸仅在新购入股票中平均分配
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
-        pass
-        # for i, d in enumerate(self.datas):
+
+        stock_codes = tushare_utils.index_weight(self.stock_index, start_date)
+        combined_factor = factor_combiner.synthesize_by_jaqs(stock_codes, start, end)
+        # 回测最后一天不进行买卖
+        if self.datas[0].datetime.date(0) == end_date:
+            return
+
+            # for i, d in enumerate(self.datas):
         #     pos = self.getposition(d)
         #     if not len(pos):
         #         if d.close[0] > self.inds[d][0]:  # 达到买入条件

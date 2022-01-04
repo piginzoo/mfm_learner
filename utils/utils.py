@@ -32,7 +32,7 @@ def tushare_login():
 
 def connect_db():
     engine = create_engine(
-        "mysql+pymysql://{}:{}@{}/{}?charset={}".format('root', 'Welcome1', '127.0.0.1:3306', 'tushare', 'utf8'))
+        "mysql+pymysql://{}:{}@{}/{}?charset={}".format('root', '123456', '127.0.0.1:3306', 'tushare', 'utf8'))
     # engine = create_engine('sqlite:///' + DB_FILE + '?check_same_thread=False', echo=echo)  # 是否显示SQL：, echo=True)
     return engine
 

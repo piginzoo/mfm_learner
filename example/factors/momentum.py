@@ -1,11 +1,8 @@
 import logging
 
-import utils
-
-utils.init_logger()
-from utils import tushare_utils, factor_utils
-
 import numpy as np
+
+from utils import tushare_utils, factor_utils
 
 logger = logging.getLogger(__name__)
 period_window = 5
@@ -22,6 +19,7 @@ period_window = 5
 参考：
     https://zhuanlan.zhihu.com/p/96888358
 """
+
 
 def load_stock_data(stock_codes, start, end):
     df_merge = None

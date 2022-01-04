@@ -14,7 +14,7 @@ import sqlalchemy
 from utils import utils
 
 BASE_DIR = "data/tushare_data/data"
-ROWS = None
+ROWS = None # 测试的话，改成100，全量改成None
 
 # 加载文件夹中的所有csv文件
 files = []

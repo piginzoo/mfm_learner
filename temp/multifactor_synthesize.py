@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 from functools import reduce
 
@@ -5,10 +6,9 @@ import numpy as np
 import pandas as pd
 import scipy.stats as scst
 import statsmodels.api as sm
-from scipy import linalg
 from sklearn.covariance import LedoitWolf
-import logging
-from example import utils
+
+from utils import utils
 
 logger = logging.getLogger(__name__)
 
@@ -501,7 +501,7 @@ def orthogonalize(factors_dict=None, standardize_type="z_score", winsorization=F
         factors_dict[factor_name] = utils.fillinf(factors_dict[factor_name])
         factors_dict[factor_name] = utils._mask_non_index_member(factors_dict[factor_name],
                                                                  index_member=index_member)
-        if winsorization:factors_dict[factor_name] = utils.winsorize(factors_dict[factor_name])
+        if winsorization: factors_dict[factor_name] = utils.winsorize(factors_dict[factor_name])
     logger.debug("完成因子")
 
     factor_name_list = list(factors_dict.keys())
@@ -529,11 +529,12 @@ def orthogonalize(factors_dict=None, standardize_type="z_score", winsorization=F
             row = pd.DataFrame(data[factor_name]).T
             row.index = [date, ]
             new_factors_dict[factor_name].append(row)
-    logger.debug("完成因子的施密特正交：%r ，每个因子%d条",len(new_factors_dict.keys()), len(new_factors.values()[0]))
+    logger.debug("完成因子的施密特正交：%r ，每个因子%d条", len(new_factors_dict.keys()), len(new_factors.values()[0]))
 
     # 因子标准化
     for factor_name in factor_name_list:
-        import pdb;pdb.set_trace()
+        import pdb;
+        pdb.set_trace()
         factor_value = pd.concat(new_factors_dict[factor_name])
         # 恢复在正交化过程中剔除的行和列
         factor_value = factor_value.reindex(index=factor_value_list[0].index, columns=factor_value_list[0].columns)
@@ -616,7 +617,7 @@ def combine_factors(factors_dict=None,
                                                                      index_member=index_member)
             if winsorization:  # 去极值化
                 factors_dict[factor_name] = utils.winsorize(factors_dict[factor_name])
-                logger.debug("因子 [%s] 去极值化:%d条",factor_name,len(factors_dict[factor_name]))
+                logger.debug("因子 [%s] 去极值化:%d条", factor_name, len(factors_dict[factor_name]))
             if standardize_type == "z_score":  # 做标准化
                 factors_dict[factor_name] = utils.standardize(factors_dict[factor_name])
                 logger.debug("因子 [%s] 标准化:%d条", factor_name, len(factors_dict[factor_name]))
@@ -670,11 +671,11 @@ def combine_factors(factors_dict=None,
 
     # 做因子的标准化
     factors_dict = standarize_factors(factors_dict)
-    logger.debug("完成因子各项标准化：%d 条",len(factors_dict))
-    logger.debug("因子权重方式：%s",weighted_method)
+    logger.debug("完成因子各项标准化：%d 条", len(factors_dict))
+    logger.debug("因子权重方式：%s", weighted_method)
     if weighted_method in ["max_IR", "max_IC", "ic_weight", "ir_weight", "factors_ret_weight"]:
         weight = _cal_weight(weighted_method)
-        logger.debug("因子权重：%r",weight)
+        logger.debug("因子权重：%r", weight)
         weighted_factors = {}
         factor_name_list = factors_dict.keys()
         for factor_name in factor_name_list:
@@ -704,8 +705,9 @@ def synthesize(factor_dict, index_member):
                                 # 输入因子标准化方法，有"rank"（排序标准化）,"z_score"(z-score标准化)两种（"rank"/"z_score"）
                                 winsorization=False,  # 是否对输入因子去极值
                                 index_member=index_member)  # 是否只处理指数成分股
-    logger.debug("完成因子的施密特正交化处理：%d",len(new_factors))
+    logger.debug("完成因子的施密特正交化处理：%d", len(new_factors))
     return combine_factors(new_factors)
+
 
 if __name__ == '__main__':
     factors = {

@@ -1,13 +1,13 @@
 import logging
 import os
 
-import utils
-from example import utils as example_utils
+from utils import utils
+
 utils.init_logger()
 utils.tushare_login()
 from temp import multifactor_synthesize
 from example.factors import momentum, peg, clv, market_value
-from utils import tushare_utils, factor_utils
+from utils import tushare_dbutils as tushare_utils, factor_utils
 import matplotlib
 import pandas as pd
 import tushare as ts
@@ -15,6 +15,7 @@ from alphalens.tears import create_returns_tear_sheet, create_information_tear_s
 from alphalens.tears import plotting
 from alphalens.utils import get_clean_factor_and_forward_returns
 from jaqs_fxdayu.research.signaldigger import multi_factor
+
 logger = logging.getLogger(__name__)
 
 FACTORS = {
@@ -101,15 +102,14 @@ def synthesize(stock_pool, start_date, end_date):
     return combined_factor
 
 
-def synthesize_by_jaqs(stock_pool, start_date, end_date):
+def synthesize_by_jaqs(stock_codes, start_date, end_date):
     """
     测试因子合成，要求数据得是panel格式的，[trade_date,stock1,stock2,....]
     """
-    stock_codes = get_stocks(stock_pool, start_date, end_date)
     factor_dict = {}
     for factor_key in FACTORS.keys():
         factors = get_factors(factor_key, stock_codes, start_date, end_date)
-        factor_dict[factor_key] = example_utils.to_panel_of_stock_columns(factors)
+        factor_dict[factor_key] = factor_utils.to_panel_of_stock_columns(factors)
     logger.debug("开始合成因子：%r , 条数：%r",
                  list(factor_dict.keys()),
                  ",".join([str(len(x)) for x in list(factor_dict.values())]))
@@ -124,13 +124,13 @@ def synthesize_by_jaqs(stock_pool, start_date, end_date):
     zz500 = tushare_utils.index_daily('000905.SH', start_date, end_date)
     zz500 = factor_utils.reset_index(zz500)
     zz500 = zz500['close'].pct_change(1)
-    zz500 = example_utils.to_panel_of_stock_columns(zz500)
-    assert len(zz500)!=0
+    zz500 = factor_utils.to_panel_of_stock_columns(zz500)
+    assert len(zz500) != 0
 
-    logger.debug("close价格：%d 条,索引：%r",len(__prices),list(__prices.index.names))
-    logger.debug("high价格：%d 条,索引：%r", len(__highs),__highs.index.names)
-    logger.debug("low价格：%d 条,索引：%r", len(__lows),__lows.index.names)
-    logger.debug("中证价格：%d 条,索引：%r", len(zz500),zz500.index.names)
+    logger.debug("close价格：%d 条,索引：%r", len(__prices), list(__prices.index.names))
+    logger.debug("high价格：%d 条,索引：%r", len(__highs), __highs.index.names)
+    logger.debug("low价格：%d 条,索引：%r", len(__lows), __lows.index.names)
+    logger.debug("中证价格：%d 条,索引：%r", len(zz500), zz500.index.names)
 
     props = {
         'price': __prices,
@@ -175,7 +175,8 @@ if __name__ == '__main__':
     # combinefactor = synthesize(stock_pool, start, end)
 
     # 测试JAQS多因子合成
-    combinefactor = synthesize_by_jaqs(stock_pool, start, end)
+    stock_codes = get_stocks(stock_pool, start, end)
+    combinefactor = synthesize_by_jaqs(stock_codes, start, end)
     logger.debug("合成因子：")
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(combinefactor)#.dropna(how="all").head())
+        print(combinefactor)  # .dropna(how="all").head())

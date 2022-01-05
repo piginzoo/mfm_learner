@@ -111,6 +111,9 @@ class CombineFactorStrategy(bt.Strategy):
         logger.debug("交易日：%r , %d/%d", utils.date2str(current_date), self.count, self.total)
         logger.debug("当天的因子为：%r",factor)
 
+        # TODO 可以根据factors选股了
+        # TODO 然后进行买卖调仓了，这个可以大把的参考代码
+
 
 # 修改原数据加载模块，以便能够加载更多自定义的因子数据
 class FactorData(PandasData):

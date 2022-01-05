@@ -1,4 +1,5 @@
 import logging
+import math
 
 import pandas as pd
 from backtrader.feeds import PandasData
@@ -9,7 +10,7 @@ from utils import utils
 utils.init_logger()
 import backtrader as bt  # 引入backtrader框架
 import backtrader.analyzers as btay  # 添加分析函数
-
+import numpy as np
 from utils import tushare_utils
 
 """
@@ -109,10 +110,57 @@ class CombineFactorStrategy(bt.Strategy):
         factor = self.factors.loc[current_date]
 
         logger.debug("交易日：%r , %d/%d", utils.date2str(current_date), self.count, self.total)
-        logger.debug("当天的因子为：%r",factor)
+        if np.isnan(factor).all():
+            logger.debug("%r 日的因子全部为NAN，忽略当日", utils.date2str(current_date))
+            return
 
-        # TODO 可以根据factors选股了
-        # TODO 然后进行买卖调仓了，这个可以大把的参考代码
+        factor = factor.dropna()
+        factor = factor.sort_values(ascending=False)
+        logger.debug("当天的因子为：%r",factor)
+        # 选择因子值前20%
+        select_stocks = factor.index[:math.ceil(0.2*len(factor))]
+        logger.debug("此次选中的股票为：%r",select_stocks)
+
+        # 以往买入的标的，本次不在标的中，则先平仓
+        to_sell_stocks = set(self.current_stocks) - set(select_stocks)
+        for sell_stock in to_sell_stocks:
+            logger.debug('卖出 %s 平仓: %r', sell_stock , self.getposition(sell_stock).size)
+            o = self.close(sell_stock)
+            self.order_list.append(o)  # 记录订单
+            self.current_stocks.remove(sell_stock)
+        logger.debug("合计卖出%d只股票，剩余%d只持仓",len(to_sell_stocks),len(self.current_stocks))
+
+
+        # 每只股票买入资金百分比，预留2%的资金以应付佣金和计算误差
+        buy_percentage = (1 - 0.02) / len(select_stocks)
+
+        # 得到目标市值
+        targetvalue = buy_percentage * self.broker.getvalue()
+
+        next_trade_day = self.datas[0].datetime(1)  # 下一交易日
+        for buy_stock in select_stocks:
+            if buy_stock in self.current_stocks:
+                logger.debug("%s 在持仓中，不动", buy_stock)
+                continue
+
+            # 按次日开盘价计算下单量，下单量是100的整数倍
+            size = int(
+                abs((self.broker.getvalue([d]) - targetvalue) / d.open[1] // 100 * 100))
+            if self.broker.getvalue([d]) > targetvalue:  # 持仓过多，要卖
+                # 次日跌停价近似值
+                lowerprice = d.close[0] * 0.9 + 0.02
+
+                o = self.sell(data=d, size=size, exectype=bt.Order.Limit,
+                              price=lowerprice, valid=validday)
+            else:  # 持仓过少，要买
+                # 次日涨停价近似值
+                upperprice = d.close[0] * 1.1 - 0.02
+                o = self.buy(data=d, size=size, exectype=bt.Order.Limit,
+                             price=upperprice, valid=validday)
+
+            self.order_list.append(o)  # 记录订单
+
+
 
 
 # 修改原数据加载模块，以便能够加载更多自定义的因子数据
@@ -123,12 +171,12 @@ class FactorData(PandasData):
 
 def main(start_date, end_date, index_code, period, stock_num):
     """
-    datetime    open    high    low     close   volume  openi.. mar...	momen.. peg	    clv
-    2016-06-24	0.16	0.002	0.085	0.078	0.173	0.214	0.068	0.068	0.068	0.068
-    2016-06-27	0.16	0.003	0.063	0.048	0.180	0.202	0.081	0.081	0.081	0.081
-    2016-06-28	0.13	0.010	0.059	0.034	0.111	0.122	0.042	0.042	0.042	0.042
-    2016-06-29	0.06	0.019	0.058	0.049	0.042	0.053	0.079	0.079	0.079	0.079
-    2016-06-30	0.03	0.012	0.037	0.027	0.010	0.077	0.057	0.057	0.057	0.057
+    datetime    open    high    low     close   volume  openi..
+    2016-06-24	0.16	0.002	0.085	0.078	0.173	0.214
+    2016-06-27	0.16	0.003	0.063	0.048	0.180	0.202
+    2016-06-28	0.13	0.010	0.059	0.034	0.111	0.122
+    2016-06-29	0.06	0.019	0.058	0.049	0.042	0.053
+    2016-06-30	0.03	0.012	0.037	0.027	0.010	0.077
     """
 
     cerebro = bt.Cerebro()  # 初始化cerebro
@@ -136,7 +184,7 @@ def main(start_date, end_date, index_code, period, stock_num):
     # 加载指数，就是为了当日期占位符
     df_index = tushare_utils.index_daily("000001.SH", start_date, end_date)
 
-    stock_codes = tushare_utils.index_weight(index_code, start_date, end_date)
+    stock_codes = tushare_utils.index_weight(index_code, start_date)
     stock_codes = stock_codes[:stock_num]
 
     combined_factor = factor_combiner.synthesize_by_jaqs(stock_codes, start_date, end_date)

@@ -6,7 +6,7 @@ import logging
 
 import numpy as np
 
-from utils import tushare_utils, factor_utils
+from utils import tushare_dbutils, factor_utils
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def load_stock_data(stock_codes, start, end):
     df_merge = None
     for stock_code in stock_codes:
-        df_basic = tushare_utils.daily_basic(stock_code=stock_code, start_date=start, end_date=end)
+        df_basic = tushare_dbutils.daily_basic(stock_code=stock_code, start_date=start, end_date=end)
         if df_merge is None:
             df_merge = df_basic
         else:

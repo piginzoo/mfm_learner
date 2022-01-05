@@ -25,7 +25,6 @@ FACTORS = {
     "clv": clv
 }
 
-
 def get_factors(name, stock_codes, start_date, end_date):
     """
     获得所有的单因子，目前是4个，在FACTORS中定义

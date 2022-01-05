@@ -19,7 +19,7 @@ import logging
 
 import pandas as pd
 
-from utils import tushare_utils, factor_utils
+from utils import tushare_dbutils, factor_utils
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def get_factor(stock_codes, start_date, end_date):
     # 每支股票
     for stock_code in stock_codes:
         # 得到日交易数据
-        data = tushare_utils.daily(stock_code=stock_code, start_date=start_date, end_date=end_date)
+        data = tushare_dbutils.daily(stock_code=stock_code, start_date=start_date, end_date=end_date)
         # data.info()
         data = data.sort_values(['trade_date'])
         # 计算CLV因子

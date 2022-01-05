@@ -1,13 +1,15 @@
-import warnings
-import conf
-import yaml
+import datetime
 import logging
 import os
+import warnings
+
+import yaml
+
+import conf
 
 logger = logging.getLogger(__name__)
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 DB_FILE = "../data/tushare.db"
 
@@ -35,6 +37,14 @@ def connect_db():
         "mysql+pymysql://{}:{}@{}/{}?charset={}".format('root', '123456', '127.0.0.1:3306', 'tushare', 'utf8'))
     # engine = create_engine('sqlite:///' + DB_FILE + '?check_same_thread=False', echo=echo)  # 是否显示SQL：, echo=True)
     return engine
+
+
+def str2date(s_date, format="%Y%m%d"):
+    return datetime.datetime.strptime(s_date, format)
+
+
+def date2str(date, format="%Y%m%d"):
+    return datetime.datetime.strftime(date, format)
 
 
 def init_logger():

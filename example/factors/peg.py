@@ -50,7 +50,7 @@ import math
 
 import numpy as np
 
-from utils import tushare_utils, factor_utils
+from utils import tushare_dbutils, factor_utils
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +59,10 @@ def load_stock_data(stock_codes, start_date, end_date):
     df_merge = None
     for stock_code in stock_codes:
         # 基本数据，包含：PE
-        df_basic = tushare_utils.daily_basic(stock_code=stock_code, start_date=start_date, end_date=end_date)
+        df_basic = tushare_dbutils.daily_basic(stock_code=stock_code, start_date=start_date, end_date=end_date)
 
         # 财务数据，包含：归母公司净利润(TTM)增长率
-        df_finance = tushare_utils.fina_indicator(stock_code=stock_code, start_date=start_date, end_date=end_date)
+        df_finance = tushare_dbutils.fina_indicator(stock_code=stock_code, start_date=start_date, end_date=end_date)
 
         df_finance = df_finance.sort_values('ann_date', ascending=True)  # 从早到晚排序
         df_finance = df_finance.reset_index()

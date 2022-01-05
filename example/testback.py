@@ -1,12 +1,15 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+import logging
 
-import backtrader as bt  # 引入backtrader框架
-import backtrader.analyzers as btay  # 添加分析函数
 import pandas as pd
-import tushare as ts
+from backtrader.feeds import PandasData
 
 from example import factor_combiner
+from utils import utils
+
+utils.init_logger()
+import backtrader as bt  # 引入backtrader框架
+import backtrader.analyzers as btay  # 添加分析函数
+
 from utils import tushare_utils
 
 """
@@ -14,6 +17,8 @@ from utils import tushare_utils
 参考：
 - https://zhuanlan.zhihu.com/p/351751730
 """
+
+logger = logging.getLogger(__name__)
 
 
 class Percent(bt.Sizer):
@@ -52,6 +57,11 @@ class CombineFactorStrategy(bt.Strategy):
     - 后续的期间，是可以使用之前的数据了，比如回测的是2017.3的，就可以使用2017.2月的数据了
     - 每次选股前，都要重新计算因子暴露（敞口、因子值），所以计算量还不小呢，即每次都要用一个滑动窗口（12个月）算
     - 单因子有负向的，比如市值因子，那么在因子合成的时候，应该怎么处理负向的呢？
+
+    (2020.3.2)--------10个交易日----------(2020.3.15)
+    |
+    当前，通过因子，去预测3.15的收益率，
+    是通过看3.2号的因子情况。
     """
 
     # 可配置策略参数
@@ -60,8 +70,15 @@ class CombineFactorStrategy(bt.Strategy):
         stake=100,  # 单笔交易股票数目
     )
 
-    def __init__(self,stock_index):
-        self.stock_index = stock_index
+    def __init__(self, stock_index, period, total, factors):
+        self.stock_index = stock_index  # 使用的股票池
+        self.current_stocks = []  # 当前持仓
+        self.period = period  # 调仓周期
+        self.current_day = 0  # 当前周期内的天数
+        self.count = 0
+        self.total = total
+        self.factors = factors
+        logger.debug("调仓期:%d，股票池：%s, 交易日： %d 天", period, stock_index, total)
 
     def next(self):
         """
@@ -79,44 +96,61 @@ class CombineFactorStrategy(bt.Strategy):
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
 
-        stock_codes = tushare_utils.index_weight(self.stock_index, start_date)
-        combined_factor = factor_combiner.synthesize_by_jaqs(stock_codes, start, end)
-        # 回测最后一天不进行买卖
-        if self.datas[0].datetime.date(0) == end_date:
-            return
+        # 回测最后一天不进行买卖,datas[0]就是当天, bugfix:  之前self.datas[0].date(0)不行，因为df.index是datetime类型的
+        current_date = self.datas[0].datetime.datetime(0)
 
-            # for i, d in enumerate(self.datas):
-        #     pos = self.getposition(d)
-        #     if not len(pos):
-        #         if d.close[0] > self.inds[d][0]:  # 达到买入条件
-        #             self.buy(data=d, size=self.p.stake)
-        #     elif d.close[0] < self.inds[d][0]:  # 达到卖出条件
-        #         self.sell(data=d)
+        self.current_day += 1
+        self.count += 1
+
+        if self.current_day < self.period: return
+
+        self.current_day = 0
+
+        factor = self.factors.loc[current_date]
+
+        logger.debug("交易日：%r , %d/%d", utils.date2str(current_date), self.count, self.total)
+        logger.debug("当天的因子为：%r",factor)
 
 
-def main(start_date, end_date, index, stock_num):
+# 修改原数据加载模块，以便能够加载更多自定义的因子数据
+class FactorData(PandasData):
+    lines = ('market_value', 'momentum', 'peg', 'clv',)
+    params = (('market_value', 7), ('momentum', 8), ('peg', 9), ('clv', 10),)
+
+
+def main(start_date, end_date, index_code, period, stock_num):
+    """
+    datetime    open    high    low     close   volume  openi.. mar...	momen.. peg	    clv
+    2016-06-24	0.16	0.002	0.085	0.078	0.173	0.214	0.068	0.068	0.068	0.068
+    2016-06-27	0.16	0.003	0.063	0.048	0.180	0.202	0.081	0.081	0.081	0.081
+    2016-06-28	0.13	0.010	0.059	0.034	0.111	0.122	0.042	0.042	0.042	0.042
+    2016-06-29	0.06	0.019	0.058	0.049	0.042	0.053	0.079	0.079	0.079	0.079
+    2016-06-30	0.03	0.012	0.037	0.027	0.010	0.077	0.057	0.057	0.057	0.057
+    """
+
     cerebro = bt.Cerebro()  # 初始化cerebro
 
-    stock_codes = tushare_utils.index_weight(index)
+    # 加载指数，就是为了当日期占位符
+    df_index = tushare_utils.index_daily("000001.SH", start_date, end_date)
 
-    # 加载股票池中的所有的交易数据
-    def get_stock_data(code, d1, d2):  # 此处时间应与下面回测期间一致
-        pro = ts.pro_api()
-        df = ts.pro_bar(ts_code=code, adj='qfq', start_date=d1, end_date=d2)
-        df.index = pd.to_datetime(df.trade_date)
-        df.sort_index(ascending=True, inplace=True)
-        df = df.rename(columns={'vol': 'volume'})
-        df['openinterest'] = 0
-        df = df[['open', 'high', 'low', 'close', 'volume', 'openinterest']]
-        return df
+    stock_codes = tushare_utils.index_weight(index_code, start_date, end_date)
+    stock_codes = stock_codes[:stock_num]
 
-    for stock_code in stock_codes:
-        # 获取数据
-        dataframe = get_stock_data(stock_code, start_date, end_date)
-        # 加载数据,每只股票的交易数据加载一次
-        data = bt.feeds.PandasData(dataname=dataframe, fromdate=start, todate=end)
-        # 在Cerebro中添加股票数据
-        cerebro.adddata(data, name=stock_code)
+    combined_factor = factor_combiner.synthesize_by_jaqs(stock_codes, start_date, end_date)
+    combined_factor.index = pd.to_datetime(combined_factor.index, format="%Y%m%d")
+    logger.debug("合成的多因子为：\n%r",combined_factor)
+
+    start_date = utils.str2date(start_date)  # 开始日期
+    end_date = utils.str2date(end_date)  # 结束日期
+
+    # 格式化成backtrader要求：索引日期；列名叫vol和datetime
+    df_index['trade_date'] = pd.to_datetime(df_index['trade_date'], format="%Y%m%d")
+    df_index = df_index.rename(columns={'vol': 'volume', 'trade_date': 'datetime'})
+    df_index = df_index.set_index('datetime')
+
+    data = PandasData(dataname=df_index, fromdate=start_date, todate=end_date)
+    # 在Cerebro中添加股票数据
+    cerebro.adddata(data, name="000001.SH")
 
     ################## cerebro整体设置 #####################
 
@@ -134,32 +168,33 @@ def main(start_date, end_date, index, stock_num):
     cerebro.addsizer(Percent)
 
     # 将交易策略加载到回测系统中
-    cerebro.addstrategy(CombineFactorStrategy)
+    cerebro.addstrategy(CombineFactorStrategy, index, period, len(df_index), combined_factor)
 
     # 添加分析对象
     cerebro.addanalyzer(btay.SharpeRatio, _name="sharpe")  # 夏普指数
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
 
     # 打印
-    print(f'回测期间：{d1}:{d2}\n初始资金: {startcash}')
+    logger.debug('回测期间：%r ~ %r , 初始资金: %r', start_date, end_date, startcash)
     # 运行回测
     results = cerebro.run()
     # 打印最后结果
     portvalue = cerebro.broker.getvalue()
     pnl = portvalue - startcash
     # 打印结果
-    print(f'总资金: {round(portvalue, 2)}')
-    print(f'净收益: {round(pnl, 2)}')
-    print("夏普比例:", results[0].analyzers.sharpe.get_analysis())
-    print("回撤", results[0].analyzers.DW.get_analysis())
+    logger.debug(f'总资金: {round(portvalue, 2)}')
+    logger.debug(f'净收益: {round(pnl, 2)}')
+    logger.debug("夏普比例:", results[0].analyzers.sharpe.get_analysis())
+    logger.debug("回撤", results[0].analyzers.DW.get_analysis())
 
-    cerebro.plot(style="candlestick")  # 绘图
+    # cerebro.plot(style="candlestick")  # 绘图
 
 
+# python -m example.testback
 if __name__ == '__main__':
     start = "20200101"  # 开始日期
     end = "20201201"  # 结束日期
     index = '000905.SH'  # 股票池为中证500
     period = 20  # 调仓周期
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
-    main(start, end, index, stock_num)
+    main(start, end, index, period, stock_num)

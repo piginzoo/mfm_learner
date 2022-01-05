@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 
-from utils import tushare_utils, factor_utils
+from utils import tushare_dbutils, factor_utils
 
 logger = logging.getLogger(__name__)
 period_window = 5
@@ -24,7 +24,7 @@ period_window = 5
 def load_stock_data(stock_codes, start, end):
     df_merge = None
     for stock_code in stock_codes:
-        df_daily = tushare_utils.daily(stock_code=stock_code, start_date=start, end_date=end)
+        df_daily = tushare_dbutils.daily(stock_code=stock_code, start_date=start, end_date=end)
         if df_merge is None:
             df_merge = df_daily
         else:

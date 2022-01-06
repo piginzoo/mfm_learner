@@ -1,17 +1,17 @@
 import logging
 import math
+import time
 
 import pandas as pd
 from backtrader.feeds import PandasData
 
 from example import factor_combiner
-from utils import utils
+from utils import utils, tushare_dbutils
 
 utils.init_logger()
 import backtrader as bt  # 引入backtrader框架
 import backtrader.analyzers as btay  # 添加分析函数
 import numpy as np
-from utils import tushare_utils
 
 """
 用factor_tester.py中合成的多因子，做选择股票的策略 ，去选择中证500的股票，跑收益率回测。使用backtrader来做回测框架。
@@ -81,6 +81,14 @@ class CombineFactorStrategy(bt.Strategy):
         self.factors = factors
         logger.debug("调仓期:%d，股票池：%s, 交易日： %d 天", period, stock_index, total)
 
+    def __print_broker(self):
+        # logger.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # logger.debug('|  当前总资产:%.2f', self.broker.getvalue())
+        # logger.debug('|  当前总头寸:%.2f', self.broker.getcash())
+        # logger.debug('|  当前持仓量:%.2f', self.broker.getposition(self.data).size)
+        # logger.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        pass
+
     def next(self):
         """
         每天都会回调，我们的逻辑是：
@@ -115,6 +123,8 @@ class CombineFactorStrategy(bt.Strategy):
 
         if self.current_day < self.period: return
 
+        logger.debug("-" * 50)
+
         self.current_day = 0
 
         factor = self.factors.loc[current_date]
@@ -125,10 +135,10 @@ class CombineFactorStrategy(bt.Strategy):
 
         factor = factor.dropna()
         factor = factor.sort_values(ascending=False)
-        logger.debug("当天的因子为：%r", factor)
+        # logger.debug("当天的因子为：%r", factor)
         # 选择因子值前20%
         select_stocks = factor.index[:math.ceil(0.2 * len(factor))]
-        logger.debug("此次选中的股票为：%r", select_stocks)
+        logger.debug("此次选中的股票为：%r", ",".join(select_stocks.tolist()))
 
         # 以往买入的标的，本次不在标的中，则先平仓
         # "常规下单函数主要有 3 个：买入 buy() 、卖出 sell()、平仓 close() "
@@ -138,18 +148,29 @@ class CombineFactorStrategy(bt.Strategy):
         for sell_stock in to_sell_stocks:
             # 根据名字获得对应那只股票的数据
             stock_data = self.getdatabyname(sell_stock)
-            self.close(data=stock_data)
+
+            # size = self.getsizing(stock_data,isbuy=False)
+            # self.sell(data=stock_data,exectype=bt.Order.Limit,size=size)
+            size = self.getposition(stock_data, self.broker).size
+            self.close(data=stock_data, exectype=bt.Order.Limit)
             self.current_stocks.remove(sell_stock)
-            logger.debug('卖出 %s 平仓: %r', sell_stock, self.getposition(sell_stock).size)
-        logger.debug("合计卖出%d只股票，剩余%d只持仓", len(to_sell_stocks), len(self.current_stocks))
+            logger.debug('平仓股票 %s : 卖出%r股', stock_data._name, size)
+
+        logger.debug("卖出%d只股票，剩余%d只持仓", len(to_sell_stocks), len(self.current_stocks))
+
+        self.__print_broker()
 
         # 每只股票买入资金百分比，预留2%的资金以应付佣金和计算误差
         buy_percentage = (1 - 0.02) / len(select_stocks)
 
-        # 得到可以用来购买的金额
-        buy_amount = buy_percentage * self.broker.getvalue()
+        # 得到可以用来购买的金额,控制仓位在0.6
+        buy_amount = buy_percentage * self.broker.getcash()
 
         for buy_stock in select_stocks:
+
+            # 防止股票不在数据集中
+            if buy_stock not in self.getdatanames():
+                continue
 
             # 如果选中的股票在当前的持仓中，就忽略
             if buy_stock in self.current_stocks:
@@ -159,11 +180,14 @@ class CombineFactorStrategy(bt.Strategy):
             # 根据名字获得对应那只股票的数据
             stock_data = self.getdatabyname(buy_stock)
             open_price = stock_data.open[0]
+
             # 按次日开盘价计算下单量，下单量是100（手）的整数倍
             size = math.ceil(buy_amount / open_price)
             logger.debug("购入股票[%s 股价%.2f] %d股，金额:%.2f", buy_stock, open_price, size, buy_amount)
             self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
             self.current_stocks.append(buy_stock)
+
+        self.__print_broker()
 
     # 记录交易执行情况（可省略，默认不输出结果）
     def notify_order(self, order):
@@ -172,12 +196,14 @@ class CombineFactorStrategy(bt.Strategy):
 
         # 如果order为submitted/accepted,返回空
         if order.status in [order.Submitted, order.Accepted]:
+            # logger.debug('订单状态：%r', order.Status[order.status])
             return
 
         # 如果order为buy/sell executed,报告价格结果
         if order.status in [order.Completed]:
             if order.isbuy():
-                logger.debug('买入: 价格[%.2f],成本[%.2f],手续费[%.2f]',
+                logger.debug('成功买入: 股票[%s],价格[%.2f],成本[%.2f],手续费[%.2f]',
+                             order.data._name,
                              order.executed.price,
                              order.executed.value,
                              order.executed.comm)
@@ -185,7 +211,9 @@ class CombineFactorStrategy(bt.Strategy):
                 self.buyprice = order.executed.price
                 self.buycomm = order.executed.comm
             else:
-                logger.debug('卖出: 价格[%.2f],成本[%.2f],手续费[%.2f]',
+                bt.OrderData
+                logger.debug('成功卖出: 股票[%s],价格[%.2f],成本[%.2f],手续费[%.2f]',
+                             order.data._name,
                              order.executed.price,
                              order.executed.value,
                              order.executed.comm)
@@ -205,15 +233,23 @@ class CombineFactorStrategy(bt.Strategy):
             Order.Cancelled (or Order.Canceled)：确认订单已经被撤销；
             Order.Expired：订单已到期，其已经从系统中删除 。
             """
-            logger.debug('交易失败，订单状态：%r', order.Status[order.status])
+            logger.debug('交易失败，股票[%s]订单状态：%r', order.data._name, order.Status[order.status])
 
         self.order = None
 
     # 记录交易收益情况（可省略，默认不输出结果）
     def notify_trade(self, trade):
+        # 最后清仓
+        # for sell_stock in self.current_stocks:
+        #     stock_data = self.getdatabyname(sell_stock)
+        #     self.close(data=stock_data, exectype=bt.Order.Limit)
+        #     logger.debug('最后平仓股票 %s', stock_data._name)
+
         if not trade.isclosed:
             return
-        logger.debug('策略收益：毛收益 [%.2f], 净收益 [%.2f]', trade.pnl, trade.pnlcomm)
+        logger.debug('策略收益：股票[%s], 毛收益 [%.2f], 净收益 [%.2f]', trade.data._name, trade.pnl, trade.pnlcomm)
+
+        # self.__print_broker()
 
 
 # # 自定义数据
@@ -242,7 +278,7 @@ def main(start_date, end_date, index_code, period, stock_num):
 
     cerebro = bt.Cerebro()  # 初始化cerebro
 
-    stock_codes = tushare_utils.index_weight(index_code, start_date)
+    stock_codes = tushare_dbutils.index_weight(index_code, start_date)
     stock_codes = stock_codes[:stock_num]
 
     combined_factor = factor_combiner.synthesize_by_jaqs(stock_codes, start_date, end_date)
@@ -253,7 +289,7 @@ def main(start_date, end_date, index_code, period, stock_num):
     d_end_date = utils.str2date(end_date)  # 结束日期
 
     # 加载上证指数，就是为了当日期占位符,在Cerebro中添加上证股指数据,格式: datetime,open,high,low,close,volume,openi..
-    df_index = tushare_utils.index_daily("000001.SH", start_date, end_date)
+    df_index = tushare_dbutils.index_daily("000001.SH", start_date, end_date)
     df_index = comply_backtrader_data_format(df_index)
     data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date)
     cerebro.adddata(data, name="000001.SH")
@@ -261,7 +297,14 @@ def main(start_date, end_date, index_code, period, stock_num):
 
     # 想脑波cerebro逐个追加每只股票的数据
     for stock_code in stock_codes:
-        df_stock = tushare_utils.daily(stock_code, start_date, end_date)
+        df_stock = tushare_dbutils.daily(stock_code, start_date, end_date)
+
+        trade_days = tushare_dbutils.trade_cal(start_date, end_date)
+        if len(df_stock) / len(trade_days) < 0.9:
+            logger.warning("股票[%s] 缺失交易日[%d/总%d]天，超过10%%，忽略此股票",
+                           stock_code, len(df_stock), len(trade_days))
+            continue
+
         df_stock = comply_backtrader_data_format(df_stock)
         data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date)
         cerebro.adddata(data, name=stock_code)
@@ -287,7 +330,7 @@ def main(start_date, end_date, index_code, period, stock_num):
     cerebro.addstrategy(CombineFactorStrategy, index, period, len(df_index), combined_factor)
 
     # 添加分析对象
-    cerebro.addanalyzer(btay.SharpeRatio, _name="sharpe")  # 夏普指数
+    cerebro.addanalyzer(btay.SharpeRatio, _name="sharpe",timeframe=bt.TimeFrame.Days)  # 夏普指数
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
 
     # 打印
@@ -298,19 +341,26 @@ def main(start_date, end_date, index_code, period, stock_num):
     portvalue = cerebro.broker.getvalue()
     pnl = portvalue - start_cash
     # 打印结果
-    logger.debug(f'总资金: {round(portvalue, 2)}')
-    logger.debug(f'净收益: {round(pnl, 2)}')
-    logger.debug("夏普比例:", results[0].analyzers.sharpe.get_analysis())
-    logger.debug("回撤", results[0].analyzers.DW.get_analysis())
-
+    logger.debug("=" * 80)
+    logger.debug("股票数: %d 只", len(stock_codes))
+    logger.debug("投资期: %s~%s, %d 天", start_date, end_date, (d_end_date - d_start_date).days)
+    logger.debug('总资金: %.2f', portvalue)
+    logger.debug('余头寸: %.2f', cerebro.broker.getcash())
+    logger.debug('净收益: %.2f', pnl)
+    logger.debug('收益率: %.2f%%', pnl / portvalue * 100)
+    logger.debug("夏普比: %.2f%%", results[0].analyzers.sharpe.get_analysis().sharperatio)
+    logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
     # cerebro.plot(style="candlestick")  # 绘图
+    # bt.AutoOrderedDict
 
 
 # python -m example.testback
 if __name__ == '__main__':
-    start = "20200101"  # 开始日期
-    end = "20201201"  # 结束日期
+    start_time = time.time()
+    start = "20150101"  # 开始日期
+    end = "20161231"  # 结束日期
     index = '000905.SH'  # 股票池为中证500
-    period = 20  # 调仓周期
-    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    period = 22  # 调仓周期
+    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
     main(start, end, index, period, stock_num)
+    logger.debug("共耗时: %.0f 秒", time.time() - start_time)

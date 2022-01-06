@@ -153,4 +153,11 @@ if __name__ == '__main__':
     # 设置佣金为0.0
     cerebro.broker.setcommission(commission=0.0)
 
-    cerebro.run()
+    # 添加分析对象
+    import backtrader.analyzers as btay  # 添加分析函数
+    cerebro.addanalyzer(btay.SharpeRatio, _name="sharpe",timeframe=bt.TimeFrame.Days)  # 夏普指数
+    cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
+
+    results = cerebro.run()
+    print(results[0][0])
+    print("夏普比:", results[0][0].analyzers.sharpe.get_analysis())

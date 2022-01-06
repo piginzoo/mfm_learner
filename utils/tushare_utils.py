@@ -73,6 +73,12 @@ def daliy_one(stock_code, start_date, end_date, fields=None):
     __check_lenght(df)
     return df
 
+def trade_cal(start_date,end_date,exchange='SSE'):
+    """
+    exchange: 交易所 SSE上交所,SZSE深交所,CFFEX 中金所,SHFE 上期所,CZCE 郑商所,DCE 大商所,INE 上能源
+    """
+    df = pro.trade_cal(exchange=exchange, start_date=start_date, end_date=end_date,is_open=1)
+    return df['cal_date']
 
 def daily(stock_code, start_date, end_date, fields=None):
     if type(stock_code) == list:

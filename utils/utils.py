@@ -46,9 +46,8 @@ def str2date(s_date, format="%Y%m%d"):
 def date2str(date, format="%Y%m%d"):
     return datetime.datetime.strftime(date, format)
 
-
 def init_logger():
-    logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:%(levelname)s : %(message)s',
+    logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:%(process)d:%(levelname)s : %(message)s',
                         level=logging.DEBUG,
                         handlers=[logging.StreamHandler()])
 

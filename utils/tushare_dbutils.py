@@ -65,6 +65,10 @@ def fina_indicator(stock_code, start_date, end_date):
     return df
 
 
+def trade_cal(start_date, end_date, exchange='SSE'):
+    return tushare_utils.trade_cal(start_date, end_date, exchange)
+
+
 # python -m utils.tushare_dbutils
 if __name__ == '__main__':
     ts_code = '000001.SZ'

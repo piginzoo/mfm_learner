@@ -350,19 +350,19 @@ def main(start_date, end_date, index_code, period, stock_num):
     logger.debug('余头寸: %.2f', cerebro.broker.getcash())
     logger.debug('净收益: %.2f', pnl)
     logger.debug('收益率: %.2f%%', pnl / portvalue * 100)
-    # logger.debug("夏普比: %.2f%%", results[0].analyzers.sharpe.get_analysis()['sharperatio'])
+    logger.debug("夏普比: %.2f%%", results[0].analyzers.sharpe.get_analysis()['sharperatio'])
     logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
-    cerebro.plot(style="candlestick")#, volume=False)  # 绘图
+    # cerebro.plot(style="candlestick",iplot=False)
     # bt.AutoOrderedDict
 
 
 # python -m example.testback
 if __name__ == '__main__':
     start_time = time.time()
-    start_date = "20150101"  # 开始日期
-    end_date = "20151201"  # 结束日期
+    start_date = "20190101"  # 开始日期
+    end_date = "20210501"  # 结束日期
     index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
-    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
     main(start_date, end_date, index, period, stock_num)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

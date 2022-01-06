@@ -34,6 +34,8 @@ class TestStrategy(bt.Strategy):
         if self.order:
             return
 
+        self.log("lines:"+str(len(self.lines)))
+
         # 如果没有持仓则买入
         if not self.position:
             # 今天的收盘价 < 昨天收盘价
@@ -101,7 +103,7 @@ if __name__ == '__main__':
         # 数据必须大于fromdate
         fromdate=datetime.datetime(2000, 1, 1),
         # 数据必须小于todate
-        todate=datetime.datetime(2000, 12, 31),
+        todate=datetime.datetime(2000, 3, 1),
         reverse=False)
 
     # 为Cerebro引擎添加策略

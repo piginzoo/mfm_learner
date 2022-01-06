@@ -69,8 +69,9 @@ def load_stock_data(stock_codes, start_date, end_date):
 
         df_finance['ann_date_next'] = df_finance['ann_date'].shift(-1)
         df_basic['netprofit_yoy'] = np.NaN
-        logger.debug("股票[%s] %s~%s 有%d条财务数据，但有%d条基础数据", stock_code, start_date, end_date, len(df_finance),
-                     len(df_basic))
+        logger.debug("股票[%s] %s~%s 有%d条财务数据，但有%d条基础数据",
+                     stock_code, start_date, end_date, len(df_finance), len(df_basic))
+
         for index, finance in df_finance.iterrows():
 
             next_date = finance['ann_date_next']

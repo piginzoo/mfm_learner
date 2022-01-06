@@ -105,6 +105,7 @@ class CombineFactorStrategy(bt.Strategy):
         - 每次都是满仓，即用卖出的股票头寸，全部购入新的股票，头寸仅在新购入股票中平均分配
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
+        logger.debug("已经处理了%d个数据, 总共有%d个数据", len(self), self.data.buflen())
 
         # logger.debug("--------------------------------------------------")
         # logger.debug('当前可用资金:%r', self.broker.getcash())
@@ -134,7 +135,6 @@ class CombineFactorStrategy(bt.Strategy):
             return
 
         factor = factor.dropna()
-        factor = factor.sort_values(ascending=False)
         # logger.debug("当天的因子为：%r", factor)
         # 选择因子值前20%
         select_stocks = factor.index[:math.ceil(0.2 * len(factor))]
@@ -262,7 +262,9 @@ class CombineFactorStrategy(bt.Strategy):
 def comply_backtrader_data_format(df):
     df['trade_date'] = pd.to_datetime(df['trade_date'], format="%Y%m%d")
     df = df.rename(columns={'vol': 'volume', 'trade_date': 'datetime'})  # 列名准从backtrader的命名规范
+    df['openinterest'] = 0
     df = df.set_index('datetime')
+    df = df.sort_index(ascending=True)
     return df
 
 
@@ -291,7 +293,7 @@ def main(start_date, end_date, index_code, period, stock_num):
     # 加载上证指数，就是为了当日期占位符,在Cerebro中添加上证股指数据,格式: datetime,open,high,low,close,volume,openi..
     df_index = tushare_dbutils.index_daily("000001.SH", start_date, end_date)
     df_index = comply_backtrader_data_format(df_index)
-    data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date)
+    data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date)#, plot=False)
     cerebro.adddata(data, name="000001.SH")
     logger.debug("初始化上证数据到脑波：%d 条", len(df_index))
 
@@ -306,7 +308,7 @@ def main(start_date, end_date, index_code, period, stock_num):
             continue
 
         df_stock = comply_backtrader_data_format(df_stock)
-        data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date)
+        data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date)#, plot=False)
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
     logger.debug("合计追加 %d 只股票数据到脑波cerebro", len(stock_codes) + 1)
@@ -330,7 +332,7 @@ def main(start_date, end_date, index_code, period, stock_num):
     cerebro.addstrategy(CombineFactorStrategy, index, period, len(df_index), combined_factor)
 
     # 添加分析对象
-    cerebro.addanalyzer(btay.SharpeRatio, _name="sharpe",timeframe=bt.TimeFrame.Days)  # 夏普指数
+    cerebro.addanalyzer(btay.SharpeRatio, _name="sharpe")  # ,timeframe=bt.TimeFrame.Days)  # 夏普指数
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
 
     # 打印
@@ -348,19 +350,19 @@ def main(start_date, end_date, index_code, period, stock_num):
     logger.debug('余头寸: %.2f', cerebro.broker.getcash())
     logger.debug('净收益: %.2f', pnl)
     logger.debug('收益率: %.2f%%', pnl / portvalue * 100)
-    logger.debug("夏普比: %.2f%%", results[0].analyzers.sharpe.get_analysis().sharperatio)
+    # logger.debug("夏普比: %.2f%%", results[0].analyzers.sharpe.get_analysis()['sharperatio'])
     logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
-    # cerebro.plot(style="candlestick")  # 绘图
+    cerebro.plot(style="candlestick")#, volume=False)  # 绘图
     # bt.AutoOrderedDict
 
 
 # python -m example.testback
 if __name__ == '__main__':
     start_time = time.time()
-    start = "20150101"  # 开始日期
-    end = "20161231"  # 结束日期
+    start_date = "20150101"  # 开始日期
+    end_date = "20151201"  # 结束日期
     index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
-    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
-    main(start, end, index, period, stock_num)
+    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    main(start_date, end_date, index, period, stock_num)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

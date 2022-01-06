@@ -24,6 +24,7 @@ FACTORS = {
     "peg": peg,
     "clv": clv
 }
+FACTORS_LONG_SHORT = [-1,1,1,1] # 因子的多空性质
 
 def get_factors(name, stock_codes, start_date, end_date):
     """
@@ -115,9 +116,11 @@ def synthesize_by_jaqs(stock_codes, start_date, end_date):
     测试因子合成，要求数据得是panel格式的，[trade_date,stock1,stock2,....]
     """
     factor_dict = {}
-    for factor_key in FACTORS.keys():
+    for i,factor_key in enumerate(FACTORS.keys()):
         factors = get_factors(factor_key, stock_codes, start_date, end_date)
+        factors *= FACTORS_LONG_SHORT[i] # 空方因子*(-1)
         factor_dict[factor_key] = factor_utils.to_panel_of_stock_columns(factors)
+
     logger.debug("开始合成因子：%r , 条数：%r",
                  list(factor_dict.keys()),
                  ",".join([str(len(x)) for x in list(factor_dict.values())]))

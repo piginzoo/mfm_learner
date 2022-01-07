@@ -1,3 +1,4 @@
+dateformat: '%Y%m%d'
 datasource: 'tushare' # currently support: tushare|database|baostock|jqdata
 datasources:
         jqdata:

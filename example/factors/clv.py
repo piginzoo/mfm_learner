@@ -17,34 +17,27 @@
 # 参考：https://www.bilibili.com/read/cv13893224?spm_id_from=333.999.0.0
 import logging
 
-import pandas as pd
-
-from utils import tushare_dbutils, factor_utils
+from datasource import datasource_utils
+from example.factor import Factor
+from utils import factor_utils
 
 logger = logging.getLogger(__name__)
 
 
-def get_factor(stock_codes, start_date, end_date):
-    df_merge = pd.DataFrame()
-    # 每支股票
-    for stock_code in stock_codes:
-        # 得到日交易数据
-        data = tushare_dbutils.daily(stock_code=stock_code, start_date=start_date, end_date=end_date)
-        # data.info()
-        data = data.sort_values(['trade_date'])
+class CLVFactor(Factor):
+
+    def calculate(self, stock_codes, start_date, end_date, df_daily=None):
+        if df_daily is None:
+            df_daily = datasource_utils.load_daily_data(self.datasource, stock_codes, start_date, end_date)
+
         # 计算CLV因子
-        data['CLV'] = ((data['close'] - data['low']) - (data['high'] - data['close'])) / (data['high'] - data['low'])
+        df_daily['CLV'] = ((df_daily['close'] - df_daily['low']) - (df_daily['high'] - df_daily['close'])) / (
+                    df_daily['high'] - df_daily['low'])
         # 处理出现一字涨跌停
-        data.loc[(data['high'] == data['low']) & (data['open'] > data['pre_close']), 'CLV'] = 1
-        data.loc[(data['high'] == data['low']) & (data['open'] < data['pre_close']), 'CLV'] = -1
+        df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] > df_daily['pre_close']), 'CLV'] = 1
+        df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] < df_daily['pre_close']), 'CLV'] = -1
 
-        # logger.debug("加载%s~%s的股票[%s]的 %d 条CLV数据", start_date, end_date, stock_code, len(data))
-        if df_merge is None:
-            df_merge = data
-        else:
-            df_merge = df_merge.append(data)
-    logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(df_merge))
+        factors = df_daily[['trade_date', 'ts_code', 'CLV']]
+        logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(df_merge))
 
-    factors = df_merge[['trade_date', 'ts_code', 'CLV']]
-
-    return factor_utils.reset_index(factors)
+        return factor_utils.reset_index(factors)

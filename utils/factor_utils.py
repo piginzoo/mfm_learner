@@ -44,10 +44,6 @@ def proprocess(factors):
     return factors
 
 
-def reset_index(factors):
-    factors['trade_date'] = pd.to_datetime(factors['trade_date'], format="%Y%m%d")  # 时间为日期格式，tushare是str
-    factors = factors.set_index(['trade_date', 'ts_code'])
-    return factors
 
 
 # encoding=utf-8

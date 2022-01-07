@@ -1,0 +1,13 @@
+datasource: 'tushare' # currently support: tushare|database|baostock|jqdata
+datasources:
+        jqdata:
+                uid: 'your user id'
+                pwd: 'your password'
+        tushare:
+                token: 'your token'
+        mysql:
+                uid: 'root'
+                pwd: '123456'
+                db:  'tushare'
+                host: '127.0.0.1'
+                port: 3306

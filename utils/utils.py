@@ -6,6 +6,7 @@ import warnings
 import yaml
 
 import conf
+import utils
 
 logger = logging.getLogger(__name__)
 
@@ -25,16 +26,13 @@ def load_config():
     return data
 
 
-def tushare_login():
-    import tushare
-    conf = load_config()
-    tushare.set_token(conf['tushare']['token'])
-    return tushare.pro_api()
-
-
 def connect_db():
-    engine = create_engine(
-        "mysql+pymysql://{}:{}@{}/{}?charset={}".format('root', '123456', '127.0.0.1:3306', 'tushare', 'utf8'))
+    uid = utils.CONF['datasources']['mysql']['uid']
+    pwd = utils.CONF['datasources']['mysql']['pwd']
+    db = utils.CONF['datasources']['mysql']['db']
+    host = utils.CONF['datasources']['mysql']['host']
+    port = utils.CONF['datasources']['mysql']['port']
+    engine = create_engine("mysql+pymysql://{}:{}@{}:{}/{}?charset={}".format(uid, pwd, host, port, db, 'utf8'))
     # engine = create_engine('sqlite:///' + DB_FILE + '?check_same_thread=False', echo=echo)  # 是否显示SQL：, echo=True)
     return engine
 
@@ -45,6 +43,7 @@ def str2date(s_date, format="%Y%m%d"):
 
 def date2str(date, format="%Y%m%d"):
     return datetime.datetime.strftime(date, format)
+
 
 def init_logger():
     logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:%(process)d:%(levelname)s : %(message)s',

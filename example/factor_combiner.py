@@ -91,14 +91,6 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
     create_turnover_tear_sheet(factor_data, set_context=False)
 
 
-def test_by_jqfactor_analyzer():
-    import jqfactor_analyzer
-    jqfactor_analyzer.analyze()
-
-
-def test_by_jaqs():
-    pass
-
 
 def synthesize(stock_pool, start_date, end_date):
     """测试因子合成"""

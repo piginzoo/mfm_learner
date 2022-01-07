@@ -1,3 +1,4 @@
+from datasource.datasource_utils import comply_field_names
 from datasource.impl.baostock_datasource import BaostockDataSource
 from datasource.impl.database_datasource import DatabaseDataSource
 from datasource.impl.tushare_datasource import TushareDataSource

@@ -25,6 +25,13 @@ def comply_field_names(df):
     df = df.rename(columns=column_mapping)
     return df
 
+def post_query(func):
+    def wrapper(*args, **kw):
+        df = func(*args, **kw)
+        df = comply_field_names(df)
+        return df
+    return wrapper
+
 
 def load_daily_data(datasource, stock_codes, start_date, end_date):
     df_merge = pd.DataFrame()

@@ -8,6 +8,7 @@ import pandas as pd
 import tushare
 
 from datasource.datasource import DataSource
+from datasource.datasource_utils import post_query
 from utils import utils
 
 logger = logging.getLogger(__name__)
@@ -69,10 +70,11 @@ class TushareDataSource(DataSource):
     def __init__(self):
         conf = utils.CONF
         self.pro = tushare.pro_api(conf['datasources']['tushare']['token'])
-        logger.debug("login到tushare pro上，key: %s...",conf['tushare']['token'][:10])
+        logger.debug("login到tushare pro上，key: %s...", conf['tushare']['token'][:10])
 
     # 返回每日行情数据，不限字段
     # https://tushare.pro/document/2?doc_id=27
+    @post_query
     def daliy_one(self, stock_code, start_date, end_date, fields=None):
         df = _get_cache('daily', stock_code, start_date, end_date)
         if df is not None: return df
@@ -89,6 +91,7 @@ class TushareDataSource(DataSource):
         df = self.pro.trade_cal(exchange=exchange, start_date=start_date, end_date=end_date, is_open=1)
         return df['cal_date']
 
+    @post_query
     def daily(self, stock_code, start_date, end_date, fields=None):
         if type(stock_code) == list:
             logger.debug("获取多只股票的交易数据：%r", ",".join(stock_code))
@@ -108,6 +111,7 @@ class TushareDataSource(DataSource):
 
     # 返回每日的其他信息，主要是市值啥的
     # https://tushare.pro/document/2?doc_id=32
+    @post_query
     def daily_basic(self, stock_code, start_date, end_date, fields=None):
         df = _get_cache('daily_basic', stock_code, start_date, end_date)
         if df is not None: return df
@@ -119,6 +123,7 @@ class TushareDataSource(DataSource):
 
     # 指数日线行情
     # https://tushare.pro/document/2?doc_id=95
+    @post_query
     def index_daily(self, index_code, start_date, end_date, fields=None):
         df = _get_cache('index_daily', index_code, start_date, end_date)
         if df is not None: return df
@@ -130,6 +135,7 @@ class TushareDataSource(DataSource):
 
     # 获得财务数据， TODO：没有按照出财务报表的时间来query
     # https://tushare.pro/document/2?doc_id=79
+    @post_query
     def fina_indicator(self, stock_code, start_date, end_date, fields=None):
         df = _get_cache('fina_indicator', stock_code, start_date, end_date)
         if df is not None: return df
@@ -141,6 +147,7 @@ class TushareDataSource(DataSource):
 
     # 获得指数包含的股票，从开始日期找1年
     # https://tushare.pro/document/2?doc_id=96
+    @post_query
     def index_weight(self, index_code, trade_date, fields=None):
         """
         这个返回数据量太大，每天300条，10天就300条，常常触发5000条限制，

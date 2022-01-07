@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 
 class CLVFactor(Factor):
 
+    def __init__(self):
+        super.__init__()
+
     def calculate(self, stock_codes, start_date, end_date, df_daily=None):
         if df_daily is None:
             df_daily = datasource_utils.load_daily_data(self.datasource, stock_codes, start_date, end_date)
@@ -37,7 +40,7 @@ class CLVFactor(Factor):
         df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] > df_daily['pre_close']), 'CLV'] = 1
         df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] < df_daily['pre_close']), 'CLV'] = -1
 
-        factors = df_daily[['trade_date', 'ts_code', 'CLV']]
-        logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(df_merge))
+        factors = df_daily['CLV']
+        logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(factors))
 
-        return factor_utils.reset_index(factors)
+        return factors

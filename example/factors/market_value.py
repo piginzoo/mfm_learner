@@ -6,7 +6,8 @@ import logging
 
 import numpy as np
 
-from utils import tushare_dbutils, factor_utils
+from datasource import datasource_utils
+from example.factor import Factor
 
 logger = logging.getLogger(__name__)
 
@@ -14,31 +15,17 @@ logger = logging.getLogger(__name__)
 # 规模因子 - 市值因子Market Value
 """
 
-def load_stock_data(stock_codes, start, end):
-    df_merge = None
-    for stock_code in stock_codes:
-        df_basic = tushare_dbutils.daily_basic(stock_code=stock_code, start_date=start, end_date=end)
-        if df_merge is None:
-            df_merge = df_basic
-        else:
-            df_merge = df_merge.append(df_basic)
-        logger.debug("加载%s~%s的股票[%s]的%d条交易和基本信息的合并数据", start, end, stock_code, len(df_merge))
-    logger.debug("一共加载%s~%s %d条数据", start, end, len(df_merge))
-    return df_merge
 
+class MarketValueFactor(Factor):
 
-def get_factor(stock_codes, start, end):
-    """
-    市值因子
-    :param universe:
-    :param start:
-    :param end:
-    :param file_name:
-    :return:
-    """
-    stock_data = load_stock_data(stock_codes, start=start, end=end)
-    factors = stock_data
-    factors['LNCAP'] = np.log(stock_data['total_mv'])
-    logger.debug("计算完市值因子(LNCAP)，%d 条因子值", len(factors))
-    factors = factors[['trade_date', 'ts_code', 'LNCAP']]
-    return factor_utils.reset_index(factors)
+    def __init__(self):
+        super.__init__()
+
+    def calculate(self, stock_codes, start_date, end_date, df_daily=None):
+        if df_daily is None:
+            df_daily = datasource_utils.load_daily_data(self.datasource, stock_codes, start_date, end_date)
+
+        df_daily['LNCAP'] = np.log(df_daily['total_mv'])
+        logger.debug("计算完市值因子(LNCAP)，%d 条因子值", len(df_daily))
+
+        return df_daily['LNCAP']

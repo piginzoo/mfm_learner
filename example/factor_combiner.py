@@ -169,17 +169,17 @@ if __name__ == '__main__':
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 测试单因子
-    # test_by_alphalens("clv", stock_pool, start, end, adjustment_days, stock_num)
-    # test("momentum", stock_pool, start, end, adjustment_days, stock_num)
-    # test("market_value", stock_pool, start, end, adjustment_days, stock_num)
-    # test("peg", stock_pool, start, end, adjustment_days, stock_num)
+    test_by_alphalens("clv", stock_pool, start, end, adjustment_days, stock_num)
+    test_by_alphalens("momentum", stock_pool, start, end, adjustment_days, stock_num)
+    test_by_alphalens("market_value", stock_pool, start, end, adjustment_days, stock_num)
+    test_by_alphalens("peg", stock_pool, start, end, adjustment_days, stock_num)
 
     # 测试多因子合成
     # combinefactor = synthesize(stock_pool, start, end)
 
     # 测试JAQS多因子合成
-    stock_codes = get_stocks(stock_pool, start, end)
-    combinefactor = synthesize_by_jaqs(stock_codes, start, end)
-    logger.debug("合成因子：")
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(combinefactor)  # .dropna(how="all").head())
+    # stock_codes = get_stocks(stock_pool, start, end)
+    # combinefactor = synthesize_by_jaqs(stock_codes, start, end)
+    # logger.debug("合成因子：")
+    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+    #     print(combinefactor)  # .dropna(how="all").head())

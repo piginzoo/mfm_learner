@@ -5,8 +5,10 @@ import logging
 
 import pandas as pd
 
-from data_source.datasource import DataSource
-from utils import utils, tushare_utils
+from datasource.datasource import DataSource
+from datasource.datasource_utils import post_query
+from datasource.impl.tushare_datasource import TushareDataSource
+from utils import utils
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,7 @@ logger = logging.getLogger(__name__)
 class DatabaseDataSource(DataSource):
     def __init__(self):
         self.db_engine = utils.connect_db()
+        self.tushare = TushareDataSource()
 
     # 返回每日行情数据，不限字段
     def __daliy_one(self, stock_code, start_date, end_date):
@@ -22,6 +25,7 @@ class DatabaseDataSource(DataSource):
             self.db_engine)
         return df
 
+    @post_query
     def daily(self, stock_code, start_date, end_date):
         if type(stock_code) == list:
             logger.debug("获取多只股票的交易数据：%r", ",".join(stock_code))
@@ -40,6 +44,7 @@ class DatabaseDataSource(DataSource):
             return df_one
 
     # 返回每日的其他信息，主要是市值啥的
+    @post_query
     def daily_basic(self, stock_code, start_date, end_date):
         df = pd.read_sql(
             f'select * from daily_basic \
@@ -48,22 +53,26 @@ class DatabaseDataSource(DataSource):
         return df
 
     # 指数日线行情
+    @post_query
     def index_daily(self, index_code, start_date, end_date):
-        return tushare_utils.index_daily(index_code, start_date, end_date)
+        return self.tushare.index_daily(index_code, start_date, end_date)
 
     # 返回指数包含的股票
+    @post_query
     def index_weight(self, index_code, start_date):
-        return tushare_utils.index_weight(index_code, start_date)
+        return self.tushare.index_weight(index_code, start_date)
 
     # 获得财务数据
+    @post_query
     def fina_indicator(self, stock_code, start_date, end_date):
         df = pd.read_sql(
             f'select * from fina_indicator \
                 where ts_code="{stock_code}" and ann_date>="{start_date}" and ann_date<="{end_date}"', self.db_engine)
         return df
 
+    @post_query
     def trade_cal(self, start_date, end_date, exchange='SSE'):
-        return tushare_utils.trade_cal(start_date, end_date, exchange)
+        return self.tushare.trade_cal(start_date, end_date, exchange)
 
 
 # python -m utils.tushare_dbutils

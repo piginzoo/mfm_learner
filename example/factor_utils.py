@@ -1,11 +1,13 @@
-import pandas as pd
 import logging
+
+from sklearn import preprocessing
 
 logger = logging.getLogger(__name__)
 
 
-def __winsorize_series(se):
+def winsorize(df, sigma=3):
     """
+    缩尾处理
     把分数为97.5%和2.5%之外的异常值替换成分位数值
     :param se:
     :return:
@@ -42,8 +44,6 @@ def proprocess(factors):
     factors = factors.groupby(level='trade_date').apply(__standardize_series)  # 标准化
     logger.debug("规范化预处理完市值因子(LNCAP)，%d行", len(factors))
     return factors
-
-
 
 
 # encoding=utf-8
@@ -85,8 +85,23 @@ def to_panel_of_stock_columns(df):
     return df
 
 
-def fillinf(df):
+def fill_inf(df):
     return df.replace([np.inf, -np.inf], np.nan)
+
+
+def fill_nan(df, by="no"):
+    if by == "no": return df
+    if by == "mean":
+        return df.fill(df.mean())
+    if by == "median":
+        return df.fill(df.median())
+    raise ValueError("无法识别的填充NAN的类型：" + by)
+
+
+def zscore(df):
+    """使用sklean的方法，归一化"""
+    df.iloc[:, 0] = preprocessing.scale(df[:, 0])  # z-score 规范化
+    return df
 
 
 def _mask_df(df, mask):

@@ -19,7 +19,6 @@ import logging
 
 from datasource import datasource_utils
 from example.factor import Factor
-from utils import factor_utils
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ logger = logging.getLogger(__name__)
 class CLVFactor(Factor):
 
     def __init__(self):
-        super.__init__()
+        super().__init__()
 
     def calculate(self, stock_codes, start_date, end_date, df_daily=None):
         if df_daily is None:
@@ -35,7 +34,7 @@ class CLVFactor(Factor):
 
         # 计算CLV因子
         df_daily['CLV'] = ((df_daily['close'] - df_daily['low']) - (df_daily['high'] - df_daily['close'])) / (
-                    df_daily['high'] - df_daily['low'])
+                df_daily['high'] - df_daily['low'])
         # 处理出现一字涨跌停
         df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] > df_daily['pre_close']), 'CLV'] = 1
         df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] < df_daily['pre_close']), 'CLV'] = -1

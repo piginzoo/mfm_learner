@@ -25,7 +25,7 @@ period_window = 10
 class MomentumFactor(Factor):
 
     def __init__(self):
-        super.__init__()
+        super().__init__()
 
     def calculate(self, stock_codes, start_date, end_date, df_daily=None):
         """

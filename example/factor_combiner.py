@@ -1,13 +1,16 @@
 import logging
 import os
 
+from datasource import datasource_factory
+from example import factor_utils
+from example.factors.clv import CLVFactor
+from example.factors.market_value import MarketValueFactor
+from example.factors.momentum import MomentumFactor
+from example.factors.peg import PEGFactor
 from utils import utils
-
 utils.init_logger()
-utils.tushare_login()
 from temp import multifactor_synthesize
 from example.factors import momentum, peg, clv, market_value
-from utils import tushare_dbutils as tushare_utils, factor_utils
 import matplotlib
 import pandas as pd
 import tushare as ts
@@ -18,11 +21,13 @@ from jaqs_fxdayu.research.signaldigger import multi_factor
 
 logger = logging.getLogger(__name__)
 
+datasource = datasource_factory.create()
+
 FACTORS = {
-    'market_value': market_value,
-    "momentum": momentum,
-    "peg": peg,
-    "clv": clv
+    'market_value': MarketValueFactor(),
+    "momentum": MomentumFactor(),
+    "peg": PEGFactor(),
+    "clv": CLVFactor()
 }
 FACTORS_LONG_SHORT = [-1,1,1,1] # 因子的多空性质
 
@@ -37,7 +42,7 @@ def get_factors(name, stock_codes, start_date, end_date):
     """
 
     if name in FACTORS:
-        factors = FACTORS[name].get_factor(stock_codes, start_date, end_date)
+        factors = FACTORS[name].calculate(stock_codes, start_date, end_date)
     else:
         raise ValueError("无法识别的因子名称：" + name)
     if not os.path.exists("data/factors"): os.makedirs("data/factors")
@@ -47,7 +52,7 @@ def get_factors(name, stock_codes, start_date, end_date):
 
 
 def get_stocks(stock_pool, start_date, end_date):
-    stock_codes = tushare_utils.index_weight(stock_pool, start_date)
+    stock_codes = datasource.index_weight(stock_pool, start_date)
     assert stock_codes is not None and len(stock_codes) > 0, stock_codes
     stock_codes = stock_codes[:stock_num]
     logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
@@ -117,15 +122,14 @@ def synthesize_by_jaqs(stock_codes, start_date, end_date):
                  list(factor_dict.keys()),
                  ",".join([str(len(x)) for x in list(factor_dict.values())]))
 
-    df_stocks = tushare_utils.daily(list(stock_codes), start_date, end_date)
+    df_stocks = datasource.daily(list(stock_codes), start_date, end_date)
     df_stocks = factor_utils.reset_index(df_stocks)
     # unstack将行转化成列
     __prices = df_stocks['close'].unstack()
     __highs = df_stocks['high'].unstack()
     __lows = df_stocks['low'].unstack()
 
-    zz500 = tushare_utils.index_daily('000905.SH', start_date, end_date)
-    zz500 = factor_utils.reset_index(zz500)
+    zz500 = datasource.index_daily('000905.SH', start_date, end_date)
     zz500 = zz500['close'].pct_change(1)
     zz500 = factor_utils.to_panel_of_stock_columns(zz500)
     assert len(zz500) != 0
@@ -156,7 +160,7 @@ def synthesize_by_jaqs(stock_codes, start_date, end_date):
     return comb_factor
 
 
-# python -m example.factor_tester
+# python -m example.factor_combiner
 if __name__ == '__main__':
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
     matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号

@@ -9,7 +9,7 @@ import tushare
 
 from datasource.datasource import DataSource
 from datasource.datasource_utils import post_query
-from utils import utils
+import utils
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +68,9 @@ def _set_cache(func, df, stock_code, start_date, end_date):
 class TushareDataSource(DataSource):
 
     def __init__(self):
-        conf = utils.CONF
-        self.pro = tushare.pro_api(conf['datasources']['tushare']['token'])
-        logger.debug("login到tushare pro上，key: %s...", conf['tushare']['token'][:10])
+        token = utils.CONF['datasources']['tushare']['token']
+        self.pro = tushare.pro_api(token)
+        logger.debug("login到tushare pro上，key: %s...",token[:10])
 
     # 返回每日行情数据，不限字段
     # https://tushare.pro/document/2?doc_id=27

@@ -52,18 +52,14 @@ import numpy as np
 
 from datasource import datasource_utils
 from example.factor import Factor
-from utils import tushare_dbutils
 
 logger = logging.getLogger(__name__)
 
 
-
-
-
-class MarketValueFactor(Factor):
+class PEGFactor(Factor):
 
     def __init__(self):
-        super.__init__()
+        super().__init__()
 
     def calculate(self, stock_codes, start_date, end_date, df_daily=None):
         """

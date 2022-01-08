@@ -22,10 +22,8 @@ class MarketValueFactor(Factor):
         super().__init__()
 
     def calculate(self, stock_codes, start_date, end_date):
-        df_basic = self.datasource.daily_basic(self.datasource, stock_codes, start_date, end_date)
-
-        df_basic['LNCAP'] = np.log(df_basic['total_mv'])
+        df_basic = self.datasource.daily_basic(stock_codes, start_date, end_date)
         logger.debug("计算完市值因子(LNCAP)，%d 条因子值", len(df_basic))
-
         df_basic = datasource_utils.reset_index(df_basic)
+        df_basic['LNCAP'] = np.log(df_basic['total_mv'])
         return df_basic['LNCAP']

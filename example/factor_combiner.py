@@ -1,16 +1,20 @@
 import logging
 import os
 
+import numpy
+
+from utils import utils
+
+utils.init_logger()
+
 from datasource import datasource_factory
 from example import factor_utils
 from example.factors.clv import CLVFactor
 from example.factors.market_value import MarketValueFactor
 from example.factors.momentum import MomentumFactor
 from example.factors.peg import PEGFactor
-from utils import utils
-utils.init_logger()
+
 from temp import multifactor_synthesize
-from example.factors import momentum, peg, clv, market_value
 import matplotlib
 import pandas as pd
 import tushare as ts
@@ -54,6 +58,7 @@ def get_stocks(stock_pool, start_date, end_date):
     stock_codes = datasource.index_weight(stock_pool, start_date)
     assert stock_codes is not None and len(stock_codes) > 0, stock_codes
     stock_codes = stock_codes[:stock_num]
+    if type(stock_codes)==numpy.ndarray: stock_codes = stock_codes.tolist()
     logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
     return stock_codes
 
@@ -73,7 +78,7 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
 
     # 此接口获取的数据为未复权数据，回测建议使用复权数据，这里为批量获取股票数据做了简化
     logger.debug("股票池：%r", stock_codes)
-    df = ts.pro_api().daily(ts_code=",".join(stock_codes.tolist()), start_date=start_date, end_date=end_date)
+    df = ts.pro_api().daily(ts_code=",".join(stock_codes), start_date=start_date, end_date=end_date)
     df.sort_index(inplace=True)
     # 多索引的因子列，第一个索引为日期，第二个索引为股票代码
     assets = df.set_index([df.index, df['ts_code']], drop=True)
@@ -172,9 +177,9 @@ if __name__ == '__main__':
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 测试单因子
-    test_by_alphalens("clv", stock_pool, start, end, adjustment_days, stock_num)
-    test_by_alphalens("momentum", stock_pool, start, end, adjustment_days, stock_num)
-    test_by_alphalens("market_value", stock_pool, start, end, adjustment_days, stock_num)
+    # test_by_alphalens("clv", stock_pool, start, end, adjustment_days, stock_num)
+    # test_by_alphalens("momentum", stock_pool, start, end, adjustment_days, stock_num)
+    # test_by_alphalens("market_value", stock_pool, start, end, adjustment_days, stock_num)
     test_by_alphalens("peg", stock_pool, start, end, adjustment_days, stock_num)
 
     # 测试多因子合成

@@ -29,7 +29,9 @@ def comply_field_names(df):
 def post_query(func):
     def wrapper(*args, **kw):
         df = func(*args, **kw)
-        if type(df)!=DataFrame: return df
+        if type(df)!=DataFrame:
+            # logger.debug("不是DataFrame：%r",df)
+            return df
         df = comply_field_names(df)
         return df
     return wrapper

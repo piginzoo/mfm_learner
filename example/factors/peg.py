@@ -67,12 +67,10 @@ class PEGFactor(Factor):
         # 输入：context(见API)；stock_list为list类型，表示股票池
         # 输出：df_PEG为dataframe: index为股票代码，data为相应的PEG值
         """
-        if df_daily is None:
-            df_daily = datasource_utils.load_daily_data(self.datasource, stock_codes, start_date, end_date)
-
-        df_daily['PEG'] = df_daily['pe'] / df_daily['netprofit_yoy']
-        df_daily = datasource_utils.reset_index(df_daily)
-        return df_daily['PEG']
+        df = self.load_stock_data(stock_codes, start_date, end_date)
+        df['PEG'] = df['pe'] / df['netprofit_yoy']
+        df = datasource_utils.reset_index(df)
+        return df['PEG']
 
     def load_stock_data(self, stock_codes, start_date, end_date):
         df_merge = None
@@ -83,7 +81,7 @@ class PEGFactor(Factor):
             # 财务数据，包含：归母公司净利润(TTM)增长率
             df_finance = self.datasource.fina_indicator(stock_code=stock_code, start_date=start_date, end_date=end_date)
 
-            df_finance = df_finance.sort('datetime', ascending=True)  # 从早到晚排序
+            df_finance = df_finance.sort_index(level='datetime', ascending=True)  # 从早到晚排序
 
             df_finance['datetime_next'] = df_finance['datetime'].shift(-1)
             df_basic['netprofit_yoy'] = np.NaN
@@ -99,19 +97,19 @@ class PEGFactor(Factor):
                 # 第一个区间，只能"2021.1.1之前的，不应该用2021.1.1去填充，但是，没办法，无法获得再之前的数据，只好用他了"
                 if index == 0:
                     # logger.debug("开始 -> %s , 过滤条数 %d", current_date,
-                    #              len(df_basic.loc[(df_basic.trade_date <= current_date)]))
-                    df_basic.loc[df_basic.trade_date <= current_date, 'netprofit_yoy'] = netprofit_yoy
+                    #              len(df_basic.loc[(df_basic.datetime <= current_date)]))
+                    df_basic.loc[df_basic.datetime <= current_date, 'netprofit_yoy'] = netprofit_yoy
 
                 # bugfix,太诡异了，如果是nan，其实nan是一个float类型的,type(nan)==<float>
                 if next_date is None or (type(next_date) == float and math.isnan(next_date)):
-                    df_basic.loc[df_basic.trade_date > current_date, 'netprofit_yoy'] = netprofit_yoy
+                    df_basic.loc[df_basic.datetime > current_date, 'netprofit_yoy'] = netprofit_yoy
                     # logger.debug("%s -> 结束 , 过滤条数 %d", current_date,
-                    #              len(df_basic.loc[(df_basic.trade_date > current_date)]))
+                    #              len(df_basic.loc[(df_basic.datetime > current_date)]))
                 else:
-                    df_basic.loc[(df_basic.trade_date > current_date) &
-                                 (df_basic.trade_date <= next_date), 'netprofit_yoy'] = netprofit_yoy
+                    df_basic.loc[(df_basic.datetime > current_date) &
+                                 (df_basic.datetime <= next_date), 'netprofit_yoy'] = netprofit_yoy
                     # logger.debug("%s -> %s , 过滤条数 %d", current_date, next_date, len(
-                    #     df_basic.loc[(df_basic.trade_date > current_date) & (df_basic.trade_date <= next_date)]))
+                    #     df_basic.loc[(df_basic.datetime > current_date) & (df_basic.datetime <= next_date)]))
 
             if df_merge is None:
                 df_merge = df_basic

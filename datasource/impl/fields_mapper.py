@@ -16,6 +16,9 @@ MAPPER={
 
     },
     'database':{
-
-    }
+        'ts_code':'code',
+        'vol': 'volume',
+        'trade_date': 'datetime',
+        'ann_date': 'datetime'
+    },
 }

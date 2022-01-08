@@ -1,4 +1,4 @@
-import pandas as pd
+
 """
 # 测试资产、因子信息转换
 
@@ -21,7 +21,7 @@ import pandas as pd
         2012-06-24  000003.SH   0.123
         2012-06-27  000003.SH   0.567
 """
-
+import pandas as pd
 data1 = [
     ['000001.SZ','2016-06-24',0.165260,0.002198,0.085632,-0.078074,0.173832,0.214377,0.068445],
     ['000001.SZ','2016-06-27',0.165537,0.003583,0.063299,-0.048674,0.180890,0.202724,0.081748],
@@ -33,6 +33,8 @@ data1 = [
 ]
 data1 = pd.DataFrame(data1,columns=["code","datetime","BP","CFP","EP","ILLIQUIDITY","REVS20","SRMI","VOL20"])
 data1 = data1.set_index(["code","datetime"])
+df=data1
+
 print("数据：")
 print(data1)
 print("------------")

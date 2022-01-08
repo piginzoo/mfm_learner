@@ -71,7 +71,7 @@ class PEGFactor(Factor):
             df_daily = datasource_utils.load_daily_data(self.datasource, stock_codes, start_date, end_date)
 
         df_daily['PEG'] = df_daily['pe'] / df_daily['netprofit_yoy']
-
+        df_daily = datasource_utils.reset_index(df_daily)
         return df_daily['PEG']
 
     def load_stock_data(self, stock_codes, start_date, end_date):
@@ -119,4 +119,5 @@ class PEGFactor(Factor):
                 df_merge = df_merge.append(df_basic)
             # logger.debug("加载%s~%s的股票[%s]的%d条PE和归母公司净利润(TTM)增长率的合并数据", start_date, end_date, stock_code, len(df_merge))
         logger.debug("一共加载%s~%s %d条 PEG 数据", start_date, end_date, len(df_merge))
+
         return df_merge

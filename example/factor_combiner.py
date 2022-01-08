@@ -40,7 +40,6 @@ def get_factors(name, stock_codes, start_date, end_date):
     :param end_date:
     :return:
     """
-
     if name in FACTORS:
         factors = FACTORS[name].calculate(stock_codes, start_date, end_date)
     else:

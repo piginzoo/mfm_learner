@@ -39,6 +39,7 @@ class CLVFactor(Factor):
         df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] > df_daily['pre_close']), 'CLV'] = 1
         df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] < df_daily['pre_close']), 'CLV'] = -1
 
+        df_daily = datasource_utils.reset_index(df_daily)
         factors = df_daily['CLV']
         logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(factors))
 

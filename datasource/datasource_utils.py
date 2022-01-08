@@ -41,16 +41,10 @@ def load_daily_data(datasource, stock_codes, start_date, end_date):
     for stock_code in stock_codes:
         # 得到日交易数据
         data = datasource.daily(stock_code=stock_code, start_date=start_date, end_date=end_date)
-        df_merge = comply_field_names(df_merge)
-        data = data.sort_values(['datetime'])
         if df_merge is None:
             df_merge = data
         else:
             df_merge = df_merge.append(data)
-        # logger.debug("加载%s~%s的股票[%s]的 %d 条CLV数据", start_date, end_date, stock_code, len(data))
-
+        # logger.debug("加载%s~%s的股票[%s]的 %d 条daliy数据", start_date, end_date, stock_code, len(data))
     logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(df_merge))
-
-    factors = df_merge[['datetime', 'code', 'CLV']]
-
-    return reset_index(factors)
+    return df_merge

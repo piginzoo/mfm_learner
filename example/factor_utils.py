@@ -5,7 +5,7 @@ from sklearn import preprocessing
 logger = logging.getLogger(__name__)
 
 
-def winsorize(df, sigma=3):
+def winsorize(se):
     """
     缩尾处理
     把分数为97.5%和2.5%之外的异常值替换成分位数值
@@ -27,22 +27,23 @@ def winsorize(df, sigma=3):
     return se
 
 
-def __standardize_series(se):
+def standardize(se):
     """标准化"""
     se_std = se.std()
     se_mean = se.mean()
     return (se - se_mean) / se_std
 
 
-def __fillna_series(se):
+def fill_nan(se):
     return se.fillna(se.dropna().mean())
 
 
 def proprocess(factors):
-    factors = factors.groupby(level='trade_date').apply(__fillna_series)  # 填充NAN
-    factors = factors.groupby(level='trade_date').apply(__winsorize_series)  # 去极值
-    factors = factors.groupby(level='trade_date').apply(__standardize_series)  # 标准化
-    logger.debug("规范化预处理完市值因子(LNCAP)，%d行", len(factors))
+    print(factors)
+    factors = factors.groupby(level='datetime').apply(fill_nan)  # 填充NAN
+    factors = factors.groupby(level='datetime').apply(winsorize)  # 去极值
+    factors = factors.groupby(level='datetime').apply(standardize)  # 标准化
+    logger.debug("规范化预处理完因子，%d行", len(factors))
     return factors
 
 
@@ -116,56 +117,56 @@ def _mask_non_index_member(df, index_member=None):
         return _mask_df(df, ~index_member)
     return df
 
+#
+# # 横截面标准化 - 对Dataframe数据
+# def standardize(factor_df, index_member=None):
+#     """
+#     对因子值做z-score标准化-算样本方差选择自由度为n-1
+#     :param index_member:
+#     :param factor_df: 因子值 (pandas.Dataframe类型),index为datetime, colunms为股票代码。
+#                       形如:
+#                                   　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
+#                         date
+#                         2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832
+#                         2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890
+#                         2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691
+#                         2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805
+#                         2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902
+#     :return:z-score标准化后的因子值(pandas.Dataframe类型),index为datetime, colunms为股票代码。
+#     """
+#
+#     factor_df = fill_inf(factor_df)
+#     factor_df = _mask_non_index_member(factor_df, index_member)
+#     return factor_df.sub(factor_df.mean(axis=1), axis=0).div(factor_df.std(axis=1), axis=0)
 
-# 横截面标准化 - 对Dataframe数据
-def standardize(factor_df, index_member=None):
-    """
-    对因子值做z-score标准化-算样本方差选择自由度为n-1
-    :param index_member:
-    :param factor_df: 因子值 (pandas.Dataframe类型),index为datetime, colunms为股票代码。
-                      形如:
-                                  　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
-                        date
-                        2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832
-                        2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890
-                        2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691
-                        2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805
-                        2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902
-    :return:z-score标准化后的因子值(pandas.Dataframe类型),index为datetime, colunms为股票代码。
-    """
 
-    factor_df = fillinf(factor_df)
-    factor_df = _mask_non_index_member(factor_df, index_member)
-    return factor_df.sub(factor_df.mean(axis=1), axis=0).div(factor_df.std(axis=1), axis=0)
-
-
-# 横截面去极值 - 对Dataframe数据
-def winsorize(factor_df, alpha=0.05, index_member=None):
-    """
-    对因子值做去极值操作
-    :param index_member:
-    :param alpha: 极值范围
-    :param factor_df: 因子值 (pandas.Dataframe类型),index为datetime, colunms为股票代码。
-                      形如:
-                                  　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
-                        date
-                        2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832
-                        2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890
-                        2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691
-                        2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805
-                        2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902
-    :return:去极值后的因子值(pandas.Dataframe类型),index为datetime, colunms为股票代码。
-    """
-
-    def winsorize_series(se):
-        q = se.quantile([alpha / 2, 1 - alpha / 2])
-        se[se < q.iloc[0]] = q.iloc[0]
-        se[se > q.iloc[1]] = q.iloc[1]
-        return se
-
-    factor_df = fillinf(factor_df)
-    factor_df = _mask_non_index_member(factor_df, index_member)
-    return factor_df.apply(lambda x: winsorize_series(x), axis=1)
+# # 横截面去极值 - 对Dataframe数据
+# def winsorize(factor_df, alpha=0.05, index_member=None):
+#     """
+#     对因子值做去极值操作
+#     :param index_member:
+#     :param alpha: 极值范围
+#     :param factor_df: 因子值 (pandas.Dataframe类型),index为datetime, colunms为股票代码。
+#                       形如:
+#                                   　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
+#                         date
+#                         2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832
+#                         2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890
+#                         2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691
+#                         2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805
+#                         2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902
+#     :return:去极值后的因子值(pandas.Dataframe类型),index为datetime, colunms为股票代码。
+#     """
+#
+#     def winsorize_series(se):
+#         q = se.quantile([alpha / 2, 1 - alpha / 2])
+#         se[se < q.iloc[0]] = q.iloc[0]
+#         se[se > q.iloc[1]] = q.iloc[1]
+#         return se
+#
+#     factor_df = fill_inf(factor_df)
+#     factor_df = _mask_non_index_member(factor_df, index_member)
+#     return factor_df.apply(lambda x: winsorize_series(x), axis=1)
 
 
 # 横截面去极值 - 对Dataframe数据

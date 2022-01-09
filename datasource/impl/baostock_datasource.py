@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 class BaostockDataSource(DataSource):
+    """
+    baostock.com, 不需要注册的股票数据源，真好！
+    """
 
     def __init__(self):
         bs.login()
@@ -50,20 +53,25 @@ class BaostockDataSource(DataSource):
         return self.__daily_one(stock_code, start_date, end_date)
 
     # 返回每日的其他信息，主要是市值啥的
+    @post_query
     def daily_basic(self, stock_code, start_date, end_date):
         pass
 
     # 指数日线行情
+    @post_query
     def index_daily(self, index_code, start_date, end_date):
         pass
 
     # 返回指数包含的股票
+    @post_query
     def index_weight(self, index_code, start_date):
         pass
 
     # 获得财务数据
+    @post_query
     def fina_indicator(self, stock_code, start_date, end_date):
         pass
 
+    @post_query
     def trade_cal(self, start_date, end_date, exchange='SSE'):
         pass

@@ -18,7 +18,8 @@ from temp import multifactor_synthesize
 import matplotlib
 import pandas as pd
 import tushare as ts
-from alphalens.tears import create_returns_tear_sheet, create_information_tear_sheet, create_turnover_tear_sheet
+from alphalens.tears import create_returns_tear_sheet, create_information_tear_sheet, create_turnover_tear_sheet, \
+    create_full_tear_sheet
 from alphalens.tears import plotting
 from alphalens.utils import get_clean_factor_and_forward_returns
 from jaqs_fxdayu.research.signaldigger import multi_factor
@@ -91,13 +92,14 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
     # Alphalens 有一个特别强大的功能叫 tears 模块，它会生成一张很大的表图，
     # 里面是一张张被称之为撕页(tear sheet)的图片，记录所有与回测相关的 结果
     # create_full_tear_sheet(factor_data, long_short=False)
+
     long_short = True
     group_neutral = False
     by_group = False
-    plotting.plot_quantile_statistics_table(factor_data)
-    create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
+    # plotting.plot_quantile_statistics_table(factor_data)
+    # create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
     create_information_tear_sheet(factor_data, group_neutral, by_group, set_context=False)
-    create_turnover_tear_sheet(factor_data, set_context=False)
+    # create_turnover_tear_sheet(factor_data, set_context=False)
 
 
 

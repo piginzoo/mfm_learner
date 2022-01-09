@@ -13,7 +13,7 @@ MAPPER={
         'ann_date': 'datetime'
     },
     'baostock':{
-
+        'date': 'datetime',
     },
     'database':{
         'ts_code':'code',

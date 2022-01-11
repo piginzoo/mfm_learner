@@ -18,9 +18,7 @@ from temp import multifactor_synthesize
 import matplotlib
 import pandas as pd
 import tushare as ts
-from alphalens.tears import create_returns_tear_sheet, create_information_tear_sheet, create_turnover_tear_sheet, \
-    create_full_tear_sheet
-from alphalens.tears import plotting
+from alphalens.tears import create_information_tear_sheet, create_returns_tear_sheet
 from alphalens.utils import get_clean_factor_and_forward_returns
 from jaqs_fxdayu.research.signaldigger import multi_factor
 
@@ -34,7 +32,8 @@ FACTORS = {
     "peg": PEGFactor(),
     "clv": CLVFactor()
 }
-FACTORS_LONG_SHORT = [-1,1,1,1] # 因子的多空性质
+FACTORS_LONG_SHORT = [-1, 1, 1, 1]  # 因子的多空性质
+
 
 def get_factors(name, stock_codes, start_date, end_date):
     """
@@ -59,7 +58,7 @@ def get_stocks(stock_pool, start_date, end_date):
     stock_codes = datasource.index_weight(stock_pool, start_date)
     assert stock_codes is not None and len(stock_codes) > 0, stock_codes
     stock_codes = stock_codes[:stock_num]
-    if type(stock_codes)==numpy.ndarray: stock_codes = stock_codes.tolist()
+    if type(stock_codes) == numpy.ndarray: stock_codes = stock_codes.tolist()
     logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
     return stock_codes
 
@@ -87,7 +86,14 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
     close = df.pivot_table(index='trade_date', columns='ts_code', values='close')
     close.index = pd.to_datetime(close.index)
 
-    factor_data = get_clean_factor_and_forward_returns(factors, close, periods=adjustment_days)
+    """
+    这个是数据规整，
+    factors - 必须是 index=[日期|股票], factor value
+    prices - 行情数据，一般都是收盘价，index=[日期]，列是所有的股票
+    groups - 行业归属数据，就是每天、每只股票隶属哪个行业：index=[日期], 列是：[股票，它归属的行业代码]
+    
+    """
+    factor_data = get_clean_factor_and_forward_returns(factors, prices=close, periods=adjustment_days)
 
     # Alphalens 有一个特别强大的功能叫 tears 模块，它会生成一张很大的表图，
     # 里面是一张张被称之为撕页(tear sheet)的图片，记录所有与回测相关的 结果
@@ -97,10 +103,36 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
     group_neutral = False
     by_group = False
     # plotting.plot_quantile_statistics_table(factor_data)
-    # create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
-    create_information_tear_sheet(factor_data, group_neutral, by_group, set_context=False)
-    # create_turnover_tear_sheet(factor_data, set_context=False)
+    factor_returns, mean_quant_ret, mean_quant_rateret, std_quantile, \
+           mean_quant_ret_bydate, std_quant_daily, mean_quant_rateret_bydate, \
+           compstd_quant_daily, alpha_beta, mean_ret_spread_quant, std_spread_quant \
+    = \
+    create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
 
+    print("factor_returns",factor_returns)
+    print("mean_quant_ret",mean_quant_ret)
+    print("mean_quant_rateret",mean_quant_rateret)
+    print("std_quantile",std_quantile)
+    print("mean_quant_ret_bydate",mean_quant_ret_bydate)
+    print("std_quant_daily",std_quant_daily)
+    print("mean_quant_rateret_bydate",mean_quant_rateret_bydate)
+    print("compstd_quant_daily",compstd_quant_daily)
+    print("alpha_beta",alpha_beta)
+    print("mean_ret_spread_quant",mean_ret_spread_quant)
+    print("std_spread_quant",std_spread_quant)
+
+    exit()
+
+    ic_data, (t_stat, p_value, skew, kurtosis) = create_information_tear_sheet(factor_data, group_neutral, by_group,
+                                                                             set_context=False)
+    print("ic_data:", ic_data)
+    print("t_stat:", t_stat)
+    print("p_value:", p_value)
+    print("skew:", skew)
+    print("kurtosis:", kurtosis)
+
+
+    # create_turnover_tear_sheet(factor_data, set_context=False)
 
 
 def synthesize(stock_pool, start_date, end_date):
@@ -119,9 +151,9 @@ def synthesize_by_jaqs(stock_codes, start_date, end_date):
     测试因子合成，要求数据得是panel格式的，[trade_date,stock1,stock2,....]
     """
     factor_dict = {}
-    for i,factor_key in enumerate(FACTORS.keys()):
+    for i, factor_key in enumerate(FACTORS.keys()):
         factors = get_factors(factor_key, stock_codes, start_date, end_date)
-        factors *= FACTORS_LONG_SHORT[i] # 空方因子*(-1)
+        factors *= FACTORS_LONG_SHORT[i]  # 空方因子*(-1)
         factor_dict[factor_key] = factor_utils.to_panel_of_stock_columns(factors)
 
     logger.debug("开始合成因子：%r , 条数：%r",

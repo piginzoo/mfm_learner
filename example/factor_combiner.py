@@ -110,16 +110,17 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
         create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
 
     print("factor_returns",factor_returns)
-    print("mean_quant_ret",mean_quant_ret)
-    print("mean_quant_rateret",mean_quant_rateret)
-    print("std_quantile",std_quantile)
+    # print("mean_quant_ret",mean_quant_ret)
+    # print("mean_quant_rateret",mean_quant_rateret)
+    # print("std_quantile",std_quantile)
     print("mean_quant_ret_bydate",mean_quant_ret_bydate)
-    print("std_quant_daily",std_quant_daily)
-    print("mean_quant_rateret_bydate",mean_quant_rateret_bydate)
-    print("compstd_quant_daily",compstd_quant_daily)
-    print("alpha_beta",alpha_beta)
-    print("mean_ret_spread_quant",mean_ret_spread_quant)
-    print("std_spread_quant",std_spread_quant)
+    # print("std_quant_daily",std_quant_daily)
+    # 我靠，这个是平均每天的收益率（用于计算5天、10天他们的，因为他们的收益率都是10天，所以要搞出来每天的）
+    # print("mean_quant_rateret_bydate",mean_quant_rateret_bydate)
+    # print("compstd_quant_daily",compstd_quant_daily)
+    # print("alpha_beta",alpha_beta)
+    # print("mean_ret_spread_quant",mean_ret_spread_quant)
+    # print("std_spread_quant",std_spread_quant)
 
     exit()
 

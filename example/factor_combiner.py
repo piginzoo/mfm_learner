@@ -6,7 +6,7 @@ import numpy as np
 from utils import utils
 
 utils.init_logger()
-
+from pandas.core.series import Series
 from datasource import datasource_factory
 from example import factor_utils
 from example.factors.clv import CLVFactor
@@ -104,7 +104,7 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
     by_group = False
     # plotting.plot_quantile_statistics_table(factor_data)
     factor_returns, mean_quant_ret, mean_quant_rateret, std_quantile, \
-    mean_quant_ret_bydate, std_quant_daily, mean_quant_rateret_bydate, \
+    mean_quantile_ret_bydate, std_quant_daily, mean_quant_rateret_bydate, \
     compstd_quant_daily, alpha_beta, mean_ret_spread_quant, std_spread_quant \
         = \
         create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
@@ -113,7 +113,8 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
     # print("mean_quant_ret",mean_quant_ret)
     # print("mean_quant_rateret",mean_quant_rateret)
     # print("std_quantile",std_quantile)
-    print("mean_quant_ret_bydate",mean_quant_ret_bydate)
+    print("mean_quantile_ret_bydate")
+    print(mean_quantile_ret_bydate)
     # print("std_quant_daily",std_quant_daily)
     # 我靠，这个是平均每天的收益率（用于计算5天、10天他们的，因为他们的收益率都是10天，所以要搞出来每天的）
     # print("mean_quant_rateret_bydate",mean_quant_rateret_bydate)
@@ -122,7 +123,6 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
     # print("mean_ret_spread_quant",mean_ret_spread_quant)
     # print("std_spread_quant",std_spread_quant)
 
-    exit()
 
     ic_data, (t_values, p_value, skew, kurtosis) = create_information_tear_sheet(factor_data, group_neutral, by_group,
                                                                                set_context=False)
@@ -131,12 +131,15 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
     # print("p_value:", p_value)
     # print("skew:", skew)
     # print("kurtosis:", kurtosis)
-    score(ic_data,t_values)
+    score(ic_data,t_values,mean_quantile_ret_bydate)
 
     # create_turnover_tear_sheet(factor_data, set_context=False)
 
 
-def score(ic_data,t_values):
+
+
+
+def score(ic_data,t_values,mean_quantile_ret_bydate):
     """
     给这个因子一个打分，参考：https://github.com/Jensenberg/multi-factor
     - IC≠0的T检验的t值>2的比例要大于60%（因为是横截面检验，存在50只股票，所以要看着50只的）
@@ -174,9 +177,33 @@ def score(ic_data,t_values):
     3.2 top组和bottom组的收益率的均值的差值的平均值
     3.3 累计所有股票的收益率（所有的股票的累计收益率的平均值）
     """
+    df_group = mean_quantile_ret_bydate.groupby(level="factor_quantile")
+    df_quantile = df_group.apply(lambda df: df.iloc[-1, :])
+    df_quantile.iloc[-1] - df_quantile.iloc[0]
+    #for _,df in df_group: print(df.iloc[-1,:])
+    """
+                      1D        5D       10D
+    factor_quantile
+    1               -0.024612 -0.042427 -0.045584
+    2                0.029472  0.048677  0.019379
+    3               -0.012253 -0.024391  0.017489
+    4               -0.012462  0.008193 -0.010619
+    5                0.019855  0.009947  0.019335
+    """
 
+    def is_ordered(s:Series):
+        (s.sort_values().index == s.index).all()
 
-
+    df_group_by_date = mean_quantile_ret_bydate.groupby(level="date")
+    df_order = df_group_by_date.apply(lambda df: df.apply(lambda s:s.sort_values().index == s.index).all())
+    df_order.value_counts(True)
+    r2 = df_order.apply(pd.Series.value_counts)
+    r2.loc[True] / (r2.loc[False] + r2.loc[True])
+    # (Pdb) r2.loc[True]/(r2.loc[False]+r2.loc[True])
+    # 1D     0.009479
+    # 5D     0.004739
+    # 10D    0.004739
+    # dtype: float64
 
 def synthesize(stock_pool, start_date, end_date):
     """测试因子合成"""

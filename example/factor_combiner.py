@@ -204,6 +204,8 @@ def score(ic_data,t_values,mean_quantile_ret_bydate):
     # 5D     0.004739
     # 10D    0.004739
     # dtype: float64
+    # 分开的意思是这个比例要超过90%
+    # 得分是最后一天的累计收益率，1和5组的差最大
 
 def synthesize(stock_pool, start_date, end_date):
     """测试因子合成"""

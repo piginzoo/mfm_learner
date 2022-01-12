@@ -86,6 +86,9 @@
 - https://github.com/Spark3122/multifactor.git
 - https://github.com/ChannelCMT/OFO
 - https://github.com/ChannelCMT/QTC_2.0
+- https://github.com/Jensenberg/multi-factor
+- https://github.com/Quant132/BackTrader_Multifactors
+- https://github.com/jiangtiantu/factorhub
 
 **参考书籍**
 - [《股票多因子模型实战：Python核心代码解析》](https://book.douban.com/subject/35446933/)，这本书深入浅出，对新手很友好

@@ -1,7 +1,7 @@
 import logging
 import os
 
-import numpy
+import numpy as np
 
 from utils import utils
 
@@ -58,7 +58,7 @@ def get_stocks(stock_pool, start_date, end_date):
     stock_codes = datasource.index_weight(stock_pool, start_date)
     assert stock_codes is not None and len(stock_codes) > 0, stock_codes
     stock_codes = stock_codes[:stock_num]
-    if type(stock_codes) == numpy.ndarray: stock_codes = stock_codes.tolist()
+    if type(stock_codes) == np.ndarray: stock_codes = stock_codes.tolist()
     logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
     return stock_codes
 
@@ -104,10 +104,10 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
     by_group = False
     # plotting.plot_quantile_statistics_table(factor_data)
     factor_returns, mean_quant_ret, mean_quant_rateret, std_quantile, \
-           mean_quant_ret_bydate, std_quant_daily, mean_quant_rateret_bydate, \
-           compstd_quant_daily, alpha_beta, mean_ret_spread_quant, std_spread_quant \
-    = \
-    create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
+    mean_quant_ret_bydate, std_quant_daily, mean_quant_rateret_bydate, \
+    compstd_quant_daily, alpha_beta, mean_ret_spread_quant, std_spread_quant \
+        = \
+        create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
 
     print("factor_returns",factor_returns)
     print("mean_quant_ret",mean_quant_ret)
@@ -123,16 +123,58 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, adjustment_
 
     exit()
 
-    ic_data, (t_stat, p_value, skew, kurtosis) = create_information_tear_sheet(factor_data, group_neutral, by_group,
-                                                                             set_context=False)
+    ic_data, (t_values, p_value, skew, kurtosis) = create_information_tear_sheet(factor_data, group_neutral, by_group,
+                                                                               set_context=False)
     print("ic_data:", ic_data)
-    print("t_stat:", t_stat)
-    print("p_value:", p_value)
-    print("skew:", skew)
-    print("kurtosis:", kurtosis)
-
+    print("t_stat:", t_values) # 这个是IC们的均值是不是0的检验T值
+    # print("p_value:", p_value)
+    # print("skew:", skew)
+    # print("kurtosis:", kurtosis)
+    score(ic_data,t_values)
 
     # create_turnover_tear_sheet(factor_data, set_context=False)
+
+
+def score(ic_data,t_values):
+    """
+    给这个因子一个打分，参考：https://github.com/Jensenberg/multi-factor
+    - IC≠0的T检验的t值>2的比例要大于60%（因为是横截面检验，存在50只股票，所以要看着50只的）
+    - 因子的偏度要 <0.05的比例大于60%，接近于正态（因为是横截面检验，存在50只股票，所以要看着50只的）
+    - TODO 信息系数 ？？？
+    - TODO 换手率
+
+    IC是横截面上的50只股票对应的因子值和10天后的收益率的Rank相关性，
+    之前理解成1只股票和它的N个10天后的收益率的相关性了，靠，基本概念都错了
+
+    参考：
+    https://zhuanlan.zhihu.com/p/24616859
+
+    """
+
+    # 测试ic（因子和股票收益率相关性）
+    test_df = pd.DataFrame()
+
+    # 1.看IC≠0的T检验，是根据IC均值不为0
+    """         1D          5D          10D         20D
+    t_stat: [ 0.15414273  0.44857945 -1.91258305 -5.01587993]
+    """
+    t_values = np.array(t_values)
+    t_flag = np.abs(t_values)>2 # T绝对值大于2，说明
+
+    # 2.看IR是不是大于0.02
+    ir_data = ic_data.apply(lambda df: np.abs(df.mean() / df.std()))
+    ir_flag = ir_data>0.02
+
+    # print(t_flag,ir_flag)
+
+    """
+    3. 看收益率
+    3.1 看分组的收益率是不是可以完美分开
+    3.2 top组和bottom组的收益率的均值的差值的平均值
+    3.3 累计所有股票的收益率（所有的股票的累计收益率的平均值）
+    """
+
+
 
 
 def synthesize(stock_pool, start_date, end_date):
@@ -203,12 +245,20 @@ if __name__ == '__main__':
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
     matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号
     matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号'-'显示为方块的问题
+
+    # 参数设置
+    start = "20190101"
+    end = "20201201"
+    adjustment_days = [1, 5, 10, 20, 40, 60]
+    stock_pool = '000905.SH'  # 中证500
+    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+
     start = "20200101"
     end = "20201201"
-    adjustment_days = [1, 5, 10, 30]
-    stock_pool = '000300.SH'
+    adjustment_days = [1, 5, 10]
     stock_pool = '000905.SH'  # 中证500
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+
 
     # 测试单因子
     # test_by_alphalens("clv", stock_pool, start, end, adjustment_days, stock_num)

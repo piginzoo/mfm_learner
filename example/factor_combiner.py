@@ -107,6 +107,9 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     factor_returns, mean_quantile_ret_bydate = \
         create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
 
+    # 临时保存一下数据，for 单元测试用
+    # mean_quantile_ret_bydate.to_csv("test/data/mean_quantile_ret_bydate.csv")
+
     print("factor_returns 因子和股票收益率整合数据\n", factor_returns)
     print("mean_quantile_ret_bydate 分层的收益率的每期数据，这个最重要\n", mean_quantile_ret_bydate)  # !!!
 
@@ -126,38 +129,48 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
 
 def score(ic_data, t_values, mean_quantile_ret_bydate, periods):
     """
-    思路是，不看图，也可以评价出来，当然，图也留着，测试用，对照用
+    基本思路是，不想看各种生成plot图，也可以评价出来一个因子好不好，通过给他打分，还知道有多好
+    当然，图也留着，测试用，对照用。
 
-
-    给这个因子一个打分，参考：https://github.com/Jensenberg/multi-factor
+    因子打分，参考：https://github.com/Jensenberg/multi-factor ； https://zhuanlan.zhihu.com/p/24616859
     - IC≠0的T检验的t值>2的比例要大于60%（因为是横截面检验，存在50只股票，所以要看着50只的）
     - 因子的偏度要 <0.05的比例大于60%，接近于正态（因为是横截面检验，存在50只股票，所以要看着50只的）
     - TODO 信息系数 ？？？
     - TODO 换手率
-
     IC是横截面上的50只股票对应的因子值和10天后的收益率的Rank相关性，
     之前理解成1只股票和它的N个10天后的收益率的相关性了，靠，基本概念都错了
 
-    参考：
-    https://zhuanlan.zhihu.com/p/24616859
-
+    ========
+    得分规则：
+    ========
+    - TODO: period单调性：就是看分组平均收益是否和按照分组递增或递减 +1分
+    - TODO: 分组中的top组每日收益 - bottom组每日收益，的平均收益是否大于0，这个是看多空差异明显 +1分
+    - TODO: 平均收益 +1
+    - IC的T检验是不是>2，检验的其实是IC均值是不是≠0，t值>2，就是显著≠0，也就是收益和因子相关
+    - 看分层quantile的发散比例（就是和quantile排序不一致）>90%, 发散程度给个3分，
+    得到一个综合得分，且，可以把评分原因print出来，就算完成了，
     """
 
-    # 测试ic（因子和股票收益率相关性）
-    test_df = pd.DataFrame()
+    scores = np.array([0] * len(periods))  # 几个换仓周期就有几个成绩
 
-    # 1.看IC≠0的T检验，是根据IC均值不为0
-    """         1D          5D          10D         20D
+    """
+    1.看IC≠0的T检验，是根据IC均值不为0
+                 1D          5D          10D         20D
     t_stat: [ 0.15414273  0.44857945 -1.91258305 -5.01587993]
+                0             0            0        1
     """
     t_values = np.array(t_values)
-    t_flag = np.abs(t_values) > 2  # T绝对值大于2，说明
+    t_flags = np.abs(t_values) > 2  # T绝对值大于2，说明
+    t_values = t_flags + [0] * len(t_flags)  # 把True,False数组=>1,0值的数组
+    scores += t_values
 
-    # 2.看IR是不是大于0.02
+    """
+    2.看IR是不是大于0.02
+    """
     ir_data = ic_data.apply(lambda df: np.abs(df.mean() / df.std()))
-    ir_flag = ir_data > 0.02
-
-    # print(t_flag,ir_flag)
+    ir_flags = ir_data > 0.02
+    ir_values = ir_flags + [0] * len(ir_flags)  # 把True,False数组=>1,0值的数组
+    scores += ir_values
 
     """
     3. 看收益率
@@ -165,15 +178,7 @@ def score(ic_data, t_values, mean_quantile_ret_bydate, periods):
     3.2 top组和bottom组的收益率的均值的差值的平均值
     3.3 累计所有股票的收益率（所有的股票的累计收益率的平均值）
     ---------------------------------------------------------------
-        factor_returns 因子和股票收益率整合数据，是整个因子的期间收益率，
-    比如5D的-0.011991，就是2020-01-02的5天后（2020-01-08）的收益率
-                       1D        5D       10D
-    date
-    2020-01-02 -0.003905 -0.011991 -0.011562
-    2020-01-03 -0.009487 -0.011938 -0.013898
-    2020-01-06  0.006794  0.009132 -0.019035
-    - - - - - - - - - -  - - - - - - - - - - 
-        mean_quantile_ret_bydate 分层的收益率的每期数据
+    mean_quantile_ret_bydate 分层的收益率的每期数据的样例，参考用
                                        1D        5D       10D
     factor_quantile date
     1               2020-01-02 -0.006622  0.032152  0.031694
@@ -187,37 +192,23 @@ def score(ic_data, t_values, mean_quantile_ret_bydate, periods):
                     2020-11-13 -0.001784  0.052973  0.039285
     ---------------------------------------------------------------                    
     """
+    monotony_percents, retuns_filterd_by_period_quantile = \
+        calc_monotony(mean_quantile_ret_bydate, periods)
 
-    mean_quantile_ret_bydate.to_csv("test/data/mean_quantile_ret_bydate.csv")
-    exit()
-    calc_monotony(mean_quantile_ret_bydate, periods)
+    monotony_percents = np.array([x.item() for x in monotony_percents])
+    monotony_percents_flags = monotony_percents > 0.9
+    monotony_percents_values = monotony_percents_flags + [0] * len(monotony_percents_flags)
+    monotony_percents_values *= 3
+    logger.debug("monotony_percents:\n%r", monotony_percents.tolist())
 
-    # 计算最后一天，第一组和最后一组的利差
-    # df_group = mean_quantile_ret_bydate.groupby(level="factor_quantile")
-    # df_quantile = df_group.apply(lambda df: df.iloc[-1, :])
-    # df_quantile.iloc[-1] - df_quantile.iloc[0]
-    # for _,df in df_group: print(df.iloc[-1,:])
-    """
-                      1D        5D       10D
-    factor_quantile
-    1               -0.024612 -0.042427 -0.045584
-    2                0.029472  0.048677  0.019379
-    3               -0.012253 -0.024391  0.017489
-    4               -0.012462  0.008193 -0.010619
-    5                0.019855  0.009947  0.019335
-    """
+    scores += monotony_percents_values
 
-    # (Pdb) r2.loc[True]/(r2.loc[False]+r2.loc[True])
-    # 1D     0.009479
-    # 5D     0.004739
-    # 10D    0.004739
-    # dtype: float64
-    # 分开的意思是这个比例要超过90%
-    # 得分是最后一天的累计收益率，1和5组的差最大
+    logger.debug("换仓周期%r的 因子得分 分别为：%r", periods, scores.tolist())
+    return scores
 
     """
     下午：TODO
-    - 完成累计的10D、5D的计算，形成一个累计收益率检测，90%的才可以
+    [x] 完成累计的10D、5D的计算，形成一个累计收益率检测，90%的才可以
     - 平均收益，1D的（不分组的），收益率的均值、正收益>负收益的比例
     - top - bottom？都应该是正的，
     - 如何考虑因子的方向？
@@ -251,10 +242,10 @@ def calc_monotony(mean_quantile_ret_bydate, periods):
         如果和quantile的顺序，如1,2,3,4,5一致，返回True，否则是False
         这个主要用来计算这一天的数据，包含了截面上的所有的分组（分组的平均收益率）
         """
-        assert type(s)==Series or type(s)==DataFrame
-        if type(s)==DataFrame:
-            assert len(s.columns)==1
-            s = s.iloc[:,0] # 如果是dataframe，一定只有1列，那么强制转成series，否则后面sort_values还需要指定列名，我们没法知道动态的列名
+        assert type(s) == Series or type(s) == DataFrame
+        if type(s) == DataFrame:
+            assert len(s.columns) == 1
+            s = s.iloc[:, 0]  # 如果是dataframe，一定只有1列，那么强制转成series，否则后面sort_values还需要指定列名，我们没法知道动态的列名
         indices_sort_by_value = s.sort_values().index.get_level_values('factor_quantile')
         indices_original = s.index.get_level_values('factor_quantile')
         return (indices_sort_by_value == indices_original).all()
@@ -268,7 +259,7 @@ def calc_monotony(mean_quantile_ret_bydate, periods):
         # 统计一下True的，也就是一致的占比
         monotony_percent = df_order.value_counts(True) / df_order.count()
         monotony_percents.append(monotony_percent)
-        logger.debug("对每隔%d天的累计收益率中，有%.2f是和分组顺序一致的", days, monotony_percent)
+        logger.debug("对每隔%d天的累计收益率中，有%.0f%%是和分组顺序一致的", days, monotony_percent)
     return monotony_percents, retuns_filterd_by_period_quantile
 
 
@@ -336,9 +327,9 @@ def filterd_by_period_quantile(mean_quantile_ret_bydate, periods):
         # 对于不同的时间间隔内，找到每一个分组，组内按照时间挑出间隔为days的行数据
         # 需要调整一下index，否则会出现重复index，参考
         #       https://stackoverflow.com/questions/38948336/why-groupby-apply-return-duplicate-level/51106729
-        __returns = mean_quantile_ret_bydate.iloc[:, col].reset_index() # 为了分组，先把index变成列，否则会出现重复index的问题
+        __returns = mean_quantile_ret_bydate.iloc[:, col].reset_index()  # 为了分组，先把index变成列，否则会出现重复index的问题
         __returns.groupby('factor_quantile').apply(lambda df: df.iloc[::days])  # 这个时候df是个series
-        __returns.reset_index(drop=True) # 上面的apply很诡异，会造成一个莫名的联合index，没用，drop掉
+        __returns.reset_index(drop=True)  # 上面的apply很诡异，会造成一个莫名的联合index，没用，drop掉
         __returns = __returns.set_index(["factor_quantile", "date"])
 
         logger.debug("每隔%d天挑出来的这%d累计收益率:\n%r", days, days, __returns)

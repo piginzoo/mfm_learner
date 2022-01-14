@@ -104,7 +104,7 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
 
     # plotting.plot_quantile_statistics_table(factor_data)
     factor_returns, mean_quantile_ret_bydate = \
-        create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False)
+        create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False,factor_name=factor_name)
 
     # 临时保存一下数据，for 单元测试用
     # mean_quantile_ret_bydate.to_csv("test/data/mean_quantile_ret_bydate.csv")
@@ -113,7 +113,7 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     print("mean_quantile_ret_bydate 分层的收益率的每期数据，这个最重要\n", mean_quantile_ret_bydate)  # !!!
 
     ic_data, (t_values, p_value, skew, kurtosis) = \
-        create_information_tear_sheet(factor_data, group_neutral, by_group, set_context=False)
+        create_information_tear_sheet(factor_data, group_neutral, by_group, set_context=False,factor_name=factor_name)
 
     print("ic_data:", ic_data)
     print("t_stat:", t_values)  # 这个是IC们的均值是不是0的检验T值
@@ -123,7 +123,7 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
 
     return score(ic_data, t_values, mean_quantile_ret_bydate, periods)
 
-    # create_turnover_tear_sheet(factor_data, set_context=False)
+    # create_turnover_tear_sheet(factor_data, set_context=False,factor_name=factor_name)
 
 
 def score(ic_data, t_values, mean_quantile_ret_bydate, periods):
@@ -255,7 +255,8 @@ def calc_monotony(mean_quantile_ret_bydate, periods):
         df_order = returns_quantile.groupby(level='date').apply(check_oneday_quantile_comply_rate)
 
         # 统计一下True的，也就是一致的占比
-        monotony_percent = df_order.value_counts()[True] / df_order.count()
+        # import pdb;pdb.set_trace()
+        monotony_percent = df_order.sum() / df_order.count() # sum()可统计True的格式，诡异哈
         monotony_percents.append(monotony_percent)
         logger.debug("对每隔%d天的累计收益率中，有%.0f%%是和分组顺序一致的", days, monotony_percent)
     return monotony_percents, retuns_filterd_by_period_quantile
@@ -419,13 +420,14 @@ if __name__ == '__main__':
     stock_pool = '000905.SH'  # 中证500
     stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
-    start = "20200101"
-    end = "20201201"
-    periods = [1, 5, 10]
-    stock_pool = '000905.SH'  # 中证500
-    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    # 调试用
+    # start = "20200101"
+    # end = "20200901"
+    # periods = [1, 5]
+    # stock_pool = '000905.SH'  # 中证500
+    # stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
-    # 测试单因子
+
 
 
     # test_by_alphalens("clv", stock_pool, start, end, periods, stock_num)

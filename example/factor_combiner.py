@@ -7,7 +7,7 @@ from pandas import Series, DataFrame
 from utils import utils
 
 utils.init_logger()
-from datasource import datasource_factory
+from datasource import datasource_factory, datasource_utils
 from example import factor_utils
 from example.factors.clv import CLVFactor
 from example.factors.market_value import MarketValueFactor
@@ -78,13 +78,12 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
 
     # 此接口获取的数据为未复权数据，回测建议使用复权数据，这里为批量获取股票数据做了简化
     logger.debug("股票池：%r", stock_codes)
-    df = ts.pro_api().daily(ts_code=",".join(stock_codes), start_date=start_date, end_date=end_date)
-    df.sort_index(inplace=True)
-    # 多索引的因子列，第一个索引为日期，第二个索引为股票代码
-    assets = df.set_index([df.index, df['ts_code']], drop=True)
+
+    df = datasource.daily(stock_codes, start_date=start_date, end_date=end_date)
+    df = datasource_utils.reset_index(df)
+
     # column为股票代码，index为日期，值为收盘价
-    close = df.pivot_table(index='trade_date', columns='ts_code', values='close')
-    close.index = pd.to_datetime(close.index)
+    close = df.pivot_table(index='datetime', columns='code', values='close')
 
     """
     这个是数据规整，
@@ -122,7 +121,7 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     # print("skew:", skew)
     # print("kurtosis:", kurtosis)
 
-    score(ic_data, t_values, mean_quantile_ret_bydate, periods)
+    return score(ic_data, t_values, mean_quantile_ret_bydate, periods)
 
     # create_turnover_tear_sheet(factor_data, set_context=False)
 
@@ -203,7 +202,6 @@ def score(ic_data, t_values, mean_quantile_ret_bydate, periods):
 
     scores += monotony_percents_values
 
-    logger.debug("换仓周期%r的 因子得分 分别为：%r", periods, scores.tolist())
     return scores
 
     """
@@ -257,7 +255,7 @@ def calc_monotony(mean_quantile_ret_bydate, periods):
         df_order = returns_quantile.groupby(level='date').apply(check_oneday_quantile_comply_rate)
 
         # 统计一下True的，也就是一致的占比
-        monotony_percent = df_order.value_counts(True) / df_order.count()
+        monotony_percent = df_order.value_counts()[True] / df_order.count()
         monotony_percents.append(monotony_percent)
         logger.debug("对每隔%d天的累计收益率中，有%.0f%%是和分组顺序一致的", days, monotony_percent)
     return monotony_percents, retuns_filterd_by_period_quantile
@@ -428,10 +426,19 @@ if __name__ == '__main__':
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 测试单因子
+
+
     # test_by_alphalens("clv", stock_pool, start, end, periods, stock_num)
     # test_by_alphalens("momentum", stock_pool, start, end, periods, stock_num)
     # test_by_alphalens("market_value", stock_pool, start, end, periods, stock_num)
-    test_by_alphalens("peg", stock_pool, start, end, periods, stock_num)
+
+    scores = []
+    for factor_name,_ in FACTORS.items():
+        __score = test_by_alphalens(factor_name, stock_pool, start, end, periods, stock_num)
+        scores.append([factor_name,__score])
+
+    for factor_name,__score in scores:
+        logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, factor_name, __score.tolist())
 
     # 测试多因子合成
     # combinefactor = synthesize(stock_pool, start, end)

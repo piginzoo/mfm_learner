@@ -1,13 +1,13 @@
 import logging
 import os
 
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 import numpy as np
 from alphalens import tears
-from matplotlib.ticker import ScalarFormatter
 from pandas import Series, DataFrame
-import matplotlib.cm as cm
+
 from utils import utils
-import matplotlib.pyplot as plt
 
 utils.init_logger()
 from datasource import datasource_factory, datasource_utils
@@ -19,8 +19,6 @@ from example.factors.peg import PEGFactor
 
 from temp import multifactor_synthesize
 import matplotlib
-import pandas as pd
-import tushare as ts
 from alphalens.tears import create_information_tear_sheet, create_returns_tear_sheet
 from alphalens.utils import get_clean_factor_and_forward_returns
 from jaqs_fxdayu.research.signaldigger import multi_factor
@@ -30,9 +28,9 @@ logger = logging.getLogger(__name__)
 datasource = datasource_factory.create()
 
 FACTORS = {
-    'market_value': MarketValueFactor(),
-    "momentum": MomentumFactor(),
-    "peg": PEGFactor(),
+    # 'market_value': MarketValueFactor(),
+    # "momentum": MomentumFactor(),
+    # "peg": PEGFactor(),
     "clv": CLVFactor()
 }
 FACTORS_LONG_SHORT = [-1, 1, 1, 1]  # 因子的多空性质
@@ -336,16 +334,16 @@ def filterd_by_period_quantile(mean_quantile_ret_bydate, periods):
         # 需要调整一下index，否则会出现重复index，参考
         #       https://stackoverflow.com/questions/38948336/why-groupby-apply-return-duplicate-level/51106729
         __returns = mean_quantile_ret_bydate.iloc[:, col].reset_index()  # 为了分组，先把index变成列，否则会出现重复index的问题
-        __returns.groupby('factor_quantile').apply(lambda df: df.iloc[::days])  # 这个时候df是个series
+        __returns = __returns.groupby('factor_quantile').apply(lambda df: df.iloc[::days])  # 这个时候df是个series
         __returns.reset_index(drop=True)  # 上面的apply很诡异，会造成一个莫名的联合index，没用，drop掉
         __returns = __returns.set_index(["factor_quantile", "date"])
 
-        logger.debug("每隔%d天挑出来的这%d累计收益率:\n%r", days, days, __returns)
+        logger.debug("每隔%d天挑出来的这%d累计收益率:\n%r", days, days, __returns.head(100))
 
-        # 还要计算累计收益率
-        __returns = (1 + __returns).cumprod() - 1
+        # 还要按照每组，计算这个组内的，累计收益率
+        __returns = __returns.groupby('factor_quantile').apply(lambda df:(1 + df).cumprod() - 1)
 
-        logger.debug("每隔%d天，从开始的累计收益率:\n%r", days, __returns)
+        logger.debug("每隔%d天，从开始的累计收益率:\n%r", days, __returns.head(100))
 
         retuns_filterd_by_period_quantile.append(__returns)
         logger.debug("按照%d天从分组收益率%d行中，过滤出%d行", days, len(mean_quantile_ret_bydate), len(__returns))
@@ -364,34 +362,38 @@ def synthesize(stock_pool, start_date, end_date):
     return combined_factor
 
 
-def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, periods):
+def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, periods, quantile=5):
     plt.clf()
-    f, axes = plt.subplots(len(quantile_cumulative_returns), 1, figsize=(18, 6))
+    fig, axes = plt.subplots(len(quantile_cumulative_returns), 1, figsize=(18, 18))
+    fig.tight_layout()  # 调整整体空白
+    plt.subplots_adjust(wspace=0, hspace=0.3)  # 调整子图间距
 
     # 遍历每一个周期（1D，5D，10D）的数据
     for i, one_period_quantile_cumulative_returns in enumerate(quantile_cumulative_returns):
-        ax = axes[i] # 1D,5D,10D对应的axis
-        color = cm.rainbow(np.linspace(0, 1, 5))
+        ax = axes[i]  # 1D,5D,10D对应的axis
+        color = cm.rainbow(np.linspace(0, 1, quantile))
         ymin, ymax = one_period_quantile_cumulative_returns.min(), one_period_quantile_cumulative_returns.max()
         ax.ylabel = 'Log Cumulative Returns'
-        # ax.title = '''Cumulative Return by Quantile[{}D] for factor {}'''.format(periods[i],factor_name)
-        ax.xlabel = ''
-        ax.yscale = 'symlog'
+        ax.set_title('Cumulative Return by Quantile[{}D] for factor {}'.format(periods[i], factor_name))
+        ax.set_xlabel('')
+        # ax.yscale = 'symlog'
         ax.yticks = np.linspace(ymin, ymax, 5)
         ax.ylim = (ymin, ymax)
 
         # 按照分组quantile，进行groupby，然后画图
+        # 先把索引去掉，把索引变成列
         one_period_quantile_cumulative_returns = one_period_quantile_cumulative_returns.reset_index()
+        one_period_quantile_cumulative_returns = one_period_quantile_cumulative_returns.sort_values('date')
         factor_quantile_groups = one_period_quantile_cumulative_returns.groupby('factor_quantile')
-        for quantile_index,group_data in factor_quantile_groups:
-            group_data.columns = ["factor_quantile","date","returns"]
-            print(group_data[['date','returns']])
-            print("----------------->",quantile_index)
-
+        # legends = []
+        for quantile_index, group_data in factor_quantile_groups:
+            group_data.columns = ["factor_quantile", "date", "returns"]
             group_data.plot(x='date',
                             y='returns',
                             ax=ax,
-                            c=color[int(quantile_index)-1])
+                            label=str(int(quantile_index)),
+                            c=color[int(quantile_index) - 1])
+        ax.legend(loc="upper right")
 
     tears.plot_image(factor_name=factor_name)
 
@@ -450,6 +452,8 @@ def synthesize_by_jaqs(stock_codes, start_date, end_date):
 
 # python -m example.factor_combiner
 if __name__ == '__main__':
+    import pandas as pd
+    pd.set_option('display.max_rows', 1000)
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
     matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号
     matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号'-'显示为方块的问题

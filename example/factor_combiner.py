@@ -2,9 +2,12 @@ import logging
 import os
 
 import numpy as np
+from alphalens import tears
+from matplotlib.ticker import ScalarFormatter
 from pandas import Series, DataFrame
-
+import matplotlib.cm as cm
 from utils import utils
+import matplotlib.pyplot as plt
 
 utils.init_logger()
 from datasource import datasource_factory, datasource_utils
@@ -104,7 +107,8 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
 
     # plotting.plot_quantile_statistics_table(factor_data)
     factor_returns, mean_quantile_ret_bydate = \
-        create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False,factor_name=factor_name)
+        create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False,
+                                  factor_name=factor_name)
 
     # 临时保存一下数据，for 单元测试用
     # mean_quantile_ret_bydate.to_csv("test/data/mean_quantile_ret_bydate.csv")
@@ -113,7 +117,7 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     print("mean_quantile_ret_bydate 分层的收益率的每期数据，这个最重要\n", mean_quantile_ret_bydate)  # !!!
 
     ic_data, (t_values, p_value, skew, kurtosis) = \
-        create_information_tear_sheet(factor_data, group_neutral, by_group, set_context=False,factor_name=factor_name)
+        create_information_tear_sheet(factor_data, group_neutral, by_group, set_context=False, factor_name=factor_name)
 
     print("ic_data:", ic_data)
     print("t_stat:", t_values)  # 这个是IC们的均值是不是0的检验T值
@@ -121,9 +125,13 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     # print("skew:", skew)
     # print("kurtosis:", kurtosis)
 
-    return score(ic_data, t_values, mean_quantile_ret_bydate, periods)
+    __score, retuns_filterd_by_period_quantile = score(ic_data, t_values, mean_quantile_ret_bydate, periods)
+
+    # 画出因子的多个期间的累计收益率的发散图
+    plot_quantile_cumulative_returns(retuns_filterd_by_period_quantile, factor_name, periods)
 
     # create_turnover_tear_sheet(factor_data, set_context=False,factor_name=factor_name)
+    return __score
 
 
 def score(ic_data, t_values, mean_quantile_ret_bydate, periods):
@@ -202,7 +210,7 @@ def score(ic_data, t_values, mean_quantile_ret_bydate, periods):
 
     scores += monotony_percents_values
 
-    return scores
+    return scores, retuns_filterd_by_period_quantile
 
     """
     下午：TODO
@@ -232,6 +240,7 @@ def calc_monotony(mean_quantile_ret_bydate, periods):
     :return:
     """
     retuns_filterd_by_period_quantile = filterd_by_period_quantile(mean_quantile_ret_bydate, periods)
+
     monotony_percents = []
 
     def check_oneday_quantile_comply_rate(s: Series):
@@ -256,7 +265,7 @@ def calc_monotony(mean_quantile_ret_bydate, periods):
 
         # 统计一下True的，也就是一致的占比
         # import pdb;pdb.set_trace()
-        monotony_percent = df_order.sum() / df_order.count() # sum()可统计True的格式，诡异哈
+        monotony_percent = df_order.sum() / df_order.count()  # sum()可统计True的格式，诡异哈
         monotony_percents.append(monotony_percent)
         logger.debug("对每隔%d天的累计收益率中，有%.0f%%是和分组顺序一致的", days, monotony_percent)
     return monotony_percents, retuns_filterd_by_period_quantile
@@ -355,6 +364,38 @@ def synthesize(stock_pool, start_date, end_date):
     return combined_factor
 
 
+def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, periods):
+    plt.clf()
+    f, axes = plt.subplots(len(quantile_cumulative_returns), 1, figsize=(18, 6))
+
+    # 遍历每一个周期（1D，5D，10D）的数据
+    for i, one_period_quantile_cumulative_returns in enumerate(quantile_cumulative_returns):
+        ax = axes[i] # 1D,5D,10D对应的axis
+        color = cm.rainbow(np.linspace(0, 1, 5))
+        ymin, ymax = one_period_quantile_cumulative_returns.min(), one_period_quantile_cumulative_returns.max()
+        ax.ylabel = 'Log Cumulative Returns'
+        # ax.title = '''Cumulative Return by Quantile[{}D] for factor {}'''.format(periods[i],factor_name)
+        ax.xlabel = ''
+        ax.yscale = 'symlog'
+        ax.yticks = np.linspace(ymin, ymax, 5)
+        ax.ylim = (ymin, ymax)
+
+        # 按照分组quantile，进行groupby，然后画图
+        one_period_quantile_cumulative_returns = one_period_quantile_cumulative_returns.reset_index()
+        factor_quantile_groups = one_period_quantile_cumulative_returns.groupby('factor_quantile')
+        for quantile_index,group_data in factor_quantile_groups:
+            group_data.columns = ["factor_quantile","date","returns"]
+            print(group_data[['date','returns']])
+            print("----------------->",quantile_index)
+
+            group_data.plot(x='date',
+                            y='returns',
+                            ax=ax,
+                            c=color[int(quantile_index)-1])
+
+    tears.plot_image(factor_name=factor_name)
+
+
 def synthesize_by_jaqs(stock_codes, start_date, end_date):
     """
     测试因子合成，要求数据得是panel格式的，[trade_date,stock1,stock2,....]
@@ -421,25 +462,22 @@ if __name__ == '__main__':
     stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 调试用
-    # start = "20200101"
-    # end = "20200901"
-    # periods = [1, 5]
-    # stock_pool = '000905.SH'  # 中证500
-    # stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
-
-
-
+    start = "20200101"
+    end = "20200901"
+    periods = [1, 5, 10]
+    stock_pool = '000905.SH'  # 中证500
+    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # test_by_alphalens("clv", stock_pool, start, end, periods, stock_num)
     # test_by_alphalens("momentum", stock_pool, start, end, periods, stock_num)
     # test_by_alphalens("market_value", stock_pool, start, end, periods, stock_num)
 
     scores = []
-    for factor_name,_ in FACTORS.items():
+    for factor_name, _ in FACTORS.items():
         __score = test_by_alphalens(factor_name, stock_pool, start, end, periods, stock_num)
-        scores.append([factor_name,__score])
+        scores.append([factor_name, __score])
 
-    for factor_name,__score in scores:
+    for factor_name, __score in scores:
         logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, factor_name, __score.tolist())
 
     # 测试多因子合成

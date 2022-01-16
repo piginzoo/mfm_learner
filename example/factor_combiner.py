@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 datasource = datasource_factory.create()
 
 FACTORS = {
-    # 'market_value': MarketValueFactor(),
-    # "momentum": MomentumFactor(),
-    # "peg": PEGFactor(),
+    'market_value': MarketValueFactor(),
+    "momentum": MomentumFactor(),
+    "peg": PEGFactor(),
     "clv": CLVFactor()
 }
 FACTORS_LONG_SHORT = [-1, 1, 1, 1]  # 因子的多空性质
@@ -466,11 +466,11 @@ if __name__ == '__main__':
     stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 调试用
-    start = "20200101"
-    end = "20200901"
-    periods = [1, 5, 10]
-    stock_pool = '000905.SH'  # 中证500
-    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    # start = "20200101"
+    # end = "20200901"
+    # periods = [1, 5, 10]
+    # stock_pool = '000905.SH'  # 中证500
+    # stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # test_by_alphalens("clv", stock_pool, start, end, periods, stock_num)
     # test_by_alphalens("momentum", stock_pool, start, end, periods, stock_num)

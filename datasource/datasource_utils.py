@@ -15,6 +15,8 @@ def reset_index(factors):
     factors = factors.set_index(['datetime', 'code'])
     return factors
 
+def to_datetime(series):
+    return pd.to_datetime(series, format=CONF['dateformat'])  # 时间为日期格式，tushare是str
 
 def comply_field_names(df):
     """

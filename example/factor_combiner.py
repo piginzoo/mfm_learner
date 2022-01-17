@@ -394,10 +394,13 @@ def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, p
         ax.ylim = (ymin, ymax)
 
         # 计算指数对应天数的收益率;只取对应相隔天数的收益率
+        index_prices['datetime'] = datasource_utils.to_datetime(index_prices['datetime'])
+        index_prices = index_prices.sort_values('datetime')
         index_prices['returns'] = factor_utils.pct_chg(index_prices['close'],periods[i])
-        # import pdb;pdb.set_trace()
         index_returns = index_prices[['datetime','returns']]
+        # import pdb;pdb.set_trace()
         index_returns = index_returns.apply(lambda df: df.iloc[::periods[i]]) # 只保留相隔天数，变少
+
         index_returns.plot(x='datetime',
                         y='returns',
                         ax=ax,

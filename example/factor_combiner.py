@@ -73,6 +73,9 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     可以加一个缓冲窗口递延交易来解决。例如，通常按照收盘价的回测其实就包含了这样的前视偏差，所以递延到第二天开盘价回测。
     """
     stock_codes = get_stocks(stock_pool, start_date, end_date)
+
+    index_prices = datasource.index_daily(stock_pool, start_date=start_date, end_date=end_date)
+
     factors = get_factors(factor_name, stock_codes, start_date, end_date)
 
     factors = factor_utils.proprocess(factors)
@@ -126,7 +129,7 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     __score, retuns_filterd_by_period_quantile = score(ic_data, t_values, mean_quantile_ret_bydate, periods)
 
     # 画出因子的多个期间的累计收益率的发散图
-    plot_quantile_cumulative_returns(retuns_filterd_by_period_quantile, factor_name, periods)
+    plot_quantile_cumulative_returns(retuns_filterd_by_period_quantile, factor_name, periods,index_prices)
 
     # create_turnover_tear_sheet(factor_data, set_context=False,factor_name=factor_name)
     return __score
@@ -362,7 +365,16 @@ def synthesize(stock_pool, start_date, end_date):
     return combined_factor
 
 
-def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, periods, quantile=5):
+def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, periods,index_prices, quantile=5):
+    """
+    画图，画累计收益率的发散图
+    :param quantile_cumulative_returns: 累计收益率
+    :param factor_name:  因子名称
+    :param periods: [1,5,10]这样的周期，和累计收益率个数对应
+    :param index_prices: 对应的指数（基准）的价格
+    :param quantile: 分组个数，默认为5
+    :return:
+    """
     plt.clf()
     fig, axes = plt.subplots(len(quantile_cumulative_returns), 1, figsize=(18, 18))
     fig.tight_layout()  # 调整整体空白
@@ -370,6 +382,7 @@ def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, p
 
     # 遍历每一个周期（1D，5D，10D）的数据
     for i, one_period_quantile_cumulative_returns in enumerate(quantile_cumulative_returns):
+
         ax = axes[i]  # 1D,5D,10D对应的axis
         color = cm.rainbow(np.linspace(0, 1, quantile))
         ymin, ymax = one_period_quantile_cumulative_returns.min(), one_period_quantile_cumulative_returns.max()
@@ -379,6 +392,17 @@ def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, p
         # ax.yscale = 'symlog'
         ax.yticks = np.linspace(ymin, ymax, 5)
         ax.ylim = (ymin, ymax)
+
+        # 计算指数对应天数的收益率;只取对应相隔天数的收益率
+        index_prices['returns'] = factor_utils.pct_chg(index_prices['close'],periods[i])
+        # import pdb;pdb.set_trace()
+        index_returns = index_prices[['datetime','returns']]
+        index_returns = index_returns.apply(lambda df: df.iloc[::periods[i]]) # 只保留相隔天数，变少
+        index_returns.plot(x='datetime',
+                        y='returns',
+                        ax=ax,
+                        label='Index Return',
+                        c='g')
 
         # 按照分组quantile，进行groupby，然后画图
         # 先把索引去掉，把索引变成列
@@ -466,11 +490,11 @@ if __name__ == '__main__':
     stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 调试用
-    # start = "20200101"
-    # end = "20200901"
-    # periods = [1, 5, 10]
-    # stock_pool = '000905.SH'  # 中证500
-    # stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    start = "20200101"
+    end = "20200901"
+    periods = [1, 5, 10]
+    stock_pool = '000905.SH'  # 中证500
+    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # test_by_alphalens("clv", stock_pool, start, end, periods, stock_num)
     # test_by_alphalens("momentum", stock_pool, start, end, periods, stock_num)

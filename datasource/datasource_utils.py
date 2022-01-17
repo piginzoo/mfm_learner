@@ -27,6 +27,11 @@ def comply_field_names(df):
     return df
 
 def post_query(func):
+    """
+    一个包装器，用于把数据的字段rename
+    :param func:
+    :return:
+    """
     def wrapper(*args, **kw):
         df = func(*args, **kw)
         if type(df)!=DataFrame:

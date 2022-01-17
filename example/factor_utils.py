@@ -293,6 +293,13 @@ def nan_count(df, fields):
     # df[fields].
     pass
 
+def pct_chg(prices,days = 1):
+    """
+    计算收益率
+    """
+    return (prices.shift(-days) - prices)/prices #  向后错days天
+
+
 
 # 行业、市值中性化 - 对Dataframe数据
 def neutralize(factor_df,

@@ -7,9 +7,8 @@ import time
 import pandas as pd
 import tushare
 
-from datasource.datasource import DataSource
-from datasource.datasource_utils import post_query
 import utils
+from datasource.datasource import DataSource, post_query
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +39,32 @@ def _get_cache_file_name(func, stock_code, start_date, end_date):
     return file_path
 
 
-def _get_cache(func, stock_code, start_date, end_date):
+def _get_cache(func, stock_code, start_date, end_date, str_fields=None):
+    """
+    :param func:
+    :param stock_code:
+    :param start_date:
+    :param end_date:
+    :param str_fields: 要转换成字符串的列名，逗号分隔
+    :return:
+    """
     file_path = _get_cache_file_name(func, stock_code, start_date, end_date)
     if not os.path.exists(file_path): return None
     logger.debug("使用%s~%s，股票[%s]的[%s]缓存数据", start_date, end_date, stock_code, func)
     df = pd.read_csv(file_path)
     # 'Unnamed: 0'，是观察出来的，第一列设置成index，原始的tushare就是这样的index结构
     df = df.set_index("Unnamed: 0")
-    if 'trade_date' in df.columns:
-        # logger.debug("设置列[trade_date]为str类型")
-        df.trade_date = df.trade_date.astype(str)
-    if 'ann_date' in df.columns: df.ann_date = df.ann_date.astype(str)
-    if 'ts_code' in df.columns:  df.ts_code = df.ts_code.astype(str)
+
+    default_str = ['trade_date', 'ann_date', 'ts_code']
+    if str_fields:
+        str_fields = str_fields.split(",")
+        str_fields += default_str
+    else:
+        str_fields = default_str
+
+    for str_field in str_fields:
+        if str_field in df.columns: df[str_field] = df[str_field].astype(str)
+
     return df
 
 
@@ -70,7 +83,7 @@ class TushareDataSource(DataSource):
     def __init__(self):
         token = utils.CONF['datasources']['tushare']['token']
         self.pro = tushare.pro_api(token)
-        logger.debug("login到tushare pro上，key: %s...",token[:10])
+        logger.debug("login到tushare pro上，key: %s...", token[:10])
 
     # 返回每日行情数据，不限字段
     # https://tushare.pro/document/2?doc_id=27
@@ -184,16 +197,15 @@ class TushareDataSource(DataSource):
         return df['con_code'].unique()
 
     # https://tushare.pro/document/2?doc_id=181
-    def index_classify(self, level='L3', src='SW2014'):
-        """申万行业，默认是L3:3级，2014版（还有2021版）"""
-        df = _get_cache('index_classify', level, start_date=src, end_date='')
+    def index_classify(self, level='', src='SW2014'):
+        """申万行业，2014版（还有2021版）"""
+        df = _get_cache('index_classify', level, start_date=src, end_date='', str_fields='industry_code,parent_code')
         if df is not None: return df
         _random_sleep()
-        df = self.pro.index_classify(level=level,src=src)
-        _set_cache('index_classify', df, index_code=level, start_date=src, end_date='')
+        df = self.pro.index_classify(level=level, src=src)
+        _set_cache('index_classify', df, level, start_date=src, end_date='')
         _check_lenght(df)
         return df
-
 
     # https://tushare.pro/document/2?doc_id=25
     def stock_basic(self, ts_code):

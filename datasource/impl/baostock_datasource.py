@@ -1,9 +1,10 @@
-from datetime import datetime
 import logging
+from datetime import datetime
+
 import baostock as bs
-from datasource.datasource import DataSource
-from datasource.datasource_utils import post_query
 import pandas as pd
+
+from datasource.datasource import DataSource, post_query
 
 logger = logging.getLogger(__name__)
 

@@ -3,9 +3,9 @@ import logging
 import pandas as pd
 from pandas import DataFrame
 
-from datasource import datasource_factory
 from datasource.impl.fields_mapper import MAPPER
 from utils import CONF
+from datasource import datasource_factory as ds_factory
 
 logger = logging.getLogger(__name__)
 
@@ -16,36 +16,10 @@ def reset_index(factors):
     factors = factors.set_index(['datetime', 'code'])
     return factors
 
+
 def to_datetime(series):
     return pd.to_datetime(series, format=CONF['dateformat'])  # 时间为日期格式，tushare是str
 
-def comply_field_names(df):
-    """
-    按照 datasource.impl.fields_mapper.MAPPER 中定义的字段映射，对字段进行统一改名
-    """
-    datasource_type = CONF['datasource']
-    column_mapping = MAPPER.get(datasource_type)
-    if column_mapping is None: raise ValueError("字段映射无法识别映射类型(即数据类型)：" + datasource_type)
-    df = df.rename(columns=column_mapping)
-    return df
-
-def datasource():
-    return datasource_factory.create(CONF['datasource'])
-
-def post_query(func):
-    """
-    一个包装器，用于把数据的字段rename
-    :param func:
-    :return:
-    """
-    def wrapper(*args, **kw):
-        df = func(*args, **kw)
-        if type(df)!=DataFrame:
-            # logger.debug("不是DataFrame：%r",df)
-            return df
-        df = comply_field_names(df)
-        return df
-    return wrapper
 
 
 def load_daily_data(datasource, stock_codes, start_date, end_date):
@@ -62,10 +36,39 @@ def load_daily_data(datasource, stock_codes, start_date, end_date):
     logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(df_merge))
     return df_merge
 
-def update_industry(df, column_name):
+
+def compile_industry(industry_series):
     """
     把行业列（文字）转换成统一的行业码
     如 "家用电器" => '330000'
+    ----------
+    index_code  industry_name    level  industry_code is_pub parent_code
+    801024.SI          采掘服务    L2        210400   None      210000
+    801035.SI          石油化工    L2        220100   None      220000
+    801033.SI          化学原料    L2        220200   None      220000
+
     """
-    industry_seris = df[column_name]
-    df_datasource().index_classify()
+    df_industries = ds_factory.get().index_classify()
+
+    def find_industry_code(chinese_name):
+
+        # import pdb;pdb.set_trace()
+        found_rows = df_industries.loc[df_industries['industry_name'] == chinese_name]
+
+        if len(found_rows) == 0: raise ValueError('无法找到 [' + chinese_name + "] 对应的行业代码")
+
+        # 如果有1级的，直接返回
+        for _,row in found_rows.iterrows():
+            if row.level == 'L1': return row.industry_code
+            if row.level == 'L2': return row.parent_code
+
+        # 如果是level=3，需回溯
+        for _,row in found_rows.iterrows():
+            if row.level == 'L3':  # 假设一定能找到
+                assert len(df_industries.loc[df_industries['industry_code'] == row.parent_code]) > 0
+                return df_industries.loc[df_industries['industry_code'] == row.parent_code][0].parent_code
+        raise ValueError('无法找到 [' + chinese_name + "] 对应的行业代码")
+
+    industry_code_series = industry_series.apply(find_industry_code)
+
+    return industry_code_series

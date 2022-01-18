@@ -1,7 +1,41 @@
 import logging
 from abc import ABC, abstractmethod
 
+from pandas import DataFrame
+
+from datasource.impl.fields_mapper import MAPPER
+from utils import CONF
+
 logger = logging.getLogger(__name__)
+
+
+def comply_field_names(df):
+    """
+    按照 datasource.impl.fields_mapper.MAPPER 中定义的字段映射，对字段进行统一改名
+    """
+    datasource_type = CONF['datasource']
+    column_mapping = MAPPER.get(datasource_type)
+    if column_mapping is None: raise ValueError("字段映射无法识别映射类型(即数据类型)：" + datasource_type)
+    df = df.rename(columns=column_mapping)
+    return df
+
+
+def post_query(func):
+    """
+    一个包装器，用于把数据的字段rename
+    :param func:
+    :return:
+    """
+
+    def wrapper(*args, **kw):
+        df = func(*args, **kw)
+        if type(df) != DataFrame:
+            # logger.debug("不是DataFrame：%r",df)
+            return df
+        df = comply_field_names(df)
+        return df
+
+    return wrapper
 
 
 class DataSource(ABC):
@@ -39,7 +73,6 @@ class DataSource(ABC):
         pass
 
     @abstractmethod
-    def index_classify(self, level='L3', src='SW2014'):
+    def index_classify(self, level='', src='SW2014'):
         """行业分类"""
         pass
-

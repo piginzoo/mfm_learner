@@ -1,14 +1,19 @@
+import logging
+
 from datasource.impl.baostock_datasource import BaostockDataSource
 from datasource.impl.database_datasource import DatabaseDataSource
 from datasource.impl.tushare_datasource import TushareDataSource
 from utils import CONF
-import logging
 
 logger = logging.getLogger(__name__)
 
 __tushare_datasource = None
 __database_datasource = None
 __baostock_datasource = None
+
+
+def get():
+    return create(CONF['datasource'])
 
 
 def create(type=None):

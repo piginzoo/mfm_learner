@@ -5,8 +5,7 @@ import logging
 
 import pandas as pd
 
-from datasource.datasource import DataSource
-from datasource.datasource_utils import post_query
+from datasource.datasource import DataSource, post_query
 from datasource.impl.tushare_datasource import TushareDataSource
 from utils import utils
 
@@ -87,7 +86,7 @@ class DatabaseDataSource(DataSource):
         return self.tushare.stock_basic(ts_code)
 
     @post_query
-    def index_classify(self, level='L3', src='SW2014'):
+    def index_classify(self, level='', src='SW2014'):
         return self.tushare.index_classify(level, src)
 
 

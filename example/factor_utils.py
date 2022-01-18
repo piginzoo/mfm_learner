@@ -301,18 +301,31 @@ def pct_chg(prices,days = 1):
 
 
 
-# 行业、市值中性化 - 对Dataframe数据
+# 行业、市值中性化 - 对Dataframe数据，参考自jaqs_fxdayu代码
 def neutralize(factor_df,
                group,
                float_mv=None,
                index_member=None):
     """
-    对因子做行业、市值中性化
+    对因子做行业、市值中性化，实际上是用市值来来做回归。
+    因为有很多天数据，所以，这个F和X是一个[Days]的一个向量，回归出的e，是一个[days]的残差向量
+    -------------
+    X = w * F + e
+    X就是市值
+    F为需要被市值中性化的因子
+    e，就是去市值中性化后的结果，即，回归残差
+
     :param index_member:
     :param group:　行业分类(pandas.Dataframe类型),index为datetime, colunms为股票代码
+                   行业分类（也可以是其他分组方式）。日期为索引,证券品种为columns的二维表格,对应每一个品种在某期所属的分类
+                        date        code        industry
+                        2016-06-24	000123.SH   23
+                        2016-06-24	000124.SH   23
+                        2016-06-24	000125.SH   22
+                        2016-06-24	000126.SH   22
     :param factor_df: 因子值 (pandas.Dataframe类型),index为datetime, colunms为股票代码。
                       形如:
-                                  　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
+                        code       　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
                         date
                         2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832
                         2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890
@@ -327,14 +340,37 @@ def neutralize(factor_df,
         return s[s != "nan"]
 
     def _ols_by_numpy(x, y):
+        # least-squares，最小二乘，m是回归系数：y = m * x
         m = np.linalg.lstsq(x, y)[0]
+        # 得到残差
         resid = y - (x @ m)
         return resid
 
     def _generate_cross_sectional_residual(data):
+        """
+        date        code        signal          industry
+        2016-06-24	000123.SH   1.1             23
+        2016-06-24	000124.SH   1.2             23
+        2016-06-24	000125.SH   1.3             22
+        2016-06-24	000126.SH   1.4             22
+        :param data:
+        :return:
+        """
         for _, X in data.groupby(level=0):
             signal = X.pop("signal")
+            """
+            pd.get_dummies(['A','B','A','C'])
+               A  B  C
+            0  1  0  0
+            1  0  1  0
+            2  1  0  0
+            3  0  0  1
+            """
             X = pd.concat([X, pd.get_dummies(X.pop("industry"))], axis=1)
+            """
+            signal(factor value因子值) = w1*0 + ... wi*1 + ... wn*0 + e
+            我们用行业的one-hot作为x，去多元回归因子值y，剩余的残差e，就是我们需要的
+            """
             signal = pd.Series(_ols_by_numpy(X.values, signal), index=signal.index, name=signal.name)
             yield signal
 
@@ -344,8 +380,9 @@ def neutralize(factor_df,
     origin_factor_columns = factor_df.columns
     origin_factor_index = factor_df.index
 
-    factor_df = fillinf(factor_df)  # 调整非法值
+    factor_df = fill_inf(factor_df)  # 调整非法值
     factor_df = _mask_non_index_member(factor_df, index_member)  # 剔除非指数成份股
+    # stack()，是把二维表转变成Seris，列变成行了，也就是把股票从列名，变成行了
     factor_df = factor_df.dropna(how="all").stack().rename("signal")  # 删除全为空的截面
     data.append(factor_df)
 
@@ -358,6 +395,7 @@ def neutralize(factor_df,
     industry_standard = drop_nan(group.stack()).rename("industry")
     data.append(industry_standard)
 
+    # 按列(axis=1)合并，其实是贴到最后一列上
     data = pd.concat(data, axis=1).dropna()
     residuals = pd.concat(_generate_cross_sectional_residual(data)).unstack()
 

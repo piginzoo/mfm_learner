@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 from pandas import DataFrame
 
+from datasource import datasource_factory
 from datasource.impl.fields_mapper import MAPPER
 from utils import CONF
 
@@ -27,6 +28,9 @@ def comply_field_names(df):
     if column_mapping is None: raise ValueError("字段映射无法识别映射类型(即数据类型)：" + datasource_type)
     df = df.rename(columns=column_mapping)
     return df
+
+def datasource():
+    return datasource_factory.create(CONF['datasource'])
 
 def post_query(func):
     """
@@ -57,3 +61,11 @@ def load_daily_data(datasource, stock_codes, start_date, end_date):
         # logger.debug("加载%s~%s的股票[%s]的 %d 条daliy数据", start_date, end_date, stock_code, len(data))
     logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(df_merge))
     return df_merge
+
+def update_industry(df, column_name):
+    """
+    把行业列（文字）转换成统一的行业码
+    如 "家用电器" => '330000'
+    """
+    industry_seris = df[column_name]
+    df_datasource().index_classify()

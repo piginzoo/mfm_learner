@@ -309,6 +309,7 @@ def neutralize(factor_df,
     """
     对因子做行业、市值中性化，实际上是用市值来来做回归。
     因为有很多天数据，所以，这个F和X是一个[Days]的一个向量，回归出的e，是一个[days]的残差向量
+    注意，在做行业中性化的时候，F实际上不是一个向量了，而是是一个行业宽度的一个矩阵[days,industies]，但是残差还是一个[days]向量
     -------------
     X = w * F + e
     X就是市值
@@ -348,6 +349,8 @@ def neutralize(factor_df,
 
     def _generate_cross_sectional_residual(data):
         """
+        就是把industry，变成one-hot，然后和signal做多元回归，求残差
+        --------------------------------------------------
         date        code        signal          industry
         2016-06-24	000123.SH   1.1             23
         2016-06-24	000124.SH   1.2             23
@@ -357,7 +360,7 @@ def neutralize(factor_df,
         :return:
         """
         for _, X in data.groupby(level=0):
-            signal = X.pop("signal")
+            signal = X.pop("signal") # pop这写法骚啊，就是单独取一列的意思，和X['pop']一个意思，不过，还包含了删除这列
             """
             pd.get_dummies(['A','B','A','C'])
                A  B  C
@@ -372,6 +375,7 @@ def neutralize(factor_df,
             我们用行业的one-hot作为x，去多元回归因子值y，剩余的残差e，就是我们需要的
             """
             signal = pd.Series(_ols_by_numpy(X.values, signal), index=signal.index, name=signal.name)
+            # 靠，为何要用yield，看着晕，其实就是每行都处理的意思
             yield signal
 
     data = []

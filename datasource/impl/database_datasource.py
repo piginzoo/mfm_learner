@@ -82,6 +82,14 @@ class DatabaseDataSource(DataSource):
     def trade_cal(self, start_date, end_date, exchange='SSE'):
         return self.tushare.trade_cal(start_date, end_date, exchange)
 
+    @post_query
+    def stock_basic(self, ts_code):
+        return self.tushare.stock_basic(ts_code)
+
+    @post_query
+    def index_classify(self, level='L3', src='SW2014'):
+        return self.tushare.index_classify(level, src)
+
 
 # python -m utils.tushare_dbutils
 if __name__ == '__main__':

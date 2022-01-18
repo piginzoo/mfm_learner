@@ -33,3 +33,13 @@ class DataSource(ABC):
     @abstractmethod
     def trade_cal(self, start_date, end_date, exchange='SSE'):
         pass
+
+    @abstractmethod
+    def stock_basic(self, ts_code):
+        pass
+
+    @abstractmethod
+    def index_classify(self, level='L3', src='SW2014'):
+        """行业分类"""
+        pass
+

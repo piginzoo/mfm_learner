@@ -15,5 +15,15 @@ def __cache(name):
 def test(test1,test2,test3):
     print(test1,test2,test3)
 
+
+def test_yield():
+    data=list(range(10))
+    for d in data:
+        yield str(d)+"_"+str(d)
+
+# python test_wrapper.py
 if __name__ == '__main__':
     test("A","B","C")
+    data = test_yield()
+    for a in data:
+        print(a)

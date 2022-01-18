@@ -182,3 +182,25 @@ class TushareDataSource(DataSource):
         _check_lenght(df)
         _set_cache('index_weight', df, index_code, original_trade_date, original_trade_date)
         return df['con_code'].unique()
+
+    # https://tushare.pro/document/2?doc_id=181
+    def index_classify(self, level='L3', src='SW2014'):
+        """申万行业，默认是L3:3级，2014版（还有2021版）"""
+        df = _get_cache('index_classify', level, start_date=src, end_date='')
+        if df is not None: return df
+        _random_sleep()
+        df = self.pro.index_classify(level=level,src=src)
+        _set_cache('index_classify', df, index_code=level, start_date=src, end_date='')
+        _check_lenght(df)
+        return df
+
+
+    # https://tushare.pro/document/2?doc_id=25
+    def stock_basic(self, ts_code):
+        df = _get_cache('stock_basic', ts_code, start_date='', end_date='')
+        if df is not None: return df
+        _random_sleep()
+        df = self.pro.stock_basic(ts_code)
+        _set_cache('stock_basic', df, ts_code, start_date='', end_date='')
+        _check_lenght(df)
+        return df

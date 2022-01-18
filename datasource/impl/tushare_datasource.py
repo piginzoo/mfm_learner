@@ -212,7 +212,7 @@ class TushareDataSource(DataSource):
         df = _get_cache('stock_basic', ts_code, start_date='', end_date='')
         if df is not None: return df
         _random_sleep()
-        df = self.pro.stock_basic(ts_code)
+        df = self.pro.stock_basic(ts_code=ts_code)
         _set_cache('stock_basic', df, ts_code, start_date='', end_date='')
         _check_lenght(df)
         return df

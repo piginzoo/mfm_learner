@@ -4,6 +4,7 @@ import os
 import warnings
 
 import yaml
+from pandas import Series
 
 import conf
 import utils
@@ -43,6 +44,11 @@ def str2date(s_date, format="%Y%m%d"):
 
 def date2str(date, format="%Y%m%d"):
     return datetime.datetime.strftime(date, format)
+
+def dataframe2series(df):
+    if type(df) == Series: return df
+    assert len(df.columns)==1, df.columns
+    return df.iloc[:,0]
 
 
 def init_logger():

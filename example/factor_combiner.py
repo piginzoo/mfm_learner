@@ -46,6 +46,7 @@ def get_factors(name, stock_codes, start_date, end_date):
     :return:
     """
     if name in FACTORS:
+        # 因子值格式为：index:[datetime,code] columns:[factor_value]
         factors = FACTORS[name].calculate(stock_codes, start_date, end_date)
     else:
         raise ValueError("无法识别的因子名称：" + name)
@@ -94,7 +95,6 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     factors - 必须是 index=[日期|股票], factor value
     prices - 行情数据，一般都是收盘价，index=[日期]，列是所有的股票
     groups - 行业归属数据，就是每天、每只股票隶属哪个行业：index=[日期], 列是：[股票，它归属的行业代码]
-    
     """
     factor_data = get_clean_factor_and_forward_returns(factors, prices=close, periods=periods)
 

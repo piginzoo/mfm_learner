@@ -2,6 +2,8 @@ import logging
 
 from sklearn import preprocessing
 
+from utils import utils
+
 logger = logging.getLogger(__name__)
 
 
@@ -116,6 +118,7 @@ def _mask_non_index_member(df, index_member=None):
         index_member = index_member.astype(bool)
         return _mask_df(df, ~index_member)
     return df
+
 
 #
 # # 横截面标准化 - 对Dataframe数据
@@ -259,6 +262,18 @@ def rank_standardize(factor_df, index_member=None):
     return rank_with_mask(factor_df, axis=1, normalize=True)
 
 
+def check_factor_format(df, index_type='date'):
+    """
+    index_type: 索引烈性，有两种格式：'date','date_code'
+    烦死了，每次因子格式都不知道对不对，我写个函数来强制检查
+    因子界面表示，有两种格式：
+        格式1：索引是[date,code], 列是[value] ===> 对应 index_type='date'
+        格式2：索引是[date], 列是[code1,code2,code3] ====> 对应 index_type='date_code'
+    """
+    index_num = 1 if index_type == 'date' else 2
+    return len(df.index.names) == index_num
+
+
 # 将因子值加一个极小的扰动项,用于对quantile做区分
 def get_disturbed_factor(factor_df):
     """
@@ -293,12 +308,12 @@ def nan_count(df, fields):
     # df[fields].
     pass
 
-def pct_chg(prices,days = 1):
+
+def pct_chg(prices, days=1):
     """
     计算收益率
     """
-    return (prices.shift(-days) - prices)/prices #  向后错days天
-
+    return (prices.shift(-days) - prices) / prices  # 向后错days天
 
 
 # 行业、市值中性化 - 对Dataframe数据，参考自jaqs_fxdayu代码
@@ -337,9 +352,6 @@ def neutralize(factor_df,
     :return: 中性化后的因子值(pandas.Dataframe类型),index为datetime, colunms为股票代码。
     """
 
-    def drop_nan(s):
-        return s[s != "nan"]
-
     def _ols_by_numpy(x, y):
         # least-squares，最小二乘，m是回归系数：y = m * x
         m = np.linalg.lstsq(x, y)[0]
@@ -360,7 +372,7 @@ def neutralize(factor_df,
         :return:
         """
         for _, X in data.groupby(level=0):
-            signal = X.pop("signal") # pop这写法骚啊，就是单独取一列的意思，和X['pop']一个意思，不过，还包含了删除这列
+            signal = X.pop("signal")  # pop这写法骚啊，就是单独取一列的意思，和X['pop']一个意思，不过，还包含了删除这列
             """
             pd.get_dummies(['A','B','A','C'])
                A  B  C
@@ -380,29 +392,29 @@ def neutralize(factor_df,
 
     data = []
 
-    # 用于恢复原先的索引和列
-    origin_factor_columns = factor_df.columns
-    origin_factor_index = factor_df.index
-
-    factor_df = fill_inf(factor_df)  # 调整非法值
-    factor_df = _mask_non_index_member(factor_df, index_member)  # 剔除非指数成份股
-    # stack()，是把二维表转变成Seris，列变成行了，也就是把股票从列名，变成行了
-    factor_df = factor_df.dropna(how="all").stack().rename("signal")  # 删除全为空的截面
-    data.append(factor_df)
+    # 准备因子数据
+    assert check_factor_format(factor_df, index_type='date_code')
+    assert len(factor_df.columns) == 1, factor_df.columns
+    data.append(utils.dataframe2series(factor_df).rename("signal"))
 
     # 获取对数流动市值，并去极值、标准化。市值类因子不需进行这一步
     if float_mv is not None:
         float_mv = standardize(mad(np.log(float_mv), index_member=index_member), index_member).stack().rename("style")
         data.append(float_mv)
 
-    # 行业
-    industry_standard = drop_nan(group.stack()).rename("industry")
+    # 行业中性化处理
+    assert check_factor_format(group, index_type='date_code')
+    assert len(group.columns) == 1
+    industry_standard = utils.dataframe2series(group).rename("industry")
     data.append(industry_standard)
+    data = pd.concat(data, axis=1).dropna()  # 按列(axis=1)合并，其实是贴到最后一列上，这里是把
+    residuals = pd.concat(_generate_cross_sectional_residual(data))
 
-    # 按列(axis=1)合并，其实是贴到最后一列上
-    data = pd.concat(data, axis=1).dropna()
-    residuals = pd.concat(_generate_cross_sectional_residual(data)).unstack()
-
-    # 恢复在中性化过程中剔除的行和列
-    residuals.reindex(index=origin_factor_index, columns=origin_factor_columns)
-    return residuals.reindex(index=origin_factor_index, columns=origin_factor_columns)
+    """"
+    中性化结果：
+    date      code
+    20200102  300433.SZ   -5.551115e-17
+              300498.SZ    0.000000e+00
+              600000.SH    1.110223e-16
+    """
+    return residuals

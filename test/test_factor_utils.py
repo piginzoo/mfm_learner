@@ -24,22 +24,33 @@ def test_pct_chg():
     assert math.isnan(returns[3])
 
 
-"""
-def neutralize(factor_df,
-               group,
-               float_mv=None,
-               index_member=None):
-"""
 
 
 def test_neutralize():
-    df_factor = __generate_mock_factor()
-    df_factor['df_factor'] = datasource_utils.compile_industry(df_factor['industry'])
-    print(df_factor)
-    # factor_utils.neutralize(df_factor)
+    """
+    测试行业中性化
+    def neutralize(factor_df,
+                   group,
+                   float_mv=None,
+                   index_member=None):
+    """
+
+    df_factor,df_industry = __generate_mock_factor()
+    print("行业1:", df_industry.head(3))
+    df_industry = datasource_utils.compile_industry(df_industry)
+    print("因子:",df_factor.head(3))
+    print("行业2:",df_industry.head(3))
+    neutralized_factor = factor_utils.neutralize(df_factor,df_industry)
+    print("中性化结果：")
+    print(neutralized_factor)
 
 
 def __generate_mock_factor():
+    """
+    因子造假器，哈哈哈
+    :return:
+    """
+
     start_date = '20200101'
     end_date = '20201201'
 
@@ -50,9 +61,6 @@ def __generate_mock_factor():
     stocks = stocks[:5].tolist()
 
     stocks_info = datasource_factory.get().stock_basic(",".join(stocks))
-    print(stocks_info)
-
-
 
     df = DataFrame()
     for d in dates:
@@ -62,4 +70,8 @@ def __generate_mock_factor():
 
     df = df.merge(stocks_info[['code','industry']],on="code")
 
-    return df
+    print("因子+行业：",df.head(3))
+
+    df = df.set_index(['date','code'])
+
+    return df[['value']], df[['industry']]

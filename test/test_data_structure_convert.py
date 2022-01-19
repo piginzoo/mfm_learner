@@ -32,8 +32,10 @@ data1 = [
     ['000002.SH','2016-06-29',0.039431,0.012271,0.037432,-0.027272,0.010902,0.077293,-0.050667]
 ]
 data1 = pd.DataFrame(data1,columns=["code","datetime","BP","CFP","EP","ILLIQUIDITY","REVS20","SRMI","VOL20"])
-data1 = data1.set_index(["code","datetime"])
+data1['datetime'] = pd.to_datetime(data1['datetime'], format='%Y-%m-%d')  # 时间为日期格式，tushare是str
+data1 = data1.set_index(["datetime","code"])
 df=data1
+
 
 print("数据：")
 print(data1)

@@ -37,7 +37,7 @@ def load_daily_data(datasource, stock_codes, start_date, end_date):
     return df_merge
 
 
-def compile_industry(df_industry):
+def compile_industry(series_industry):
     """
     把行业列（文字）转换成统一的行业码
     如 "家用电器" => '330000'
@@ -72,7 +72,7 @@ def compile_industry(df_industry):
         if row.level == 'L2': return row.parent_code
         if row.level == 'L3':  # 假设一定能找到
             assert len(df_industries.loc[df_industries['industry_code'] == row.parent_code]) > 0
-            return df_industries.loc[df_industries['industry_code'] == row.parent_code][0].parent_code
+            return df_industries.loc[df_industries['industry_code'] == row.parent_code].iloc[0].parent_code
         raise None
 
     def __get_possible(df_industries, chinese_name):
@@ -88,7 +88,5 @@ def compile_industry(df_industry):
 
         return code
 
-    # 用中文名列，生成，申万的行业代码列
-    df_industry['industry'] = df_industry['industry'].apply(find_industry_code)
-
-    return df_industry[['industry']]
+    # 用中文名列，生成，申万的行业代码列, df_industry['industry']是中文名，转成申万的代码：industry_code
+    return series_industry.apply(find_industry_code)

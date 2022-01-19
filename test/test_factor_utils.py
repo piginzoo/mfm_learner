@@ -40,12 +40,12 @@ def test_neutralize():
     stocks = stocks[:5].tolist()
 
     # 行业数据
-    df_factor, df_industry = __generate_mock_factor(stocks, start_date, end_date)
-    df_industry = datasource_utils.compile_industry(df_industry)
-    # 市值数据
-    df_mv = datasource_factory.get().daily_basic(stocks, start_date, end_date)
-    df_mv = datasource_utils.reset_index(df_mv)
-    neutralized_factor = factor_utils.neutralize(df_factor, df_industry, df_mv['total_mv'])
+    df_factor = __generate_mock_factor(stocks, start_date, end_date)
+    # df_industry = datasource_utils.compile_industry(df_industry)
+    # # 市值数据
+    # df_mv = datasource_factory.get().daily_basic(stocks, start_date, end_date)
+    # df_mv = datasource_utils.reset_index(df_mv)
+    neutralized_factor = factor_utils.neutralize(df_factor)# df_industry, df_mv['total_mv'])
 
     print("中性化结果：")
     print(neutralized_factor)
@@ -56,9 +56,10 @@ def __generate_mock_factor(stocks, start_date, end_date):
     因子造假器，哈哈哈
     :return:
     """
+    # 获得交易日期
     dates = datasource_factory.get().trade_cal(start_date, end_date)
 
-    stocks_info = datasource_factory.get().stock_basic(",".join(stocks))
+    # stocks_info = datasource_factory.get().stock_basic(",".join(stocks))
 
     df = DataFrame()
     for d in dates:
@@ -66,10 +67,10 @@ def __generate_mock_factor(stocks, start_date, end_date):
             df = df.append([[d, s, random()]])
     df.columns = ['datetime', 'code', 'value']
 
-    df = df.merge(stocks_info[['code', 'industry']], on="code")
+    # df = df.merge(stocks_info[['code', 'industry']], on="code")
 
-    print("因子+行业：", df.head(3))
+    print("因子：", df.head(3))
 
     df = datasource_utils.reset_index(df)
 
-    return df[['value']], df[['industry']]
+    return df

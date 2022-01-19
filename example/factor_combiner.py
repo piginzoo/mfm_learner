@@ -76,10 +76,11 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     stock_codes = get_stocks(stock_pool, start_date, end_date)
 
     index_prices = datasource.index_daily(stock_pool, start_date=start_date, end_date=end_date)
-
     factors = get_factors(factor_name, stock_codes, start_date, end_date)
-
     factors = factor_utils.preprocess(factors)
+
+    # 中性化后的
+    factors = factor_utils.neutralize(factors)
 
     # 此接口获取的数据为未复权数据，回测建议使用复权数据，这里为批量获取股票数据做了简化
     logger.debug("股票池：%r", stock_codes)

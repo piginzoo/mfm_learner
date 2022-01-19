@@ -4,9 +4,12 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame, Series
 
+from datasource import datasource_factory, datasource_utils
 from utils import utils
 
 logger = logging.getLogger(__name__)
+
+datasource = datasource_factory.get()
 
 
 def winsorize(se):
@@ -202,10 +205,7 @@ def pct_chg(prices, days=1):
 
 
 # 行业、市值中性化 - 对Dataframe数据，参考自jaqs_fxdayu代码
-def neutralize(factor_df,
-               group,
-               float_mv=None,
-               index_member=None):
+def neutralize(factor_df):
     """
     对因子做行业、市值中性化，实际上是用市值来来做回归。
     因为有很多天数据，所以，这个F和X是一个[Days]的一个向量，回归出的e，是一个[days]的残差向量
@@ -236,6 +236,17 @@ def neutralize(factor_df,
     :param float_mv: 流通市值因子(pandas.Dataframe类型),index为datetime, colunms为股票代码．为空则不进行市值中性化
     :return: 中性化后的因子值(pandas.Dataframe类型),index为datetime, colunms为股票代码。
     """
+
+    def _get_stock_info(factor_df):
+        """从索引中剥离开始日期、结束日期、所有的股票"""
+        assert len(factor_df.index.names) == 2 and factor_df.index.names[0] == 'datetime', factor_df.index.names
+        assert len(factor_df.index.names) == 2 and factor_df.index.names[1] == 'code', factor_df.index.names
+        stock_codes = factor_df.index.levels[1].tolist()
+        dates = factor_df.index.levels[0]
+        dates = dates.sort_values()
+        start_date = utils.date2str(dates[0])
+        end_date = utils.date2str(dates[-1])
+        return stock_codes, start_date, end_date
 
     def _ols_by_numpy(x, y):
         # least-squares，最小二乘，m是回归系数：y = m * x
@@ -277,22 +288,35 @@ def neutralize(factor_df,
             # 靠，为何要用yield，看着晕，其实就是每行都处理的意思
             yield signal
 
+    stock_codes, start_date, end_date = _get_stock_info(factor_df)
+
+    #   行业数据
+    stocks_info = datasource.stock_basic(",".join(stock_codes))
+    df_factor_temp = DataFrame(factor_df)  # 防止他是Series
+    assert check_factor_format(factor_df, index_type='date_code')
+    df_factor_temp = df_factor_temp.reset_index()
+    df_factor_temp = df_factor_temp.merge(stocks_info[['code', 'industry']], on="code")  # stocks_info行太少，需要和factors做merge
+    df_factor_temp = df_factor_temp.set_index(['datetime','code'])
+    df_industry = datasource_utils.compile_industry(df_factor_temp['industry'])
+
+    #   市值数据
+    df_mv = datasource.daily_basic(stock_codes, start_date, end_date)
+    df_mv = datasource_utils.reset_index(df_mv)
+    df_mv = df_mv['total_mv']
+
     data = []
 
     # 准备因子数据
     assert check_factor_format(factor_df, index_type='date_code')
-    assert len(factor_df.columns) == 1, factor_df.columns
     data.append(utils.dataframe2series(factor_df).rename("signal"))
 
     # 获取对数流动市值，并去极值、标准化。市值类因子不需进行这一步
-    if float_mv is not None:
-        float_mv = preprocess(float_mv)
-        data.append(float_mv)
+    df_mv = preprocess(df_mv)
+    data.append(df_mv)
 
     # 行业中性化处理
-    assert check_factor_format(group, index_type='date_code')
-    assert len(group.columns) == 1
-    industry_standard = utils.dataframe2series(group).rename("industry")
+    assert check_factor_format(df_industry, index_type='date_code')
+    industry_standard = utils.dataframe2series(df_industry).rename("industry")
     data.append(industry_standard)
 
     data = pd.concat(data, axis=1).dropna()  # 按列(axis=1)合并，其实是贴到最后一列上，索引要相同，都是 [datetime|code]

@@ -2,9 +2,12 @@
 import math
 from random import random
 
-import numpy as np
 import pandas as pd
 from pandas import DataFrame
+
+from utils import utils
+
+utils.init_logger()
 
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
@@ -43,7 +46,7 @@ def __generate_mock_factor():
     dates = datasource_factory.get().trade_cal(start_date, end_date)
 
     stocks = datasource_factory.get().index_weight('000300.SH', start_date)
-    np.random.shuffle(stocks)
+    # np.random.shuffle(stocks)
     stocks = stocks[:5].tolist()
 
     stocks_info = datasource_factory.get().stock_basic(",".join(stocks))

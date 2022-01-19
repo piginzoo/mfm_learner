@@ -10,7 +10,10 @@ logger = logging.getLogger(__name__)
 
 def reset_index(factors):
     """把索引设置成[日期+股票代码]的复合索引"""
-    factors['datetime'] = pd.to_datetime(factors['datetime'], format=CONF['dateformat'])  # 时间为日期格式，tushare是str
+    assert 'datetime' in factors.columns, factors.columns
+    assert 'code' in factors.columns, factors.columns
+
+    factors['datetime'] = to_datetime(factors['datetime'])
     factors = factors.set_index(['datetime', 'code'])
     return factors
 

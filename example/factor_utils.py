@@ -1,6 +1,8 @@
 import logging
 
-from sklearn import preprocessing
+import numpy as np
+import pandas as pd
+from pandas import DataFrame, Series
 
 from utils import utils
 
@@ -8,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def winsorize(se):
+    assert type(se) == Series
     """
     缩尾处理
     把分数为97.5%和2.5%之外的异常值替换成分位数值
@@ -31,30 +34,24 @@ def winsorize(se):
 
 def standardize(se):
     """标准化"""
+    assert type(se) == Series
+
     se_std = se.std()
     se_mean = se.mean()
     return (se - se_mean) / se_std
 
 
 def fill_nan(se):
+    assert type(se) == Series
     return se.fillna(se.dropna().mean())
 
 
-def proprocess(factors):
-    print(factors)
+def preprocess(factors):
     factors = factors.groupby(level='datetime').apply(fill_nan)  # 填充NAN
     factors = factors.groupby(level='datetime').apply(winsorize)  # 去极值
     factors = factors.groupby(level='datetime').apply(standardize)  # 标准化
-    logger.debug("规范化预处理完因子，%d行", len(factors))
+    logger.debug("规范化预处理，%d行", len(factors))
     return factors
-
-
-# encoding=utf-8
-# 数据处理
-
-import numpy as np
-import pandas as pd
-from pandas import DataFrame
 
 
 def to_panel_of_stock_columns(df):
@@ -92,15 +89,6 @@ def fill_inf(df):
     return df.replace([np.inf, -np.inf], np.nan)
 
 
-def fill_nan(df, by="no"):
-    if by == "no": return df
-    if by == "mean":
-        return df.fill(df.mean())
-    if by == "median":
-        return df.fill(df.median())
-    raise ValueError("无法识别的填充NAN的类型：" + by)
-
-
 def zscore(df):
     """使用sklean的方法，归一化"""
     df.iloc[:, 0] = preprocessing.scale(df[:, 0])  # z-score 规范化
@@ -118,87 +106,6 @@ def _mask_non_index_member(df, index_member=None):
         index_member = index_member.astype(bool)
         return _mask_df(df, ~index_member)
     return df
-
-
-#
-# # 横截面标准化 - 对Dataframe数据
-# def standardize(factor_df, index_member=None):
-#     """
-#     对因子值做z-score标准化-算样本方差选择自由度为n-1
-#     :param index_member:
-#     :param factor_df: 因子值 (pandas.Dataframe类型),index为datetime, colunms为股票代码。
-#                       形如:
-#                                   　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
-#                         date
-#                         2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832
-#                         2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890
-#                         2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691
-#                         2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805
-#                         2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902
-#     :return:z-score标准化后的因子值(pandas.Dataframe类型),index为datetime, colunms为股票代码。
-#     """
-#
-#     factor_df = fill_inf(factor_df)
-#     factor_df = _mask_non_index_member(factor_df, index_member)
-#     return factor_df.sub(factor_df.mean(axis=1), axis=0).div(factor_df.std(axis=1), axis=0)
-
-
-# # 横截面去极值 - 对Dataframe数据
-# def winsorize(factor_df, alpha=0.05, index_member=None):
-#     """
-#     对因子值做去极值操作
-#     :param index_member:
-#     :param alpha: 极值范围
-#     :param factor_df: 因子值 (pandas.Dataframe类型),index为datetime, colunms为股票代码。
-#                       形如:
-#                                   　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
-#                         date
-#                         2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832
-#                         2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890
-#                         2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691
-#                         2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805
-#                         2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902
-#     :return:去极值后的因子值(pandas.Dataframe类型),index为datetime, colunms为股票代码。
-#     """
-#
-#     def winsorize_series(se):
-#         q = se.quantile([alpha / 2, 1 - alpha / 2])
-#         se[se < q.iloc[0]] = q.iloc[0]
-#         se[se > q.iloc[1]] = q.iloc[1]
-#         return se
-#
-#     factor_df = fill_inf(factor_df)
-#     factor_df = _mask_non_index_member(factor_df, index_member)
-#     return factor_df.apply(lambda x: winsorize_series(x), axis=1)
-
-
-# 横截面去极值 - 对Dataframe数据
-def mad(factor_df, index_member=None):
-    """
-    对因子值做去极值操作
-    :param index_member:
-    :param factor_df: 因子值 (pandas.Dataframe类型),index为datetime, colunms为股票代码。
-                      形如:
-                                  　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
-                        date
-                        2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832
-                        2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890
-                        2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691
-                        2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805
-                        2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902
-    :return:去极值后的因子值(pandas.Dataframe类型),index为datetime, colunms为股票代码。
-    """
-
-    def _mad(series):
-        if series.dropna().size == 0:
-            return series
-        median = series.median()
-        tmp = (series - median).abs().median()
-        return series.clip(median - 5 * tmp, median + 5 * tmp)
-
-    factor_df = fillinf(factor_df)
-    factor_df = _mask_non_index_member(factor_df, index_member)
-    return factor_df.apply(lambda x: _mad(x), axis=1)
 
 
 def rank_with_mask(df, axis=1, mask=None, normalize=False, method='min'):
@@ -238,28 +145,6 @@ def rank_with_mask(df, axis=1, mask=None, normalize=False, method='min'):
         dividend.loc[dividend > SUB] = dividend.loc[dividend > SUB] - SUB
         rank = rank.sub(SUB).div(dividend, axis=(1 - axis))
     return rank
-
-
-# 横截面排序并归一化
-def rank_standardize(factor_df, index_member=None):
-    """
-    输入因子值, 将因子用排序分值重构，并处理到0-1之间(默认为升序——因子越大 排序分值越大(越好)
-        :param index_member:
-        :param factor_df: 因子值 (pandas.Dataframe类型),index为datetime, colunms为股票代码。
-                      形如:
-                                  　AAPL	　　　     BA	　　　CMG	　　   DAL	      LULU	　　
-                        date
-                        2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832
-                        2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890
-                        2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691
-                        2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805
-                        2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902
-
-    :return: 排序重构后的因子值。 取值范围在0-1之间
-    """
-    factor_df = fillinf(factor_df)
-    factor_df = _mask_non_index_member(factor_df, index_member)
-    return rank_with_mask(factor_df, axis=1, normalize=True)
 
 
 def check_factor_format(df, index_type='date'):
@@ -380,6 +265,8 @@ def neutralize(factor_df,
             1  0  1  0
             2  1  0  0
             3  0  0  1
+            X可能会有两列[signal,style(mv)]，也可能只有1列[signal]，
+            最终回归的时候，signal会变成one-hot，
             """
             X = pd.concat([X, pd.get_dummies(X.pop("industry"))], axis=1)
             """
@@ -399,7 +286,7 @@ def neutralize(factor_df,
 
     # 获取对数流动市值，并去极值、标准化。市值类因子不需进行这一步
     if float_mv is not None:
-        float_mv = standardize(mad(np.log(float_mv), index_member=index_member), index_member).stack().rename("style")
+        float_mv = preprocess(float_mv)
         data.append(float_mv)
 
     # 行业中性化处理
@@ -407,12 +294,13 @@ def neutralize(factor_df,
     assert len(group.columns) == 1
     industry_standard = utils.dataframe2series(group).rename("industry")
     data.append(industry_standard)
-    data = pd.concat(data, axis=1).dropna()  # 按列(axis=1)合并，其实是贴到最后一列上，这里是把
+
+    data = pd.concat(data, axis=1).dropna()  # 按列(axis=1)合并，其实是贴到最后一列上，索引要相同，都是 [datetime|code]
     residuals = pd.concat(_generate_cross_sectional_residual(data))
 
     """"
     中性化结果：
-    date      code
+    datetime  code
     20200102  300433.SZ   -5.551115e-17
               300498.SZ    0.000000e+00
               600000.SH    1.110223e-16

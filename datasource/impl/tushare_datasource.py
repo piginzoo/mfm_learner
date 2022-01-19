@@ -209,6 +209,8 @@ class TushareDataSource(DataSource):
 
     # https://tushare.pro/document/2?doc_id=25
     def stock_basic(self, ts_code):
+        """股票基本信息，主要是为了获得行业信息（目前）"""
+
         df = _get_cache('stock_basic', ts_code, start_date='', end_date='')
         if df is not None: return df
         _random_sleep()

@@ -533,8 +533,6 @@ def orthogonalize(factors_dict=None, standardize_type="z_score", winsorization=F
 
     # 因子标准化
     for factor_name in factor_name_list:
-        import pdb;
-        pdb.set_trace()
         factor_value = pd.concat(new_factors_dict[factor_name])
         # 恢复在正交化过程中剔除的行和列
         factor_value = factor_value.reindex(index=factor_value_list[0].index, columns=factor_value_list[0].columns)

@@ -35,7 +35,7 @@ def main(stock_pool, start, end, stock_num):
     实现多重索引的方法是 df.set_index([„date‟,‟asset‟])。
     """
     factors = market_value_factor.LNCAP(universe=universe, start=start, end=end)
-    factors = market_value_factor.proprocess(factors)
+    factors = market_value_factor.preprocess(factors)
     factors.index = pd.to_datetime(factors.index) # 时间为日期格式，tushare是str
     factors = factors.unstack() # 将LNCAP的因子格式从列为股票名，转变成，日期+股票的联合索引，注意，unstack导致股票名称在前
     factors.index.names=['ts_code','trade_date']

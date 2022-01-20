@@ -144,26 +144,23 @@ class MultiFactorStrategy(bt.Strategy):
             # 得到当天的因子
             factor = factor.loc[current_date]
             # 按照value排序，reset_index()会自动生成从0开始索引，用这点来生成排序序号，酷
-            df_sorted_by_factor_values = factor.sort_values().reset_index()
+            df_sorted_by_factor_values = factor.sort_values(by=factor.columns[0]).reset_index()
             # 再利用reset_index，生成排序列
             df_stock_rank_by_factor = df_sorted_by_factor_values.reset_index()
-            df_stock_rank_by_factor.columns = ['index', 'code']
+            df_stock_rank_by_factor.columns = ['index', 'code', 'factor_value']
             # 把索引换成股票代码
             df_stock_rank_by_factor = df_stock_rank_by_factor.set_index('code')
-            df_stock_scores.append(df_stock_rank_by_factor)
+            df_stock_scores.append(df_stock_rank_by_factor['index'])
 
         df_stock_scores = pd.concat(df_stock_scores, axis=1)
 
-        df_stock_scores[:, 'score'] = df_stock_scores.sum(axis=1)
-
-        logger.debug("交易日：%r , %d/%d", utils.date2str(current_date), self.count, self.total)
-        if np.isnan(factor).all():
-            logger.debug("%r 日的因子全部为NAN，忽略当日", utils.date2str(current_date))
-            return None
+        # 按照score列求和
+        df_stock_scores.loc[:,'score'] = df_stock_scores.sum(axis=1)
 
         df_stock_scores = df_stock_scores.dropna()
-        # logger.debug("当天的因子为：%r", factor)
+
+        logger.debug("因子排序成绩为：\n%r", df_stock_scores)
         # 选择因子值前20%
-        select_stocks = df_stock_scores.index[:math.ceil(0.2 * len(factor))]
-        logger.debug("此次选中的股票为：%r", ",".join(select_stocks.tolist()))
+        select_stocks = df_stock_scores.sort_values(by='score',ascending=False).index[:math.ceil(0.2 * len(df_stock_scores))]
+        logger.debug("此次选中的股票为：%r", ",".join(select_stocks))
         return select_stocks

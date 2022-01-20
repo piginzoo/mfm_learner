@@ -68,6 +68,29 @@
 - 同理，去极值（MAD）、用中位数（均值也可以）填充NAN，也是用因子自己的值，也就是df.group(factor_name).apply(xxx)
 - 单个因子搞完了，要做去极值、填充NAN、和标准化
 - 合成因子后，还需要再做一遍
+- 关于回测
+
+    我使用的是backtrader做的回测，backtrader可能是大家用的最多的回测框架，但是我的多因子回测比较特殊，还是有不少坑。
+    [参考1](https://zhuanlan.zhihu.com/p/351751730),[参考2](https://www.bilibili.com/video/BV1VU4y1W7KN)
+    - 核心是数据，我需要灌入多个股票的数据，其中第一个是中证500的指数，然后才是其他50只股票，为何要第一个是中证500呢，
+    原因是为了对齐，因为50只股票里今天你停牌，明天我停牌，最好的就是用他们的股票池，也就是中证500，做日期的对齐
+    - 每支股票其实对应到backtrader就是一个line，所以我总共有51个lines
+    - 另外一个就是数据的格式，backtrader要求类必须是: `datetime, open, high, low, high, close, volume, openinterest`
+    每个column的顺序都有顺序，但是datetime没有，你要么指定datetime的顺序，要么直接把他设成index，否则，会报错
+    - 我在策略列中，实现了多因子选股的逻辑：
+        ```    
+        我自己的多因子策略，即，用我的多因子来进行选股，股票池是中证500，每一个选股周期，我都要根据当期数据，去计算因子暴露（因子值），
+        然后根据因子值，对当前期中证500股票池中的股票进行排序，（这个期间中证500可能备选股票可能会变化）
+        然后，选择前100名进行投资，对比新旧100名中，卖出未在list中，买入list中的，如此进行3年、5年投资，看回测收益率。
+        ```
+    - 我需要获得当前日期，datas[0]就是当天, 但是之前用`self.datas[0].date(0)`取不行，因为df.index是datetime类型的，需要改成`self.datas[0].datetime.datetime(0)`
+    - 买入、清仓函数，必须要传入到当前的股票，而当前股票的引用是通过名字查找到的，而名字是在最开始数据feed时候绑定的
+        ```
+            stock_data = self.getdatabyname(sell_stock) # 根据名字获得对应那只股票的数据
+            self.close(data=stock_data, exectype=bt.Order.Limit)
+            self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
+        ```
+        
 
 
 ## 参考

@@ -1,5 +1,4 @@
 import logging
-import math
 import time
 
 import pandas as pd
@@ -14,8 +13,7 @@ from backtrader.feeds import PandasData
 from datasource import datasource_factory, datasource_utils
 from example import factor_combiner
 import backtrader as bt  # 引入backtrader框架
-import backtrader.analyzers as btay  # 添加分析函数
-import numpy as np
+import backtrader.analyzers as bta  # 添加分析函数
 
 """
 用factor_tester.py中合成的多因子，做选择股票的策略 ，去选择中证500的股票，跑收益率回测。使用backtrader来做回测框架。
@@ -137,7 +135,7 @@ def main(start_date, end_date, index_code, period, stock_num):
     cerebro.addstrategy(CombineFactorStrategy, index, period, len(df_index), combined_factor)
 
     # 添加分析对象
-    cerebro.addanalyzer(btay.SharpeRatio, _name="sharpe")  # ,timeframe=bt.TimeFrame.Days)  # 夏普指数
+    cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe")  # ,timeframe=bt.TimeFrame.Days)  # 夏普指数
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
 
     # 打印

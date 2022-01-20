@@ -1,6 +1,7 @@
 这个是我多因子学习的沙盒，各种尝试，学习和练习，都放到里面。
 
 # 开发日志
+- 2022.1.18 实现了中性化(市值和行业)处理，处理了tushare行业代码的问题
 - 2022.1.13 回去理解alphalens的各种分析结果，并依据它形成一个自己的因子评分 factor_combiner.py::score()
 - 2022.1.6 终于跑通了单因子检验+多因子合成+合成因子选股+backtrader回测，happy~ :)
 - 2022.1.3 utils/db_creater，将["致敬大神"](https://www.bilibili.com/video/BV1564y1b7PR?p=5)的csv数据导入到数据库

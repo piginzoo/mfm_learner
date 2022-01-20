@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 class BaostockDataSource(DataSource):
     """
     baostock.com, 不需要注册的股票数据源，真好！
+    TODO: 由于一些接口，目前处于废弃状态，未实现完整
     """
 
     def __init__(self):

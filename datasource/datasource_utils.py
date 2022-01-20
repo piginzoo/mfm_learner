@@ -8,14 +8,17 @@ from utils import CONF
 logger = logging.getLogger(__name__)
 
 
-def reset_index(factors):
+def reset_index(df,date_only=False):
     """把索引设置成[日期+股票代码]的复合索引"""
-    assert 'datetime' in factors.columns, factors.columns
-    assert 'code' in factors.columns, factors.columns
-
-    factors['datetime'] = to_datetime(factors['datetime'])
-    factors = factors.set_index(['datetime', 'code'])
-    return factors
+    assert 'datetime' in df.columns, df.columns
+    assert 'code' in df.columns, df.columns
+    if date_only:
+        df['datetime'] = to_datetime(df['datetime'])
+        df = df.set_index('datetime')
+    else:
+        df['datetime'] = to_datetime(df['datetime'])
+        df = df.set_index(['datetime', 'code'])
+    return df
 
 
 def to_datetime(series):

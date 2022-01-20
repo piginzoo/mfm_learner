@@ -45,10 +45,11 @@ class DatabaseDataSource(DataSource):
     # 返回每日的其他信息，主要是市值啥的
     @post_query
     def daily_basic(self, stock_code, start_date, end_date):
+        assert type(stock_code)==list or type(stock_code)==str, type(stock_code)
         if type(stock_code) == list:
             logger.debug("获取多只股票的交易数据：%r", ",".join(stock_code))
             df_basics = [self.__daily_basic_one(stock, start_date, end_date) for stock in stock_code]
-            print(df_basics)
+            # print(df_basics)
             return pd.concat(df_basics)
         return self.__daily_basic_one(stock_code, start_date, end_date)
 

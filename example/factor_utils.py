@@ -59,10 +59,11 @@ def preprocess(factors):
 
 def to_panel_of_stock_columns(df):
     """
-    从列为[日期|股票|值]，转换成，[日期|股票1|股票2|...|股票n]的panel数据
+    从[日期|股票]+值的Series，转换成，[日期|股票1|股票2|...|股票n]的panel数据
     从
         --------------------------------
-        date        stock       value
+        <       index       >   value
+        date        stock
         2012-06-24  000001.SH   0.1234
         2012-06-27  000001.SH   0.5678
         ...         ...         ...
@@ -82,8 +83,11 @@ def to_panel_of_stock_columns(df):
 
     的Panel数据
     """
+    assert len(df)>0, df
     if type(df) == DataFrame:
         df = df.iloc[:, 0]  # 把dataframe转成series，这样做的缘故是，unstack的时候，可以避免复合列名，如 ['clv','003859.SH']
+    assert type(df)==Series
+    assert len(df.index.names) == 2, df
     df = df.unstack()
     return df
 

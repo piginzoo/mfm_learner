@@ -3,12 +3,15 @@ import math
 import time
 
 import pandas as pd
-from backtrader.feeds import PandasData
 
-from example import factor_combiner
-from utils import utils, tushare_dbutils
+from utils import utils
 
 utils.init_logger()
+
+from backtrader.feeds import PandasData
+
+from datasource import datasource_factory, datasource_utils
+from example import factor_combiner
 import backtrader as bt  # 引入backtrader框架
 import backtrader.analyzers as btay  # 添加分析函数
 import numpy as np
@@ -20,6 +23,8 @@ import numpy as np
 """
 
 logger = logging.getLogger(__name__)
+
+datasource = datasource_factory.get()
 
 
 class Percent(bt.Sizer):
@@ -260,10 +265,9 @@ class CombineFactorStrategy(bt.Strategy):
 
 # 按照backtrader要求的数据格式做数据整理,格式化成backtrader要求：索引日期；列名叫vol和datetime
 def comply_backtrader_data_format(df):
-    df['trade_date'] = pd.to_datetime(df['trade_date'], format="%Y%m%d")
-    df = df.rename(columns={'vol': 'volume', 'trade_date': 'datetime'})  # 列名准从backtrader的命名规范
-    df['openinterest'] = 0
-    df = df.set_index('datetime')
+    df = df.rename(columns={'vol': 'volume', 'datetime': 'datetime', 'trade_date': 'code'})  # 列名准从backtrader的命名规范
+    df['openinterest'] = 0  # backtrader需要这列，所以给他补上
+    df = datasource_utils.reset_index(df, date_only=True)  # 只设置日期列为索引
     df = df.sort_index(ascending=True)
     return df
 
@@ -280,35 +284,37 @@ def main(start_date, end_date, index_code, period, stock_num):
 
     cerebro = bt.Cerebro()  # 初始化cerebro
 
-    stock_codes = tushare_dbutils.index_weight(index_code, start_date)
+    stock_codes = datasource.index_weight(index_code, start_date)
+    stock_codes = stock_codes.tolist()
     stock_codes = stock_codes[:stock_num]
 
     combined_factor = factor_combiner.synthesize_by_jaqs(stock_codes, start_date, end_date)
     combined_factor.index = pd.to_datetime(combined_factor.index, format="%Y%m%d")
-    logger.debug("合成的多因子为：\n%r", combined_factor)
+    logger.debug("合成的多因子为：%d 行\n%r", len(combined_factor), combined_factor)
 
     d_start_date = utils.str2date(start_date)  # 开始日期
     d_end_date = utils.str2date(end_date)  # 结束日期
 
     # 加载上证指数，就是为了当日期占位符,在Cerebro中添加上证股指数据,格式: datetime,open,high,low,close,volume,openi..
-    df_index = tushare_dbutils.index_daily("000001.SH", start_date, end_date)
+    # 把上证指数，作为股票的第一个，排头兵，主要是为了用它来做时间对齐
+    df_index = datasource.index_daily(index_code, start_date, end_date)
     df_index = comply_backtrader_data_format(df_index)
-    data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date)#, plot=False)
+    data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date)  # , plot=False)
     cerebro.adddata(data, name="000001.SH")
     logger.debug("初始化上证数据到脑波：%d 条", len(df_index))
 
     # 想脑波cerebro逐个追加每只股票的数据
     for stock_code in stock_codes:
-        df_stock = tushare_dbutils.daily(stock_code, start_date, end_date)
+        df_stock = datasource.daily(stock_code, start_date, end_date)
 
-        trade_days = tushare_dbutils.trade_cal(start_date, end_date)
+        trade_days = datasource.trade_cal(start_date, end_date)
         if len(df_stock) / len(trade_days) < 0.9:
             logger.warning("股票[%s] 缺失交易日[%d/总%d]天，超过10%%，忽略此股票",
                            stock_code, len(df_stock), len(trade_days))
             continue
 
         df_stock = comply_backtrader_data_format(df_stock)
-        data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date)#, plot=False)
+        data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date)  # , plot=False)
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
     logger.debug("合计追加 %d 只股票数据到脑波cerebro", len(stock_codes) + 1)
@@ -360,9 +366,9 @@ def main(start_date, end_date, index_code, period, stock_num):
 if __name__ == '__main__':
     start_time = time.time()
     start_date = "20190101"  # 开始日期
-    end_date = "20210501"  # 结束日期
+    end_date = "20191201"  # 结束日期
     index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
-    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
     main(start_date, end_date, index, period, stock_num)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

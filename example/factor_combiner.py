@@ -4,6 +4,7 @@ import os
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from alphalens import tears
 from pandas import Series, DataFrame
 
@@ -441,13 +442,14 @@ def synthesize_by_jaqs(stock_codes, start_date, end_date):
                  ",".join([str(len(x)) for x in list(factor_dict.values())]))
 
     df_stocks = datasource.daily(list(stock_codes), start_date, end_date)
-    df_stocks = factor_utils.reset_index(df_stocks)
+    df_stocks = datasource_utils.reset_index(df_stocks)
     # unstack将行转化成列
     __prices = df_stocks['close'].unstack()
     __highs = df_stocks['high'].unstack()
     __lows = df_stocks['low'].unstack()
 
     zz500 = datasource.index_daily('000905.SH', start_date, end_date)
+    zz500 = datasource_utils.reset_index(zz500)
     zz500 = zz500['close'].pct_change(1)
     zz500 = factor_utils.to_panel_of_stock_columns(zz500)
     assert len(zz500) != 0
@@ -480,7 +482,6 @@ def synthesize_by_jaqs(stock_codes, start_date, end_date):
 
 # python -m example.factor_combiner
 if __name__ == '__main__':
-    import pandas as pd
     pd.set_option('display.max_rows', 1000)
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
     matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号

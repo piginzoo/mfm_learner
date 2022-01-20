@@ -3,6 +3,7 @@ import math
 
 import backtrader as bt  # 引入backtrader框架
 import numpy as np
+import pandas as pd
 
 from utils import utils
 
@@ -33,7 +34,7 @@ class MultiFactorStrategy(bt.Strategy):
         self.current_day = 0  # 当前周期内的天数
         self.count = 0
         self.total = total
-        self.factors = factors
+        self.factors = factors  # 这个是一个字典，key是因子名，value是因子值
         logger.debug("调仓期:%d，股票池：%s, 交易日： %d 天", period, stock_index, total)
 
     def __print_broker(self):
@@ -77,23 +78,14 @@ class MultiFactorStrategy(bt.Strategy):
         self.current_day += 1
         self.count += 1
 
+        # 如果不到换仓日，忽略
         if self.current_day < self.period: return
 
         logger.debug("-" * 50)
 
         self.current_day = 0
 
-        factor = self.factors.loc[current_date]
-        logger.debug("交易日：%r , %d/%d", utils.date2str(current_date), self.count, self.total)
-        if np.isnan(factor).all():
-            logger.debug("%r 日的因子全部为NAN，忽略当日", utils.date2str(current_date))
-            return
-
-        factor = factor.dropna()
-        # logger.debug("当天的因子为：%r", factor)
-        # 选择因子值前20%
-        select_stocks = factor.index[:math.ceil(0.2 * len(factor))]
-        logger.debug("此次选中的股票为：%r", ",".join(select_stocks.tolist()))
+        select_stocks = self.select_stocks_by_score(self.factors,current_date)
 
         # 以往买入的标的，本次不在标的中，则先平仓
         # "常规下单函数主要有 3 个：买入 buy() 、卖出 sell()、平仓 close() "
@@ -144,64 +136,34 @@ class MultiFactorStrategy(bt.Strategy):
 
         self.__print_broker()
 
-    # 记录交易执行情况（可省略，默认不输出结果）
-    def notify_order(self, order):
-        # logger.debug('订单状态：%r', order.Status[order.status])
-        # print(order)
+    def select_stocks_by_score(self, factors, current_date):
+        df_stock_scores = []
 
-        # 如果order为submitted/accepted,返回空
-        if order.status in [order.Submitted, order.Accepted]:
-            # logger.debug('订单状态：%r', order.Status[order.status])
-            return
+        # 遍历每一个因子(因子是 index:[datetime,code], columns:factor_value)
+        for name, factor in factors.items():
+            # 得到当天的因子
+            factor = factor.loc[current_date]
+            # 按照value排序，reset_index()会自动生成从0开始索引，用这点来生成排序序号，酷
+            df_sorted_by_factor_values = factor.sort_values().reset_index()
+            # 再利用reset_index，生成排序列
+            df_stock_rank_by_factor = df_sorted_by_factor_values.reset_index()
+            df_stock_rank_by_factor.columns = ['index', 'code']
+            # 把索引换成股票代码
+            df_stock_rank_by_factor = df_stock_rank_by_factor.set_index('code')
+            df_stock_scores.append(df_stock_rank_by_factor)
 
-        # 如果order为buy/sell executed,报告价格结果
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                logger.debug('成功买入: 股票[%s],价格[%.2f],成本[%.2f],手续费[%.2f]',
-                             order.data._name,
-                             order.executed.price,
-                             order.executed.value,
-                             order.executed.comm)
+        df_stock_scores = pd.concat(df_stock_scores, axis=1)
 
-                self.buyprice = order.executed.price
-                self.buycomm = order.executed.comm
-            else:
-                bt.OrderData
-                logger.debug('成功卖出: 股票[%s],价格[%.2f],成本[%.2f],手续费[%.2f]',
-                             order.data._name,
-                             order.executed.price,
-                             order.executed.value,
-                             order.executed.comm)
+        df_stock_scores[:, 'score'] = df_stock_scores.sum(axis=1)
 
-            self.bar_executed = len(self)
+        logger.debug("交易日：%r , %d/%d", utils.date2str(current_date), self.count, self.total)
+        if np.isnan(factor).all():
+            logger.debug("%r 日的因子全部为NAN，忽略当日", utils.date2str(current_date))
+            return None
 
-        # 如果指令取消/交易失败, 报告结果
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            """
-            Order.Created：订单已被创建；
-            Order.Submitted：订单已被传递给经纪商 Broker；
-            Order.Accepted：订单已被经纪商接收；
-            Order.Partial：订单已被部分成交；
-            Order.Complete：订单已成交；
-            Order.Rejected：订单已被经纪商拒绝；
-            Order.Margin：执行该订单需要追加保证金，并且先前接受的订单已从系统中删除；
-            Order.Cancelled (or Order.Canceled)：确认订单已经被撤销；
-            Order.Expired：订单已到期，其已经从系统中删除 。
-            """
-            logger.debug('交易失败，股票[%s]订单状态：%r', order.data._name, order.Status[order.status])
-
-        self.order = None
-
-    # 记录交易收益情况（可省略，默认不输出结果）
-    def notify_trade(self, trade):
-        # 最后清仓
-        # for sell_stock in self.current_stocks:
-        #     stock_data = self.getdatabyname(sell_stock)
-        #     self.close(data=stock_data, exectype=bt.Order.Limit)
-        #     logger.debug('最后平仓股票 %s', stock_data._name)
-
-        if not trade.isclosed:
-            return
-        logger.debug('策略收益：股票[%s], 毛收益 [%.2f], 净收益 [%.2f]', trade.data._name, trade.pnl, trade.pnlcomm)
-
-        # self.__print_broker()
+        df_stock_scores = df_stock_scores.dropna()
+        # logger.debug("当天的因子为：%r", factor)
+        # 选择因子值前20%
+        select_stocks = df_stock_scores.index[:math.ceil(0.2 * len(factor))]
+        logger.debug("此次选中的股票为：%r", ",".join(select_stocks.tolist()))
+        return select_stocks

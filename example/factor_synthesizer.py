@@ -13,10 +13,6 @@ from utils import utils
 utils.init_logger()
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
-from example.factors.clv import CLVFactor
-from example.factors.market_value import MarketValueFactor
-from example.factors.momentum import MomentumFactor
-from example.factors.peg import PEGFactor
 
 from temp import multifactor_synthesize
 import matplotlib
@@ -28,33 +24,6 @@ logger = logging.getLogger(__name__)
 
 datasource = datasource_factory.create()
 
-FACTORS = {
-    'market_value': MarketValueFactor(),
-    "momentum": MomentumFactor(),
-    "peg": PEGFactor(),
-    "clv": CLVFactor()
-}
-FACTORS_LONG_SHORT = [-1, 1, 1, 1]  # 因子的多空性质
-
-
-def get_factors(name, stock_codes, start_date, end_date):
-    """
-    获得所有的单因子，目前是4个，在FACTORS中定义
-    :param name:
-    :param stock_codes:
-    :param start_date:
-    :param end_date:
-    :return:
-    """
-    if name in FACTORS:
-        # 因子值格式为：index:[datetime,code] columns:[factor_value]
-        factors = FACTORS[name].calculate(stock_codes, start_date, end_date)
-    else:
-        raise ValueError("无法识别的因子名称：" + name)
-    if not os.path.exists("data/factors"): os.makedirs("data/factors")
-    factor_path = os.path.join("data/factors", name + ".csv")
-    factors.to_csv(factor_path)
-    return factors
 
 
 def get_stocks(stock_pool, start_date, end_date):
@@ -360,8 +329,8 @@ def synthesize(stock_pool, start_date, end_date):
     """测试因子合成"""
     stock_codes = get_stocks(stock_pool, start_date, end_date)
     factors = {}
-    for factor_key in FACTORS.keys():
-        factors[factor_key] = get_factors(factor_key, stock_codes, start_date, end_date)
+    for factor_key in factor_utils.FACTORS.keys():
+        factors[factor_key] = factor_utils.get_factor(factor_key, stock_codes, start_date, end_date)
     logger.debug("开始合成因子：%r", factors.keys())
     combined_factor = multifactor_synthesize.synthesize(factors, None)
     return combined_factor
@@ -432,9 +401,9 @@ def synthesize_by_jaqs(stock_codes, start_date, end_date):
     测试因子合成，要求数据得是panel格式的，[trade_date,stock1,stock2,....]
     """
     factor_dict = {}
-    for i, factor_key in enumerate(FACTORS.keys()):
-        factors = get_factors(factor_key, stock_codes, start_date, end_date)
-        factors *= FACTORS_LONG_SHORT[i]  # 空方因子*(-1)
+    for i, factor_key in enumerate(factor_utils.FACTORS.keys()):
+        factors = factor_utils.get_factor(factor_key, stock_codes, start_date, end_date)
+        factors *= factor_utils.FACTORS_LONG_SHORT[i]  # 空方因子*(-1)
         factor_dict[factor_key] = factor_utils.to_panel_of_stock_columns(factors)
 
     logger.debug("开始合成因子：%r , 条数：%r",
@@ -506,7 +475,7 @@ if __name__ == '__main__':
     # test_by_alphalens("market_value", stock_pool, start, end, periods, stock_num)
 
     scores = []
-    for factor_name, _ in FACTORS.items():
+    for factor_name, _ in factor_utils.FACTORS.items():
         __score = test_by_alphalens(factor_name, stock_pool, start, end, periods, stock_num)
         scores.append([factor_name, __score])
 

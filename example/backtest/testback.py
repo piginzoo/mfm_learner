@@ -3,7 +3,8 @@ import time
 
 import pandas as pd
 
-from example.backtest.combine_factor_strategy import CombineFactorStrategy
+from example.backtest.multifactors_strategy import MultiFactorStrategy
+from example.backtest.synthesized_factor_strategy import SynthesizedFactorStrategy
 from utils import utils
 
 utils.init_logger()
@@ -11,7 +12,7 @@ utils.init_logger()
 from backtrader.feeds import PandasData
 
 from datasource import datasource_factory, datasource_utils
-from example import factor_combiner
+from example import factor_synthesizer, factor_utils
 import backtrader as bt  # 引入backtrader框架
 import backtrader.analyzers as bta  # 添加分析函数
 
@@ -51,9 +52,6 @@ class Percent(bt.Sizer):
         return size
 
 
-
-
-
 # # 自定义数据
 # class FactorData(PandasData):
 #     lines = ('market_value', 'momentum', 'peg', 'clv',)
@@ -69,7 +67,20 @@ def comply_backtrader_data_format(df):
     return df
 
 
-def main(start_date, end_date, index_code, period, stock_num):
+def __load_strategy_and_data(stock_codes, start_date, end_date, factor_policy):
+    if factor_policy == "synthesis":
+        synthesized_factor = factor_synthesizer.synthesize_by_jaqs(stock_codes, start_date, end_date)
+        synthesized_factor.index = pd.to_datetime(synthesized_factor.index, format="%Y%m%d")
+        logger.debug("合成的多因子为：%d 行\n%r", len(synthesized_factor), synthesized_factor)
+        return SynthesizedFactorStrategy, synthesized_factor
+    if factor_policy == "single":
+        factors = factor_utils.get_factors(stock_codes, start_date, end_date)
+        return MultiFactorStrategy, factors
+
+    raise ValueError("无效的因子处理策略：" + factor_policy)
+
+
+def main(start_date, end_date, index_code, period, stock_num, factor_names, factor_policy):
     """
     datetime    open    high    low     close   volume  openi..
     2016-06-24	0.16	0.002	0.085	0.078	0.173	0.214
@@ -84,10 +95,6 @@ def main(start_date, end_date, index_code, period, stock_num):
     stock_codes = datasource.index_weight(index_code, start_date)
     stock_codes = stock_codes.tolist()
     stock_codes = stock_codes[:stock_num]
-
-    combined_factor = factor_combiner.synthesize_by_jaqs(stock_codes, start_date, end_date)
-    combined_factor.index = pd.to_datetime(combined_factor.index, format="%Y%m%d")
-    logger.debug("合成的多因子为：%d 行\n%r", len(combined_factor), combined_factor)
 
     d_start_date = utils.str2date(start_date)  # 开始日期
     d_end_date = utils.str2date(end_date)  # 结束日期
@@ -131,8 +138,10 @@ def main(start_date, end_date, index_code, period, stock_num):
     # 实际过程中，我们不可能如此简单的制定买卖的数目，而是要根据一定的规则，这就需要自己写一个sizers
     # cerebro.addsizer(Percent)
 
+    strategy_class, factor_data = __load_strategy_and_data(start_date, end_date, factor_names, factor_policy)
+
     # 将交易策略加载到回测系统中
-    cerebro.addstrategy(CombineFactorStrategy, index, period, len(df_index), combined_factor)
+    cerebro.addstrategy(strategy_class, index_code, period, len(df_index), factor_data)
 
     # 添加分析对象
     cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe")  # ,timeframe=bt.TimeFrame.Days)  # 夏普指数
@@ -164,8 +173,10 @@ if __name__ == '__main__':
     start_time = time.time()
     start_date = "20190101"  # 开始日期
     end_date = "20191201"  # 结束日期
-    index = '000905.SH'  # 股票池为中证500
+    stock_pool_index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
-    main(start_date, end_date, index, period, stock_num)
+    factor_names = list(factor_utils.FACTORS.keys)
+    factor_policy = "synthesis"  # synthesized| single 是合成，还是单独使用
+    main(start_date, end_date, stock_pool_index, period, stock_num, factor_names, factor_policy)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

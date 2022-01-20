@@ -9,7 +9,7 @@ from utils import utils
 logger = logging.getLogger(__name__)
 
 
-class CombineFactorStrategy(bt.Strategy):
+class SynthesizedFactorStrategy(bt.Strategy):
     """
     我自己的多因子策略，即，用我的多因子来进行选股，股票池是中证500，每一个选股周期，我都要根据当期数据，去计算因子暴露（因子值），
     然后根据因子值，对当前期中证500股票池中的股票进行排序，（这个期间中证500可能备选股票可能会变化）

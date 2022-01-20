@@ -1,6 +1,6 @@
 import pandas as pd
 
-from example.factor_combiner import calc_monotony
+from example.factor_synthesizer import calc_monotony
 
 """
 

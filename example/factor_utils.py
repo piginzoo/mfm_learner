@@ -1,10 +1,16 @@
 import logging
+import os
 
 import numpy as np
 import pandas as pd
 from pandas import DataFrame, Series
+from sklearn import preprocessing
 
 from datasource import datasource_factory, datasource_utils
+from example.factors.clv import CLVFactor
+from example.factors.market_value import MarketValueFactor
+from example.factors.momentum import MomentumFactor
+from example.factors.peg import PEGFactor
 from utils import utils
 
 logger = logging.getLogger(__name__)
@@ -83,10 +89,10 @@ def to_panel_of_stock_columns(df):
 
     的Panel数据
     """
-    assert len(df)>0, df
+    assert len(df) > 0, df
     if type(df) == DataFrame:
         df = df.iloc[:, 0]  # 把dataframe转成series，这样做的缘故是，unstack的时候，可以避免复合列名，如 ['clv','003859.SH']
-    assert type(df)==Series
+    assert type(df) == Series
     assert len(df.index.names) == 2, df
     df = df.unstack()
     return df
@@ -299,8 +305,9 @@ def neutralize(factor_df):
     df_factor_temp = DataFrame(factor_df)  # 防止他是Series
     assert check_factor_format(factor_df, index_type='date_code')
     df_factor_temp = df_factor_temp.reset_index()
-    df_factor_temp = df_factor_temp.merge(stocks_info[['code', 'industry']], on="code")  # stocks_info行太少，需要和factors做merge
-    df_factor_temp = df_factor_temp.set_index(['datetime','code'])
+    df_factor_temp = df_factor_temp.merge(stocks_info[['code', 'industry']],
+                                          on="code")  # stocks_info行太少，需要和factors做merge
+    df_factor_temp = df_factor_temp.set_index(['datetime', 'code'])
     df_industry = datasource_utils.compile_industry(df_factor_temp['industry'])
 
     #   市值数据
@@ -334,3 +341,49 @@ def neutralize(factor_df):
               600000.SH    1.110223e-16
     """
     return residuals
+
+
+# 因子库的列表，TODO：将来肯定要入库的
+FACTORS = {
+    'market_value': MarketValueFactor(),
+    "momentum": MomentumFactor(),
+    "peg": PEGFactor(),
+    "clv": CLVFactor()
+}
+FACTORS_LONG_SHORT = [-1, 1, 1, 1]  # 因子的多空性质
+
+
+def get_factor(name, stock_codes, start_date, end_date):
+    """
+    获得单因子，目前是4个，在FACTORS中定义
+    :param name:
+    :param stock_codes:
+    :param start_date:
+    :param end_date:
+    :return:
+    """
+    if name in FACTORS:
+        # 因子值格式为：index:[datetime,code] columns:[factor_value]
+        factors = FACTORS[name].calculate(stock_codes, start_date, end_date)
+    else:
+        raise ValueError("无法识别的因子名称：" + name)
+    if not os.path.exists("data/factors"): os.makedirs("data/factors")
+    factor_path = os.path.join("data/factors", name + ".csv")
+    factors.to_csv(factor_path)
+    return factors
+
+
+def get_factors(stock_codes, start_date, end_date):
+    """
+    加载所有的系统定义的因子们
+    :param stock_codes:
+    :param start_date:
+    :param end_date:
+    :return: 返回是一个字典，key是名字， value是因子的dataframe
+    """
+    factor_dict = {}
+    for i, factor_key in enumerate(FACTORS.keys()):
+        factors = get_factor(factor_key, stock_codes, start_date, end_date)
+        factors *= FACTORS_LONG_SHORT[i]  # 空方因子*(-1)
+        factor_dict[factor_key] = to_panel_of_stock_columns(factors)
+    return factor_dict

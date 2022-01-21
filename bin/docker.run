@@ -1,0 +1,22 @@
+#!/bin/bash
+
+PWD=`pwd`
+PROXY="--env http_proxy=http://172.17.0.1:8123 --env https_proxy=http://172.17.0.1:8123 --env HTTP_PROXY=http://172.17.0.1:8123 --env HTTPS_PROXY=http://172.17.0.1:8123"
+CMD="/bin/bash"
+
+FULL_CMD="
+    docker run --rm
+    -it
+    -v $PWD:/root/mfm_learner
+    --name mfm_learner_container
+    --network host
+    --workdir /root/mfm_learner
+    mfm_leaner.image
+    $CMD
+"
+
+echo "启动命令："
+echo "==================================="
+echo "$FULL_CMD"
+echo "==================================="
+eval $FULL_CMD

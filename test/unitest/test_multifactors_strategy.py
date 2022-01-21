@@ -6,7 +6,7 @@ from utils import utils
 
 utils.init_logger()
 from datasource import datasource_utils
-from example.backtest.multifactors_strategy import MultiFactorStrategy
+from example.backtest.strategy_multifactors import MultiFactorStrategy
 import backtrader as bt
 
 

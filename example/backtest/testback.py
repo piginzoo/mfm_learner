@@ -3,8 +3,8 @@ import time
 
 import pandas as pd
 
-from example.backtest.multifactors_strategy import MultiFactorStrategy
-from example.backtest.synthesized_factor_strategy import SynthesizedFactorStrategy
+from example.backtest.strategy_multifactors import MultiFactorStrategy
+from example.backtest.strategy_synthesis import SynthesizedFactorStrategy
 from utils import utils
 
 utils.init_logger()
@@ -141,7 +141,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     strategy_class, factor_data = __load_strategy_and_data(start_date, end_date, factor_names, factor_policy)
 
     # 将交易策略加载到回测系统中
-    cerebro.addstrategy(strategy_class, index_code, period, len(df_index), factor_data)
+    cerebro.addstrategy(strategy_class, period, factor_data)
 
     # 添加分析对象
     cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe")  # ,timeframe=bt.TimeFrame.Days)  # 夏普指数

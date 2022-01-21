@@ -12,7 +12,7 @@ from datasource.datasource import DataSource, post_query
 
 logger = logging.getLogger(__name__)
 
-BASE_DIR = "../data/tushare/"
+BASE_DIR = "./data/tushare/"
 MAX_ROWS = 1000
 
 if not os.path.exists(BASE_DIR): os.makedirs(BASE_DIR)
@@ -50,11 +50,12 @@ def _get_cache(func, stock_code, start_date, end_date, str_fields=None):
     """
     file_path = _get_cache_file_name(func, stock_code, start_date, end_date)
     if not os.path.exists(file_path): return None
-    logger.debug("使用%s~%s，股票[%s]的[%s]缓存数据", start_date, end_date, stock_code, func)
     df = pd.read_csv(file_path)
+    logger.debug("使用%s~%s，股票[%s]的[%s]缓存数据%d条", start_date, end_date, stock_code, func,len(df))
     # 'Unnamed: 0'，是观察出来的，第一列设置成index，原始的tushare就是这样的index结构
     df = df.set_index("Unnamed: 0")
 
+    # 由于从csv加载，很多字段被整成int，不行，得转回str
     default_str = ['trade_date', 'ann_date', 'ts_code']
     if str_fields:
         str_fields = str_fields.split(",")
@@ -126,8 +127,10 @@ class TushareDataSource(DataSource):
     # https://tushare.pro/document/2?doc_id=32
     @post_query
     def daily_basic(self, stock_code, start_date, end_date, fields=None):
+        if type(stock_code)==list: stock_code = ",".join(stock_code)
         df = _get_cache('daily_basic', stock_code, start_date, end_date)
-        if df is not None: return df
+        if df is not None:
+            return df
         _random_sleep()
         df = self.pro.daily_basic(ts_code=stock_code, start_date=start_date, end_date=end_date, fields=fields)
         _set_cache('daily_basic', df, stock_code, start_date, end_date)
@@ -197,6 +200,7 @@ class TushareDataSource(DataSource):
         return df['con_code'].unique()
 
     # https://tushare.pro/document/2?doc_id=181
+    @post_query
     def index_classify(self, level='', src='SW2014'):
         """申万行业，2014版（还有2021版）"""
         df = _get_cache('index_classify', level, start_date=src, end_date='', str_fields='industry_code,parent_code')
@@ -208,6 +212,7 @@ class TushareDataSource(DataSource):
         return df
 
     # https://tushare.pro/document/2?doc_id=25
+    @post_query
     def stock_basic(self, ts_code):
         """股票基本信息，主要是为了获得行业信息（目前）"""
 

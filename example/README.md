@@ -34,7 +34,10 @@
 
 ### 运行程序
 运行：
-`python -m example.factor_tester`
+
+- 单因子测试：`python -m example.factor_analyzer`
+- 多因子测试：`python -m example.factor_synthesizer`
+- 因子选股回测：`python -m example.factor_backtester`
 
 目前是测试的2014~2019年5年的数据，股票池使用的是中证500。
 

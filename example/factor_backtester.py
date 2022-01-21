@@ -171,7 +171,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # bt.AutoOrderedDict
 
 
-# python -m example.backtest.testback
+# python -m example.factor_backtester
 if __name__ == '__main__':
     start_time = time.time()
     start_date = "20190101"  # 开始日期

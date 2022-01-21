@@ -373,7 +373,7 @@ def get_factor(name, stock_codes, start_date, end_date):
     return factors
 
 
-def get_factors(stock_codes, start_date, end_date):
+def get_factors(stock_codes, factor_names, start_date, end_date):
     """
     加载所有的系统定义的因子们
     :param stock_codes:
@@ -383,6 +383,7 @@ def get_factors(stock_codes, start_date, end_date):
     """
     factor_dict = {}
     for i, factor_key in enumerate(FACTORS.keys()):
+        if not factor_key in factor_names: continue # 刨除不在factor_names的因子
         factors = get_factor(factor_key, stock_codes, start_date, end_date)
         factors *= FACTORS_LONG_SHORT[i]  # 空方因子*(-1)
         factor_dict[factor_key] = to_panel_of_stock_columns(factors)

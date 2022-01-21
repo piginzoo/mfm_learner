@@ -51,7 +51,7 @@ import math
 import numpy as np
 
 from datasource import datasource_utils
-from example.factor import Factor
+from example.factors.factor import Factor
 
 logger = logging.getLogger(__name__)
 

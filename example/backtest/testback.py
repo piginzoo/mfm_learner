@@ -67,15 +67,17 @@ def comply_backtrader_data_format(df):
     return df
 
 
-def __load_strategy_and_data(stock_codes, start_date, end_date, factor_policy):
+def __load_strategy_and_data(stock_codes, start_date, end_date, factor_names, factor_policy):
+
+    factor_dict = factor_utils.get_factors(stock_codes, factor_names, start_date, end_date)
+
     if factor_policy == "synthesis":
-        synthesized_factor = factor_synthesizer.synthesize_by_jaqs(stock_codes, start_date, end_date)
+        synthesized_factor = factor_synthesizer.synthesize_by_jaqs(stock_codes, factor_dict, start_date, end_date)
         synthesized_factor.index = pd.to_datetime(synthesized_factor.index, format="%Y%m%d")
         logger.debug("合成的多因子为：%d 行\n%r", len(synthesized_factor), synthesized_factor)
         return SynthesizedFactorStrategy, synthesized_factor
     if factor_policy == "single":
-        factors = factor_utils.get_factors(stock_codes, start_date, end_date)
-        return MultiFactorStrategy, factors
+        return MultiFactorStrategy, factor_dict
 
     raise ValueError("无效的因子处理策略：" + factor_policy)
 
@@ -138,7 +140,8 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 实际过程中，我们不可能如此简单的制定买卖的数目，而是要根据一定的规则，这就需要自己写一个sizers
     # cerebro.addsizer(Percent)
 
-    strategy_class, factor_data = __load_strategy_and_data(start_date, end_date, factor_names, factor_policy)
+    strategy_class, factor_data = __load_strategy_and_data(stock_codes, start_date, end_date, factor_names,
+                                                           factor_policy)
 
     # 将交易策略加载到回测系统中
     cerebro.addstrategy(strategy_class, period, factor_data)
@@ -176,7 +179,7 @@ if __name__ == '__main__':
     stock_pool_index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
-    factor_names = list(factor_utils.FACTORS.keys)
+    factor_names = list(factor_utils.FACTORS.keys())
     factor_policy = "synthesis"  # synthesized| single 是合成，还是单独使用
     main(start_date, end_date, stock_pool_index, period, stock_num, factor_names, factor_policy)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

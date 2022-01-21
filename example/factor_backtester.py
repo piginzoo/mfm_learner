@@ -178,7 +178,7 @@ if __name__ == '__main__':
     end_date = "20191201"  # 结束日期
     stock_pool_index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
-    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_num = 5  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
     factor_names = list(factor_utils.FACTORS.keys())
     factor_policy = "synthesis"  # synthesized| single 是合成，还是单独使用
     main(start_date, end_date, stock_pool_index, period, stock_num, factor_names, factor_policy)

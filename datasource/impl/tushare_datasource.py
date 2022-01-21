@@ -30,7 +30,7 @@ def _random_sleep():
 
 
 def _check_lenght(df):
-    if len(df) > 1000: raise ValueError("Tushare返回结果超过1000：" + str(len(df)))
+    if len(df) > 4000: raise ValueError("为防止被封，Tushare返回结果不超过4000：" + str(len(df)))
 
 
 def _get_cache_file_name(func, stock_code, start_date, end_date):

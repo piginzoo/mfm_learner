@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 datasource = datasource_factory.create()
 
 
-
 def get_stocks(stock_pool, start_date, end_date):
     stock_codes = datasource.index_weight(stock_pool, start_date)
     assert stock_codes is not None and len(stock_codes) > 0, stock_codes
@@ -86,7 +85,7 @@ def synthesize_by_jaqs(stock_codes, factor_dict, start_date, end_date):
     return comb_factor
 
 
-# python -m example.factor_combiner
+# python -m example.factor_synthesizer
 if __name__ == '__main__':
     pd.set_option('display.max_rows', 1000)
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
@@ -107,10 +106,10 @@ if __name__ == '__main__':
     stock_pool = '000905.SH'  # 中证500
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
-
     # 测试JAQS多因子合成
     stock_codes = get_stocks(stock_pool, start, end)
-    combinefactor = synthesize_by_jaqs(stock_codes, start, end)
+    factor_dict = factor_utils.get_factors(stock_codes, None, start, end)
+    combinefactor = synthesize_by_jaqs(stock_codes, factor_dict, start, end)
     logger.debug("合成因子：")
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
         print(combinefactor)  # .dropna(how="all").head())

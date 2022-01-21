@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class MultiStocksFactorStrategy(bt.Strategy):
     """
     多个股票的回测的父类，是一个**基类**，
-    有个抽象方法，叫select_stocks(current_date)用来选取当期股票
+    有个抽象方法，叫selected_stocks(current_date)用来选取当期股票
     """
 
     def __init__(self, period, factors):
@@ -33,7 +33,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         pass
 
     @abstractmethod
-    def select_stocks(self,current_date):
+    def select_stocks(self, current_date):
         pass
 
     # 记录交易执行情况（可省略，默认不输出结果）
@@ -114,7 +114,15 @@ class MultiStocksFactorStrategy(bt.Strategy):
         - 每次都是满仓，即用卖出的股票头寸，全部购入新的股票，头寸仅在新购入股票中平均分配
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
-        logger.debug("已经处理了%d个数据, 总共有%d个数据", len(self), self.data.buflen())
+        # logger.debug("已经处理了%d个数据, 总共有%d个数据", len(self), self.data.buflen())
+
+        # 回测最后一天不进行买卖,datas[0]就是当天, bugfix:  之前self.datas[0].date(0)不行，因为df.index是datetime类型的
+        current_date = self.datas[0].datetime.datetime(0)
+
+        self.current_day += 1
+        self.count += 1
+
+        if self.current_day < self.period: return
 
         # logger.debug("--------------------------------------------------")
         # logger.debug('当前可用资金:%r', self.broker.getcash())
@@ -125,35 +133,18 @@ class MultiStocksFactorStrategy(bt.Strategy):
         # logger.debug('当前持仓成本:%r', self.getposition(self.data).price)
         # logger.debug("--------------------------------------------------")
 
-        # 回测最后一天不进行买卖,datas[0]就是当天, bugfix:  之前self.datas[0].date(0)不行，因为df.index是datetime类型的
-        current_date = self.datas[0].datetime.datetime(0)
-
-        self.current_day += 1
-        self.count += 1
-
-        if self.current_day < self.period: return
-
         logger.debug("-" * 50)
-
         self.current_day = 0
-
-        factor = self.factors.loc[current_date]
         logger.debug("交易日：%r , %d", utils.date2str(current_date), self.count)
-        if np.isnan(factor).all():
-            logger.debug("%r 日的因子全部为NAN，忽略当日", utils.date2str(current_date))
-            return
 
-        factor = factor.dropna()
-        # logger.debug("当天的因子为：%r", factor)
-        # 选择因子值前20%
-        select_stocks = factor.index[:math.ceil(0.2 * len(factor))]
-        logger.debug("此次选中的股票为：%r", ",".join(select_stocks.tolist()))
+        selected_stocks = self.select_stocks(self, current_date)
+        if type(selected_stocks)==np.array: selected_stocks = selected_stocks.tolist()
 
-
+        logger.debug("此次选中的股票为：%r", ",".join(selected_stocks))
 
         # 以往买入的标的，本次不在标的中，则先平仓
         # "常规下单函数主要有 3 个：买入 buy() 、卖出 sell()、平仓 close() "
-        to_sell_stocks = set(self.current_stocks) - set(select_stocks)
+        to_sell_stocks = set(self.current_stocks) - set(selected_stocks)
 
         logger.debug("卖出股票：%r", to_sell_stocks)
         for sell_stock in to_sell_stocks:
@@ -172,12 +163,12 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.__print_broker()
 
         # 每只股票买入资金百分比，预留2%的资金以应付佣金和计算误差
-        buy_percentage = (1 - 0.02) / len(select_stocks)
+        buy_percentage = (1 - 0.02) / len(selected_stocks)
 
         # 得到可以用来购买的金额,控制仓位在0.6
         buy_amount = buy_percentage * self.broker.getcash()
 
-        for buy_stock in select_stocks:
+        for buy_stock in selected_stocks:
 
             # 防止股票不在数据集中
             if buy_stock not in self.getdatanames():

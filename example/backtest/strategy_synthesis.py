@@ -44,7 +44,7 @@ class SynthesizedFactorStrategy(MultiStocksFactorStrategy):
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
         factor = self.factors.loc[current_date]
-        logger.debug("交易日：%r , %d/%d", utils.date2str(current_date), self.count, self.total)
+        logger.debug("交易日：%r , %d", utils.date2str(current_date), self.count)
         if np.isnan(factor).all():
             logger.debug("%r 日的因子全部为NAN，忽略当日", utils.date2str(current_date))
             return

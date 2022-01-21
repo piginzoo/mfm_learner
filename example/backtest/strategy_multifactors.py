@@ -3,11 +3,15 @@ import math
 
 import backtrader as bt  # 引入backtrader框架
 import pandas as pd
+from pandas import DataFrame
+
+from example.backtest.strategy_multistocks_base import MultiStocksFactorStrategy
+from utils import utils
 
 logger = logging.getLogger(__name__)
 
 
-class MultiFactorStrategy(bt.Strategy):
+class MultiFactorStrategy(MultiStocksFactorStrategy):
     """
     和旁边那个CombineFactorStategy不同，这个策略不需要做多因子合成，而是用每一个因子都参与进来，一起打分，
     然后用每个因子的打分的总分，给每支股票评价，然后选出调仓的股票。
@@ -45,7 +49,7 @@ class MultiFactorStrategy(bt.Strategy):
         # logger.debug('当前持仓成本:%r', self.getposition(self.data).price)
         # logger.debug("--------------------------------------------------")
 
-        select_stocks = self.select_stocks_by_score(factors, current_date)
+        select_stocks = self.select_stocks_by_score(self.factors, current_date)
 
         return select_stocks
 
@@ -57,6 +61,8 @@ class MultiFactorStrategy(bt.Strategy):
             # 得到当天的因子
             factor = factor.loc[current_date]
             # 按照value排序，reset_index()会自动生成从0开始索引，用这点来生成排序序号，酷
+            factor = DataFrame(factor)
+            assert len(factor.columns)==1
             df_sorted_by_factor_values = factor.sort_values(by=factor.columns[0]).reset_index()
             # 再利用reset_index，生成排序列
             df_stock_rank_by_factor = df_sorted_by_factor_values.reset_index()

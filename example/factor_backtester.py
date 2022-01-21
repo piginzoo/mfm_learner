@@ -159,13 +159,15 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     pnl = portvalue - start_cash
     # 打印结果
     logger.debug("=" * 80)
-    logger.debug("股票数: %d 只", len(stock_codes))
-    logger.debug("投资期: %s~%s, %d 天", start_date, end_date, (d_end_date - d_start_date).days)
-    logger.debug('总资金: %.2f', portvalue)
-    logger.debug('余头寸: %.2f', cerebro.broker.getcash())
-    logger.debug('净收益: %.2f', pnl)
+    logger.debug("股票个数: %d 只", len(stock_codes))
+    logger.debug("投资期间: %s~%s, %d 天", start_date, end_date, (d_end_date - d_start_date).days)
+    logger.debug("因子策略: %s", factor_policy)
+    logger.debug('期初投资: %.2f', start_cash)
+    logger.debug('期末总额: %.2f', portvalue)
+    logger.debug('剩余头寸: %.2f', cerebro.broker.getcash())
+    logger.debug('净收益额: %.2f', pnl)
     logger.debug('收益率: %.2f%%', pnl / portvalue * 100)
-    logger.debug("夏普比: %.2f%%", results[0].analyzers.sharpe.get_analysis()['sharperatio'])
+    logger.debug("夏普比: %r", results[0].analyzers.sharpe.get_analysis())
     logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
     # cerebro.plot(style="candlestick",iplot=False)
     # bt.AutoOrderedDict
@@ -174,12 +176,12 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
 # python -m example.factor_backtester
 if __name__ == '__main__':
     start_time = time.time()
-    start_date = "20190101"  # 开始日期
-    end_date = "20191201"  # 结束日期
+    start_date = "20130101"  # 开始日期
+    end_date = "20171231"  # 结束日期
     stock_pool_index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
-    stock_num = 5  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
     factor_names = list(factor_utils.FACTORS.keys())
-    factor_policy = "synthesis"  # synthesized| single 是合成，还是单独使用
+    factor_policy = "synthesis"  # synthesis| single 是合成，还是单独使用
     main(start_date, end_date, stock_pool_index, period, stock_num, factor_names, factor_policy)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

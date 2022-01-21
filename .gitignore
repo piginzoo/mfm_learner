@@ -1,5 +1,6 @@
 debug/
 conf/config.yml
+.venv/
 data/
 .idea/
 __pycache__/

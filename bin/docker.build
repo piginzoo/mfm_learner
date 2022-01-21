@@ -1,1 +1,2 @@
-docker build --no-cache -f deploy/Dockerfile -t mfm_leaner.image .
+# --no-cache
+docker build -f deploy/Dockerfile -t mfm_leaner.image .

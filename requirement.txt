@@ -1,12 +1,14 @@
+# 这个两个需要单独安装
+# git+https://github.com/piginzoo/alphalens.git
+# git+https://github.com/piginzoo/jaqs_fxdayu.git
+tqdm
 tushare
 async_generator
 matplotlib
-git+https://github.com/piginzoo/alphalens.git
-git+https://github.com/piginzoo/jaqs_fxdayu.git
+jaqs
 jqdatasdk
 statsmodels
 pandas
-tqdm
 pyyaml
 scikit-learn
 backtrader

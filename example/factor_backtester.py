@@ -2,13 +2,14 @@ import logging
 import time
 
 import pandas as pd
+from backtrader.plot import Plot_OldSync
 
 from example.backtest.strategy_multifactors import MultiFactorStrategy
 from example.backtest.strategy_synthesis import SynthesizedFactorStrategy
 from utils import utils
 
 utils.init_logger()
-
+import matplotlib.pyplot as plt
 from backtrader.feeds import PandasData
 
 from datasource import datasource_factory, datasource_utils
@@ -25,6 +26,11 @@ import backtrader.analyzers as bta  # 添加分析函数
 logger = logging.getLogger(__name__)
 
 datasource = datasource_factory.get()
+
+
+class MyPlot(Plot_OldSync):
+    def show(self):
+        plt.savefig("debug/backtrader回测.jpg")
 
 
 class Percent(bt.Sizer):
@@ -68,7 +74,6 @@ def comply_backtrader_data_format(df):
 
 
 def __load_strategy_and_data(stock_codes, start_date, end_date, factor_names, factor_policy):
-
     factor_dict = factor_utils.get_factors(stock_codes, factor_names, start_date, end_date)
 
     if factor_policy == "synthesis":
@@ -105,7 +110,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 把上证指数，作为股票的第一个，排头兵，主要是为了用它来做时间对齐
     df_index = datasource.index_daily(index_code, start_date, end_date)
     df_index = comply_backtrader_data_format(df_index)
-    data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date, plot=True) # plot=False 不在plot图中显示个股价格
+    data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date, plot=True)
     cerebro.adddata(data, name=index_code)
     logger.debug("初始化上证数据到脑波：%d 条", len(df_index))
 
@@ -120,6 +125,8 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
             continue
 
         df_stock = comply_backtrader_data_format(df_stock)
+
+        # plot=False 不在plot图中显示个股价格
         data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=False)
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
@@ -169,8 +176,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     logger.debug('收益率: %.2f%%', pnl / portvalue * 100)
     logger.debug("夏普比: %r", results[0].analyzers.sharpe.get_analysis())
     logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
-    cerebro.plot(style="candlestick",iplot=False)
-    # bt.AutoOrderedDict
+    cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
 
 
 # python -m example.factor_backtester
@@ -190,7 +196,6 @@ if __name__ == '__main__':
     stock_pool_index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
-
 
     factor_names = list(factor_utils.FACTORS.keys())
     factor_policy = "single"  # synthesis| single 是合成，还是单独使用

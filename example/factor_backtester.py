@@ -105,8 +105,8 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 把上证指数，作为股票的第一个，排头兵，主要是为了用它来做时间对齐
     df_index = datasource.index_daily(index_code, start_date, end_date)
     df_index = comply_backtrader_data_format(df_index)
-    data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date)  # , plot=False)
-    cerebro.adddata(data, name="000001.SH")
+    data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date, plot=True) # plot=False 不在plot图中显示个股价格
+    cerebro.adddata(data, name=index_code)
     logger.debug("初始化上证数据到脑波：%d 条", len(df_index))
 
     # 想脑波cerebro逐个追加每只股票的数据
@@ -120,7 +120,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
             continue
 
         df_stock = comply_backtrader_data_format(df_stock)
-        data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date)  # , plot=False)
+        data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=False)
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
     logger.debug("合计追加 %d 只股票数据到脑波cerebro", len(stock_codes) + 1)
@@ -169,19 +169,30 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     logger.debug('收益率: %.2f%%', pnl / portvalue * 100)
     logger.debug("夏普比: %r", results[0].analyzers.sharpe.get_analysis())
     logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
-    # cerebro.plot(style="candlestick",iplot=False)
+    cerebro.plot(style="candlestick",iplot=False)
     # bt.AutoOrderedDict
 
 
 # python -m example.factor_backtester
 if __name__ == '__main__':
     start_time = time.time()
-    start_date = "20130101"  # 开始日期
-    end_date = "20171231"  # 结束日期
+
+    # 正式
+    start_date = "20160101"  # 开始日期
+    end_date = "20210531"  # 结束日期
     stock_pool_index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
     stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+
+    # 测试
+    start_date = "20200101"  # 开始日期
+    end_date = "20201231"  # 结束日期
+    stock_pool_index = '000905.SH'  # 股票池为中证500
+    period = 22  # 调仓周期
+    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+
+
     factor_names = list(factor_utils.FACTORS.keys())
-    factor_policy = "synthesis"  # synthesis| single 是合成，还是单独使用
+    factor_policy = "single"  # synthesis| single 是合成，还是单独使用
     main(start_date, end_date, stock_pool_index, period, stock_num, factor_names, factor_policy)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

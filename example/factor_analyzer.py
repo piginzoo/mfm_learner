@@ -1,4 +1,7 @@
 import logging
+from utils import utils
+
+utils.init_logger()
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -7,9 +10,7 @@ import pandas as pd
 from alphalens import tears
 from pandas import Series, DataFrame
 
-from utils import utils
 
-utils.init_logger()
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
 
@@ -400,9 +401,9 @@ if __name__ == '__main__':
     # 调试用
     start = "20200101"
     end = "20200901"
-    periods = [1, 5, 10]
+    periods = [1, 5]
     stock_pool = '000905.SH'  # 中证500
-    stock_num = 5  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 逐一测试因子们
     scores = []

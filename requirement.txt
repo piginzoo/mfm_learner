@@ -13,3 +13,7 @@ pyyaml
 scikit-learn
 backtrader
 pymysql
+IPython
+empyrical
+baostock
+python-Levenshtein

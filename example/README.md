@@ -20,10 +20,34 @@
 
 ## 如何运行
 
-### 安装依赖
-`pip install -r requirement.txt`
+### 1.安装依赖
 
-### 准备数据
+运行：
+
+`source bin/env.sh`
+
+本来想做个docker，做到一半没时间继续搞了，还是virtualenv大法简单一些。
+
+### 2.准备好配置
+
+准备好`conf/config.yml`，可以参考`conf/config.sample.yml`文件编写此文件。
+
+默认为支持的数据源为tushuare，所以，请提前自行注册[tushare](https://tushare.pro)账号:
+
+```commandline
+datasource: 'tushare' 
+```
+
+### 3. 运行程序
+运行：
+
+- 单因子测试：`python -m example.factor_analyzer`
+- 多因子测试：`python -m example.factor_synthesizer`
+- 因子选股回测：`python -m example.factor_backtester`
+
+目前是测试的2014~2019年5年的数据，股票池使用的是中证500。
+
+### 使用数据库
 `python -m utils.db_creator`
 
 我们使用的数据是 [B站UP主致敬大神](https://www.bilibili.com/video/BV1564y1b7PR) 提供的离线tushare数据（数据是有偿的）。
@@ -32,14 +56,6 @@
 
 如果不想这么麻烦，可以直接调用tushare的数据API，只不过有时候会限流。
 
-### 运行程序
-运行：
-
-- 单因子测试：`python -m example.factor_analyzer`
-- 多因子测试：`python -m example.factor_synthesizer`
-- 因子选股回测：`python -m example.factor_backtester`
-
-目前是测试的2014~2019年5年的数据，股票池使用的是中证500。
 
 ## 研发中的思考
 - 究竟格式是 date,stock,factor，还是，date，stock1，stock2，....，这种格式呢？

@@ -14,10 +14,9 @@
 - 2021.12.16 实现了一个新的因子，LNCAP市值因子的验证
 - 2021.12.14 实现了CLV因子的所有的验证
 
-# 依赖
-alphalens有些小bugs，fork之并修复，所以项目中使用的我自己的[alphalens](https://github.com/piginzoo/alphalens)：
+# 项目
 
-`pip install git+https://github.com/piginzoo/alphalens.git`
+这里涉及到一些里的项目，不过主要项目为[/example](example/README.md)下的例子项目。
 
 # 参考
 

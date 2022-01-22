@@ -4,6 +4,8 @@ import os
 import warnings
 
 import yaml
+import matplotlib.pyplot as plt
+from backtrader.plot import Plot_OldSync
 from pandas import Series
 
 import conf
@@ -62,3 +64,9 @@ def init_logger():
     logging.getLogger('matplotlib').disabled = True
     warnings.filterwarnings("ignore")
     warnings.filterwarnings("ignore", module="matplotlib")
+
+
+class MyPlot(Plot_OldSync):
+    def show(self):
+        plt.savefig("debug/backtrader回测.jpg")
+

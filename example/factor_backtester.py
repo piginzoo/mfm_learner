@@ -7,6 +7,7 @@ from backtrader.plot import Plot_OldSync
 from example.backtest.strategy_multifactors import MultiFactorStrategy
 from example.backtest.strategy_synthesis import SynthesizedFactorStrategy
 from utils import utils
+from utils.utils import MyPlot
 
 utils.init_logger()
 import matplotlib.pyplot as plt
@@ -26,11 +27,6 @@ import backtrader.analyzers as bta  # 添加分析函数
 logger = logging.getLogger(__name__)
 
 datasource = datasource_factory.get()
-
-
-class MyPlot(Plot_OldSync):
-    def show(self):
-        plt.savefig("debug/backtrader回测.jpg")
 
 
 class Percent(bt.Sizer):
@@ -66,7 +62,7 @@ class Percent(bt.Sizer):
 
 # 按照backtrader要求的数据格式做数据整理,格式化成backtrader要求：索引日期；列名叫vol和datetime
 def comply_backtrader_data_format(df):
-    df = df.rename(columns={'vol': 'volume', 'datetime': 'datetime', 'trade_date': 'code'})  # 列名准从backtrader的命名规范
+    df = df.rename(columns={'vol': 'volume'})  # 列名准从backtrader的命名规范
     df['openinterest'] = 0  # backtrader需要这列，所以给他补上
     df = datasource_utils.reset_index(df, date_only=True)  # 只设置日期列为索引
     df = df.sort_index(ascending=True)

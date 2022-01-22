@@ -76,6 +76,7 @@ def synthesize_by_jaqs(stock_codes, factor_dict, start_date, end_date):
         "covariance_type": "shrink",  # 协方差矩阵估算方法 还可以为"simple"
         "rollback_period": 10}  # 滚动窗口天数
 
+    """按照IC_Weight进行合成"""
     comb_factor = multi_factor.combine_factors(factor_dict,
                                                standardize_type="z_score",
                                                winsorization=False,

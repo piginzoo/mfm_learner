@@ -30,6 +30,22 @@
 - [jqdata的api文档](https://www.joinquant.com/help/api/help#name:Stock)
 - [B站'直径大神'的UP主整理tushare数据的教程](https://www.bilibili.com/video/BV1564y1b7PR)
 
+# 视频
+【免费】
+- [2020年第一届“大湾区杯”粤港澳金融数学建模竞赛系列培训讲座](https://www.bilibili.com/video/BV1Z54y117y3?p=4)  、[2](https://www.bilibili.com/video/BV1Z54y117y3?p=6)
+- [有用量化Alpha策略-因子选股](https://www.bilibili.com/video/BV1wE41147V7)
+- [科大金融金融量化 多因子选股的基本原理](https://www.bilibili.com/video/BV11Q4y1e7Sv) ，[2](https://www.bilibili.com/video/BV1sT4y127tJ)
+- [量化投资的工具、模型与策略 -Ricequant出品](https://www.bilibili.com/video/BV11b4y1q7Ky)
+- [孙健老师量化金融网课-多因子模型](https://www.bilibili.com/video/BV1J7411F7ZX)
+
+【收费】
+- 著名某呼上的网红BBQ，babyquant的课，可以收获多因子的技巧，价格3700
+- [教父kim的知乎live课，跟babyquant挺熟](https://www.zhihu.com/lives/specials/938793876643938304)：价格420
+- 有用教育的alpha多因子和多因子
+- 科大量化的课：门级别的，价格1500
+- csdn[alphalens的单因子测试](https://edu.csdn.net/course/detail/25572)，价格250
+- csdn[量化回测平台Backtrader实战教程](https://edu.csdn.net/course/detail/9040)，价格500
+
 ## 代码
 - [很赞的一个资源集合项目awesome-quant](https://github.com/thuquant/awesome-quant)
 - https://github.com/zhangjinzhi/Wind_Python.git

@@ -21,9 +21,9 @@ class MyStrategy(bt.Strategy):
     """
 
     params = (
-        # 补仓周期
-        ('period', 22),
+        ('period', (10, 22, 30, 60)),  # 补仓周期
         ('invest', 0),
+        ('trade_days', 0)
     )
 
     def log(self, txt, doprint=None):
@@ -35,7 +35,10 @@ class MyStrategy(bt.Strategy):
         # 保存收盘价的引用
         self.last_price = 0
         self.current_day = 0
-        self.time=0
+        self.time = 0
+        duration = int(self.params.trade_days / self.params.period)
+        self.amount_per_period = int(self.params.invest / duration)
+        print("总投资：%d，投资期数：%d, 每期投资: %d" % (self.params.invest, duration, self.amount_per_period))
 
     # 订单状态通知，买入卖出都是下单
     def notify_order(self, order):
@@ -85,17 +88,17 @@ class MyStrategy(bt.Strategy):
             # print("当前 %d, 调仓期 %d" % (self.current_day , self.params.period))
             return
 
-        self.time+=1
+        self.time += 1
         self.current_day = 0
         current_price = self.data0.close[0]
 
         if self.last_price and current_price < self.last_price:
-            amount = self.params.invest * 0.5
-            print("[%r] 下跌趋势，上次价格%.2f, 现价%.2f，买入一半 %.2f" % (current_date, self.last_price, current_price, amount))
+            amount = self.amount_per_period  # * 0.5
+            # print("[%r] 下跌趋势，上次价格%.2f, 现价%.2f，买入一半 %.2f" % (current_date, self.last_price, current_price, amount))
         else:
-            amount = self.params.invest
+            amount = self.amount_per_period
             if self.last_price is None: self.last_price = 0
-            print("[%r] 上涨趋势，上次价格%.2f, 现价%.2f，买入 %.2f" % (current_date, self.last_price, current_price, amount))
+            # print("[%r] 上涨趋势，上次价格%.2f, 现价%.2f，买入 %.2f" % (current_date, self.last_price, current_price, amount))
 
         self.last_price = current_price
 
@@ -104,39 +107,44 @@ class MyStrategy(bt.Strategy):
         #     return
 
         self.buy(size=int(amount / current_price))
-        print("购入 %d 股, %d 次" % (int(amount / current_price),self.time))
+        # print("购入 %d 股, %d 次" % (int(amount / current_price),self.time))
 
     # 测略结束时，多用于参数调优
     def stop(self):
-        self.log('(均线周期 %2d)期末资金 %.2f' % (self.params.period, self.broker.getvalue()), doprint=True)
+        self.log('调仓期[%r]的期末资金 ： %.2f' % (self.params.period, self.broker.getvalue()), doprint=True)
 
 
 # python -m btrader.invest
 if __name__ == '__main__':
     index_code = "000905.SH"  # 中证500
-    index_code = "000300.SH"  # 沪深300
-    start_date = "20170101"
-    end_date = "20211201"
-    period = 18
-    total_invest = 1000000
-    duration = int(abs((utils.str2date(start_date) - utils.str2date(end_date)).days / 30))
-    amount_per_period = int(total_invest / duration)
-    print("总投资：%d，投资期数：%d, 每期投资: %d" % (total_invest, duration, amount_per_period))
+    # index_code = "000300.SH"  # 沪深300
+    index_code = '001938.SH' # 基金代码 001938：时代先锋 002943 ： 广发多因子
+    start_date = "20191001"
+    end_date = "20220115"
+    period = (10, 22, 30, 60)
+    total_invest = 100000
+
+    trade_days = datasource_factory.get().trade_cal(start_date, end_date)
+    trade_days = len(trade_days)
 
     # 创建Cerebro引擎
     cerebro = bt.Cerebro()
 
     # # 使用参数来设定10到31天的均线,看看均线参数下那个收益最好
-    strats = cerebro.addstrategy(
+    strats = cerebro.optstrategy(
         MyStrategy,
+        trade_days=trade_days,
         period=period,
-        invest=amount_per_period
+        invest=total_invest
     )
 
     d_start_date = utils.str2date(start_date)  # 开始日期
     d_end_date = utils.str2date(end_date)  # 结束日期
     # import pdb; pdb.set_trace()
-    df_index = datasource_factory.get().index_daily(index_code, start_date, end_date)
+    # df_index = datasource_factory.get().index_daily(index_code, start_date, end_date)
+    df_index = datasource_factory.get().fund_daily(index_code, start_date, end_date)
+
+    print(df_index)
     df_index = comply_backtrader_data_format(df_index)
 
     data = PandasData(dataname=df_index, fromdate=df_index.index[0], todate=df_index.index[-1], plot=True)
@@ -145,7 +153,6 @@ if __name__ == '__main__':
 
     # 设置投资金额1000.0
     cerebro.broker.setcash(total_invest)
-
 
     # # 每笔交易使用固定交易量
     # cerebro.addsizer(bt.sizers.FixedSize, stake=10)
@@ -161,24 +168,25 @@ if __name__ == '__main__':
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
     cerebro.addanalyzer(bt.analyzers.PeriodStats, _name='period_stats')
     cerebro.addanalyzer(bt.analyzers.AnnualReturn, _name='annual')
+
     results = cerebro.run()
 
 
-    def format_print(title, results, key):
+    # import pdb;pdb.set_trace()
+
+    def format_print(title, results):
         print(title, ":")
-        print(results[0].analyzers)
-        for year, value in results[0].analyzers.get(key).get_analysis().items():
+        # print(results[0].analyzers)
+        for year, value in results.items():
             print("\t %s : %r" % (year, value))
 
-    print("总资金:", cerebro.broker.getvalue())
-    print("现金：",cerebro.broker.getcash())
-    print("收益率: %.2f%%" % ((cerebro.broker.getvalue() - total_invest) * 100 / total_invest))
-    print("回撤:", results[0].analyzers.DW.get_analysis())
-    print("收益:", results[0].analyzers.returns.get_analysis())
-    # format_print("收益", results, "returns")
-    print("期间:", results[0].analyzers.period_stats.get_analysis())
-    print("年化:")
-    for year, value in results[0].analyzers.annual.get_analysis().items():
-        print("\t %s : %.0f%%" % (year, value * 100))
 
-    cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
+    for i, result in enumerate(results):
+        print("-" * 80)
+        print("%d天调仓期结果：" % period[i])
+        format_print("回撤:", result[0].analyzers.DW.get_analysis())
+        format_print("收益:", result[0].analyzers.returns.get_analysis())
+        format_print("期间:", result[0].analyzers.period_stats.get_analysis())
+        format_print("年化:", result[0].analyzers.annual.get_analysis())
+
+    # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)

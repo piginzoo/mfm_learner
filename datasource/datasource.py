@@ -76,3 +76,7 @@ class DataSource(ABC):
     def index_classify(self, level='', src='SW2014'):
         """行业分类"""
         pass
+
+    @abstractmethod
+    def fund_daily(self, fund_code, start_date, end_date):
+        pass

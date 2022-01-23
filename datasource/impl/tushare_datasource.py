@@ -223,3 +223,10 @@ class TushareDataSource(DataSource):
         _set_cache('stock_basic', df, ts_code, start_date='', end_date='')
         _check_lenght(df)
         return df
+
+    # https://tushare.pro/document/2?doc_id=119
+    @post_query
+    def fund_daily(self, fund_code, start_date, end_date):
+        print(fund_code,start_date,end_date)
+        df = self.pro.fund_daily(ts_code=fund_code,start_date=start_date,end_date=end_date)
+        return df

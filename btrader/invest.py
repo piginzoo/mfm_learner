@@ -35,6 +35,7 @@ class MyStrategy(bt.Strategy):
         # 保存收盘价的引用
         self.last_price = 0
         self.current_day = 0
+        self.time=0
 
     # 订单状态通知，买入卖出都是下单
     def notify_order(self, order):
@@ -84,6 +85,7 @@ class MyStrategy(bt.Strategy):
             # print("当前 %d, 调仓期 %d" % (self.current_day , self.params.period))
             return
 
+        self.time+=1
         self.current_day = 0
         current_price = self.data0.close[0]
 
@@ -102,7 +104,7 @@ class MyStrategy(bt.Strategy):
         #     return
 
         self.buy(size=int(amount / current_price))
-        print("购入 %d 股" % (int(amount / current_price)))
+        print("购入 %d 股, %d 次" % (int(amount / current_price),self.time))
 
     # 测略结束时，多用于参数调优
     def stop(self):
@@ -115,7 +117,7 @@ if __name__ == '__main__':
     index_code = "000300.SH"  # 沪深300
     start_date = "20170101"
     end_date = "20211201"
-    period = 22
+    period = 18
     total_invest = 1000000
     duration = int(abs((utils.str2date(start_date) - utils.str2date(end_date)).days / 30))
     amount_per_period = int(total_invest / duration)
@@ -144,6 +146,7 @@ if __name__ == '__main__':
     # 设置投资金额1000.0
     cerebro.broker.setcash(total_invest)
 
+
     # # 每笔交易使用固定交易量
     # cerebro.addsizer(bt.sizers.FixedSize, stake=10)
 
@@ -168,10 +171,11 @@ if __name__ == '__main__':
             print("\t %s : %r" % (year, value))
 
     print("总资金:", cerebro.broker.getvalue())
+    print("现金：",cerebro.broker.getcash())
     print("收益率: %.2f%%" % ((cerebro.broker.getvalue() - total_invest) * 100 / total_invest))
     print("回撤:", results[0].analyzers.DW.get_analysis())
     print("收益:", results[0].analyzers.returns.get_analysis())
-    format_print("收益", results, "returns")
+    # format_print("收益", results, "returns")
     print("期间:", results[0].analyzers.period_stats.get_analysis())
     print("年化:")
     for year, value in results[0].analyzers.annual.get_analysis().items():

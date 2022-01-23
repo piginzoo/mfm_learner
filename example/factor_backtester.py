@@ -135,7 +135,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     cerebro.broker.setcash(start_cash)
 
     # https://baike.baidu.com/item/%E8%82%A1%E7%A5%A8%E4%BA%A4%E6%98%93%E6%89%8B%E7%BB%AD%E8%B4%B9/9080806
-    # 设置交易手续费：印花税0.001+证管费0.00002+证券交易经手费0.0000487+券商交易佣金0.003
+    # 设置交易手续费：印花税0.001+证管费0.00002+证券交易经手费0.0000487+券商交易佣金0.0003
     cerebro.broker.setcommission(commission=0.004)
 
     # 设置订单份额,设置每笔交易交易的股票数量,比如" cerebro.addsizer(bt.sizers.FixedSize, stake=10)"

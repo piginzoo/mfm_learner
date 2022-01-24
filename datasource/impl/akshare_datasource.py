@@ -52,4 +52,5 @@ class AKShareDataSource(DataSource):
     def fund_daily(self, code, start_date, end_date):
         df = ak.fund_em_open_fund_info(fund=code, indicator="累计净值走势")
         df.columns = ["datetime","close"]
+        df['open'] = df['close']
         return df

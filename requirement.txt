@@ -16,4 +16,5 @@ pymysql
 IPython
 empyrical
 baostock
+akshare
 python-Levenshtein

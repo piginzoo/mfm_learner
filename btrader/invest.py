@@ -136,7 +136,7 @@ def main():
 
     df_index = comply_backtrader_data_format(df_index)
 
-    data = PandasData(dataname=df_index, fromdate=df_index.index[0], todate=df_index.index[-1], plot=True)
+    data = PandasData(dataname=df_index, fromdate=df_index.index[0], todate=df_index.index[-1], plot=True, close=0)
     cerebro.adddata(data, name=code)
     print("初始化 [%s] 数据到脑波：%d 条" % (code, len(df_index)))
 
@@ -160,7 +160,6 @@ def main():
 
     results = cerebro.run()
 
-
     # import pdb;pdb.set_trace()
 
     def format_print(title, results):
@@ -168,7 +167,6 @@ def main():
         # print(results[0].analyzers)
         for year, value in results.items():
             print("\t %s : %r" % (year, value))
-
 
     for i, result in enumerate(results):
         print("-" * 80)
@@ -180,14 +178,15 @@ def main():
 
     # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
 
+
 # python -m btrader.invest
 if __name__ == '__main__':
     code = "000905.SH"  # 中证500
     code = "000300.SH"  # 沪深300
-    code = '001938' # 基金代码 001938：时代先锋 002943 ： 广发多因子
-    start_date = "20191001"
-    end_date = "20220115"
-    period = (10, 22, 30, 60)
+    code = '001938'  # 基金代码 001938：时代先锋 002943 ： 广发多因子
+    start_date = "20150101"
+    end_date = "20210115"
+    period = (10, 22 , 30, 60)
     total_invest = 100000
 
     main()

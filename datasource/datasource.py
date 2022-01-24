@@ -42,7 +42,10 @@ def post_query(func):
 
 
 def _get_cache_file_name(dir, func, args, kwargs):
+    print(dir, func, args, kwargs)
+
     args = list(args) + list(kwargs.values())  # 获得所有的参数值
+    args = [arg for arg in args if arg is not None] # 去掉None的参数
     file_name = "_".join(args)
     file_name = "{}_{}.csv".format(func, file_name)
     file_path = os.path.join(dir, file_name)
@@ -60,7 +63,7 @@ def _get_cache(dir, func, args, kwargs, str_fields=None):
     """
     file_path = _get_cache_file_name(dir, func, args, kwargs)
     if not os.path.exists(file_path): return None
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path,infer_datetime_format=True)
     logger.debug("使用%s_%r缓存数据%d条", func, args, len(df))
     # 'Unnamed: 0'，是观察出来的，第一列设置成index，原始的tushare就是这样的index结构
     df = df.set_index("Unnamed: 0")
@@ -115,7 +118,7 @@ def cache(dir,str_fields=None):
     return decorator
 
 
-class DataSource(ABC):
+class DataSource():
 
     @abstractmethod
     def daily(self, stock_code, start_date, end_date):
@@ -154,6 +157,7 @@ class DataSource(ABC):
         """行业分类"""
         pass
 
-    # @abstractmethod
-    # def fund_daily(self, fund_code, start_date, end_date):
-    #     pass
+    # 返回基金信息
+    @abstractmethod
+    def fund_daily(self, fund_code, start_date, end_date):
+        pass

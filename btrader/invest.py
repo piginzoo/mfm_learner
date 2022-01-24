@@ -1,3 +1,5 @@
+import argparse
+
 from utils import utils
 from utils.utils import MyPlot
 
@@ -114,17 +116,8 @@ class MyStrategy(bt.Strategy):
         self.log('调仓期[%r]的期末资金 ： %.2f' % (self.params.period, self.broker.getvalue()), doprint=True)
 
 
-# python -m btrader.invest
-if __name__ == '__main__':
-    index_code = "000905.SH"  # 中证500
-    # index_code = "000300.SH"  # 沪深300
-    index_code = '001938.SH' # 基金代码 001938：时代先锋 002943 ： 广发多因子
-    start_date = "20191001"
-    end_date = "20220115"
-    period = (10, 22, 30, 60)
-    total_invest = 100000
-
-    trade_days = datasource_factory.get().trade_cal(start_date, end_date)
+def main():
+    trade_days = datasource_factory.create('tushare').trade_cal(start_date, end_date)
     trade_days = len(trade_days)
 
     # 创建Cerebro引擎
@@ -138,18 +131,14 @@ if __name__ == '__main__':
         invest=total_invest
     )
 
-    d_start_date = utils.str2date(start_date)  # 开始日期
-    d_end_date = utils.str2date(end_date)  # 结束日期
-    # import pdb; pdb.set_trace()
-    # df_index = datasource_factory.get().index_daily(index_code, start_date, end_date)
-    df_index = datasource_factory.get().fund_daily(index_code, start_date, end_date)
+    # df_index = datasource_factory.get().index_daily(code, start_date, end_date)
+    df_index = datasource_factory.create('akshare').fund_daily(code, start_date, end_date)
 
-    print(df_index)
     df_index = comply_backtrader_data_format(df_index)
 
     data = PandasData(dataname=df_index, fromdate=df_index.index[0], todate=df_index.index[-1], plot=True)
-    cerebro.adddata(data, name=index_code)
-    print("初始化 [%s] 数据到脑波：%d 条" % (index_code, len(df_index)))
+    cerebro.adddata(data, name=code)
+    print("初始化 [%s] 数据到脑波：%d 条" % (code, len(df_index)))
 
     # 设置投资金额1000.0
     cerebro.broker.setcash(total_invest)
@@ -190,3 +179,15 @@ if __name__ == '__main__':
         format_print("年化:", result[0].analyzers.annual.get_analysis())
 
     # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
+
+# python -m btrader.invest
+if __name__ == '__main__':
+    code = "000905.SH"  # 中证500
+    code = "000300.SH"  # 沪深300
+    code = '001938' # 基金代码 001938：时代先锋 002943 ： 广发多因子
+    start_date = "20191001"
+    end_date = "20220115"
+    period = (10, 22, 30, 60)
+    total_invest = 100000
+
+    main()

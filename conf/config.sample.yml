@@ -1,5 +1,5 @@
 dateformat: '%Y%m%d'
-datasource: 'tushare' # currently support: tushare|database|baostock|jqdata
+datasource: 'tushare' # currently support: tushare|database|baostock|jqdata|akshare
 datasources:
         jqdata:
                 uid: 'your user id'

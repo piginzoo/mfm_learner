@@ -15,6 +15,10 @@ MAPPER={
         'trade_date': 'datetime',
         'ann_date': 'datetime'
     },
+    'akshare': {
+        '净值日期': 'datetime',
+        '累计净值': 'close'
+    },
     'baostock':{
         'date': 'datetime',
     },

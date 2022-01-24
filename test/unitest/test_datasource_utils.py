@@ -1,6 +1,9 @@
 # pytest  test/unitest/test_datasource_utils.py -s
 import utils
 import pandas as pd
+
+from datasource.impl.akshare_datasource import AKShareDataSource
+
 utils.utils.init_logger()
 from datasource import datasource_utils as dsu
 from datasource.impl.tushare_datasource import TushareDataSource
@@ -50,4 +53,9 @@ def test_tushare_cache():
     df = ts.stock_basic('600000.SH')
     print(df)
     df = ts.stock_basic('600000.SH')
+    print(df)
+
+def test_akshare_cache():
+    ak = AKShareDataSource()
+    df = ak.fund_daily('710001',start_date=None, end_date=None)
     print(df)

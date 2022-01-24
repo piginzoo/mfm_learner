@@ -1,21 +1,17 @@
 import datetime
 import logging
-import os
 import random
 import time
 
-import pandas as pd
 import tushare
 
 import utils
-from datasource.datasource import DataSource, post_query
+from datasource.datasource import DataSource, post_query, cache
 
 logger = logging.getLogger(__name__)
 
 BASE_DIR = "./data/tushare/"
 MAX_ROWS = 1000
-
-if not os.path.exists(BASE_DIR): os.makedirs(BASE_DIR)
 
 """
 不小心触发了5000行的调用，被tushare限流了，所以不得不写一个类，来控制一下流量，
@@ -33,48 +29,6 @@ def _check_lenght(df):
     if len(df) > 4000: raise ValueError("为防止被封，Tushare返回结果不超过4000：" + str(len(df)))
 
 
-def _get_cache_file_name(func, stock_code, start_date, end_date):
-    file_name = "{}_{}_{}_{}.csv".format(func, stock_code, start_date, end_date)
-    file_path = os.path.join(BASE_DIR, file_name)
-    return file_path
-
-
-def _get_cache(func, stock_code, start_date, end_date, str_fields=None):
-    """
-    :param func:
-    :param stock_code:
-    :param start_date:
-    :param end_date:
-    :param str_fields: 要转换成字符串的列名，逗号分隔
-    :return:
-    """
-    file_path = _get_cache_file_name(func, stock_code, start_date, end_date)
-    if not os.path.exists(file_path): return None
-    df = pd.read_csv(file_path)
-    logger.debug("使用%s~%s，股票[%s]的[%s]缓存数据%d条", start_date, end_date, stock_code, func,len(df))
-    # 'Unnamed: 0'，是观察出来的，第一列设置成index，原始的tushare就是这样的index结构
-    df = df.set_index("Unnamed: 0")
-
-    # 由于从csv加载，很多字段被整成int，不行，得转回str
-    default_str = ['trade_date', 'ann_date', 'ts_code']
-    if str_fields:
-        str_fields = str_fields.split(",")
-        str_fields += default_str
-    else:
-        str_fields = default_str
-
-    for str_field in str_fields:
-        if str_field in df.columns: df[str_field] = df[str_field].astype(str)
-
-    return df
-
-
-def _set_cache(func, df, stock_code, start_date, end_date):
-    file_path = _get_cache_file_name(func, stock_code, start_date, end_date)
-    logger.debug("缓存%s~%s，股票[%s]的[%s]数据=>%s", start_date, end_date, stock_code, func, file_path)
-    df.to_csv(file_path)
-
-
 # ------------------------------------------------------------------------------------------------
 # 以下是对tushare的各种API函数包装
 # ------------------------------------------------------------------------------------------------
@@ -89,12 +43,10 @@ class TushareDataSource(DataSource):
     # 返回每日行情数据，不限字段
     # https://tushare.pro/document/2?doc_id=27
     @post_query
+    @cache(BASE_DIR)
     def daliy_one(self, stock_code, start_date, end_date, fields=None):
-        df = _get_cache('daily', stock_code, start_date, end_date)
-        if df is not None: return df
         _random_sleep()
         df = self.pro.daily(ts_code=stock_code, start_date=start_date, end_date=end_date, fields=fields)
-        _set_cache('daily', df, stock_code, start_date, end_date)
         _check_lenght(df)
         return df
 
@@ -126,40 +78,33 @@ class TushareDataSource(DataSource):
     # 返回每日的其他信息，主要是市值啥的
     # https://tushare.pro/document/2?doc_id=32
     @post_query
+    @cache(BASE_DIR)
     def daily_basic(self, stock_code, start_date, end_date, fields=None):
-        if type(stock_code)==list: stock_code = ",".join(stock_code)
-        df = _get_cache('daily_basic', stock_code, start_date, end_date)
-        if df is not None:
-            return df
         _random_sleep()
+        if type(stock_code) == list: stock_code = ",".join(stock_code)
         df = self.pro.daily_basic(ts_code=stock_code, start_date=start_date, end_date=end_date, fields=fields)
-        _set_cache('daily_basic', df, stock_code, start_date, end_date)
         _check_lenght(df)
         return df
 
     # 指数日线行情
     # https://tushare.pro/document/2?doc_id=95
     @post_query
+    @cache(BASE_DIR)
     def index_daily(self, index_code, start_date, end_date, fields=None):
-        df = _get_cache('index_daily', index_code, start_date, end_date)
-        if df is not None: return df
         _random_sleep()
         df = self.pro.index_daily(ts_code=index_code, start_date=start_date, end_date=end_date, fields=fields)
-        _set_cache('index_daily', df, index_code, start_date, end_date)
+        return df
+
+    # https://tushare.pro/document/2?doc_id=79
+    @post_query
+    @cache(BASE_DIR)
+    def fina_indicator(self, stock_code, start_date, end_date, fields=None):
+        _random_sleep()
+        df = self.pro.fina_indicator(ts_code=stock_code, start_date=start_date, end_date=end_date, fields=fields)
         _check_lenght(df)
         return df
 
     # 获得财务数据， TODO：没有按照出财务报表的时间来query
-    # https://tushare.pro/document/2?doc_id=79
-    @post_query
-    def fina_indicator(self, stock_code, start_date, end_date, fields=None):
-        df = _get_cache('fina_indicator', stock_code, start_date, end_date)
-        if df is not None: return df
-        _random_sleep()
-        df = self.pro.fina_indicator(ts_code=stock_code, start_date=start_date, end_date=end_date, fields=fields)
-        _set_cache('fina_indicator', df, stock_code, start_date, end_date)
-        _check_lenght(df)
-        return df
 
     # 获得指数包含的股票，从开始日期找1年
     # https://tushare.pro/document/2?doc_id=96
@@ -201,32 +146,26 @@ class TushareDataSource(DataSource):
 
     # https://tushare.pro/document/2?doc_id=181
     @post_query
+    @cache(BASE_DIR,'parent_code,index_code,industry_code')
     def index_classify(self, level='', src='SW2014'):
-        """申万行业，2014版（还有2021版）"""
-        df = _get_cache('index_classify', level, start_date=src, end_date='', str_fields='industry_code,parent_code')
-        if df is not None: return df
+        # """申万行业，2014版（还有2021版）"""
         _random_sleep()
         df = self.pro.index_classify(level=level, src=src)
-        _set_cache('index_classify', df, level, start_date=src, end_date='')
         _check_lenght(df)
         return df
 
     # https://tushare.pro/document/2?doc_id=25
     @post_query
+    @cache(BASE_DIR)
     def stock_basic(self, ts_code):
         """股票基本信息，主要是为了获得行业信息（目前）"""
-
-        df = _get_cache('stock_basic', ts_code, start_date='', end_date='')
-        if df is not None: return df
         _random_sleep()
         df = self.pro.stock_basic(ts_code=ts_code)
-        _set_cache('stock_basic', df, ts_code, start_date='', end_date='')
         _check_lenght(df)
         return df
 
     # https://tushare.pro/document/2?doc_id=119
     @post_query
     def fund_daily(self, fund_code, start_date, end_date):
-        print(fund_code,start_date,end_date)
-        df = self.pro.fund_daily(ts_code=fund_code,start_date=start_date,end_date=end_date)
+        df = self.pro.fund_daily(ts_code=fund_code, start_date=start_date, end_date=end_date)
         return df

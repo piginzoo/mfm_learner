@@ -44,5 +44,5 @@ class MomentumFactor(Factor):
 
         adj_close = (df_daily['close'] + df_daily['high'] + df_daily['low']) / 3
         df_daily['momentum'] = np.log(adj_close / adj_close.shift(period_window))  # shift(1) 往后移，就变成上个月的了
-        df_daily = datasource_utils.reset_index(df_daily)
+        df_daily = datasource_utils.reset_index(df_daily) # 设置日期+code为索引
         return df_daily['momentum']

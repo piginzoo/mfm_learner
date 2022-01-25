@@ -120,25 +120,39 @@ datasource: 'tushare'
 - [jqfactor_analyzer，聚宽开源出来的一套因子分析工具](https://github.com/piginzoo/jqfactor_analyzer)，它只有单因子分析。
 - [jaqs-fxdayu，新格投资做的JAQS扩展](https://github.com/xingetouzi/jaqs-fxdayu)
 
-**一些示例项目**
-- https://github.com/zhangjinzhi/Wind_Python.git
+**一些参考项目**
+- https://github.com/Weiwei-Ch/AI-trading-alpha.git
+- https://github.com/Quant132/BackTrader_Multifactors.git
+- https://github.com/SAmmer0/GeneralLib.git
+- https://github.com/hugo2046/GetAstockFactors.git
+- https://github.com/LHospitalLKY/JointQuant_Learning.git
 - https://github.com/a1137261060/Multi-Factor-Models.git
+- https://github.com/ChannelCMT/OFO.git
+- https://github.com/ChannelCMT/QS.git
+- https://github.com/ChannelCMT/QTC_2.0.git
+- https://github.com/Miya-Su/Quantitative-Trading.git
+- https://github.com/hugo2046/Quantitative-analysis.git
 - https://github.com/JoshuaQYH/TIDIBEI
-- https://github.com/JoinQuant/jqfactor_analyzer.git
+- https://github.com/zhangjinzhi/Wind_Python.git
+- https://github.com/lc-sysbs/alpha101.git
+- https://github.com/lc-sysbs/alpha101-new.git
+- https://github.com/phonegapX/alphasickle.git
+- https://github.com/iLampard/alphaware.git
+- https://github.com/jcchao/deeplearning-for-quant.git
+- https://github.com/Hatonnlatwiira/factor-model-tushare.git
+- https://github.com/jiangtiantu/factorhub.git
+- https://github.com/Jensenberg/multi-factor.git
 - https://github.com/Spark3122/multifactor.git
-- https://github.com/ChannelCMT/OFO
-- https://github.com/ChannelCMT/QTC_2.0
-- https://github.com/Jensenberg/multi-factor
-- https://github.com/Quant132/BackTrader_Multifactors
-- https://github.com/jiangtiantu/factorhub
+- https://github.com/ricequant/rqalpha.git
 
 **参考书籍**
 - [《股票多因子模型实战：Python核心代码解析》](https://book.douban.com/subject/35446933/)，这本书深入浅出，对新手很友好
 - [《因子投资：方法与实践》](https://book.douban.com/subject/35192979/)，石川大佬的书，经典的和，很多细节讨论很深入
 
 ## 实现的因子
-
-**动量因子**
-- [https://www.windquant.com/qntcloud/article?3aef2d11-8fab-427b-a6b5-ef50cdbe997b](https://www.windquant.com/qntcloud/article?3aef2d11-8fab-427b-a6b5-ef50cdbe997b)
-- [https://zhuanlan.zhihu.com/p/379269953](https://zhuanlan.zhihu.com/p/379269953)
+- [优矿提供的因子库列表](https://uqer.datayes.com/data/search/MktStockFactorsOneDayGet)
+- [聚宽提供的因子列表](https://www.joinquant.com/help/api/help#name:factor_values)
+- [万矿社区策略和研究汇总](https://www.windquant.com/qntcloud/article?3d622808-4060-41f1-ad69-6abc42a246bc)
+- [动量因子](https://zhuanlan.zhihu.com/p/379269953)
+- [动量类因子](https://www.windquant.com/qntcloud/article?3aef2d11-8fab-427b-a6b5-ef50cdbe997b)
 

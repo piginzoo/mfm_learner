@@ -18,3 +18,4 @@ empyrical
 baostock
 akshare
 python-Levenshtein
+quantstats

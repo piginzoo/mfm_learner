@@ -1,7 +1,6 @@
-import argparse
+import quantstats as qs
 
 from utils import utils
-from utils.utils import MyPlot
 
 utils.init_logger()
 
@@ -157,10 +156,9 @@ def main():
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
     cerebro.addanalyzer(bt.analyzers.PeriodStats, _name='period_stats')
     cerebro.addanalyzer(bt.analyzers.AnnualReturn, _name='annual')
+    cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')  # 加入PyFolio分析者,这个是为了做quantstats分析用
 
     results = cerebro.run()
-
-    # import pdb;pdb.set_trace()
 
     def format_print(title, results):
         print(title, ":")
@@ -175,8 +173,27 @@ def main():
         format_print("收益:", result[0].analyzers.returns.get_analysis())
         format_print("期间:", result[0].analyzers.period_stats.get_analysis())
         format_print("年化:", result[0].analyzers.annual.get_analysis())
+        quant_statistics(result[0], period[i], code, name)
 
     # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
+
+
+def quant_statistics(strat, period, code, name):
+    portfolio_stats = strat.analyzers.getbyname('PyFolio')  # 得到PyFolio分析者实例
+    # 以下returns为以日期为索引的资产日收益率系列
+    returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
+
+    returns.index = returns.index.tz_convert(None)  # 索引的时区要设置一下，否则出错
+
+    # 输出html策略报告,rf为无风险利率
+    qs.reports.html(returns,
+                    output='debug/stats_{}{}_{}.html'.format(code, name, period),
+                    title='{}日调仓的定投[{}{}]基金的绩效报告'.format(period, code, name), rf=0.0)
+
+    print(qs.reports.metrics(returns=returns, mode='full'))
+    df = qs.reports.metrics(returns=returns, mode='full', display=False)
+    print("返回的QuantStats报表：\n%r", df)
+    qs.reports.basic(returns)
 
 
 # python -m btrader.invest
@@ -184,9 +201,10 @@ if __name__ == '__main__':
     code = "000905.SH"  # 中证500
     code = "000300.SH"  # 沪深300
     code = '001938'  # 基金代码 001938：时代先锋 002943 ： 广发多因子
+    name = '时代先锋'
     start_date = "20150101"
     end_date = "20210115"
-    period = (10, 22 , 30, 60)
+    period = (10, 22, 30, 60)
     total_invest = 100000
 
     main()

@@ -54,7 +54,7 @@ def dataframe2series(df):
 
 
 def init_logger():
-    logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:%(process)d:%(levelname)s : %(message)s',
+    logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:P%(process)d:%(levelname)s : %(message)s',
                         level=logging.DEBUG,
                         handlers=[logging.StreamHandler()])
 
@@ -62,6 +62,7 @@ def init_logger():
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger('matplotlib.font_manager').disabled = True
     logging.getLogger('matplotlib').disabled = True
+    logging.getLogger('fontTools.ttLib.ttFont').disabled = True
     warnings.filterwarnings("ignore")
     warnings.filterwarnings("ignore", module="matplotlib")
 

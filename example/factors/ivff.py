@@ -4,9 +4,9 @@ import logging
 
 from datasource import datasource_utils
 from example.factors.factor import Factor
+from fama import fama_model
 
 logger = logging.getLogger(__name__)
-
 
 """
 所谓"特质波动率"： 就是源于一个现象"低特质波动的股票，未来预期收益更高"。
@@ -39,36 +39,25 @@ logger = logging.getLogger(__name__)
     我是这么理解的，也不知道对不对，这些文章云山雾罩地不说人话都。
 """
 
+
 class IVFFFactor(Factor):
 
     def __init__(self):
         super().__init__()
+        self.index_code = "000905.SH"  # TODO: 暂时用这个，未来需要外部配置
 
     def calculate(self, stock_codes, start_date, end_date, df_daily=None):
         if df_daily is None:
             df_daily = datasource_utils.load_daily_data(self.datasource, stock_codes, start_date, end_date)
 
-        # 计算CLV因子
-        df_daily['CLV'] = ((df_daily['close'] - df_daily['low']) - (df_daily['high'] - df_daily['close'])) / (
-                df_daily['high'] - df_daily['low'])
-        # 处理出现一字涨跌停
-        df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] > df_daily['pre_close']), 'CLV'] = 1
-        df_daily.loc[(df_daily['high'] == df_daily['low']) & (df_daily['open'] < df_daily['pre_close']), 'CLV'] = -1
+        df_fama = fama_model.calculate_factors(index_code=self.index_code, stock_num=50, start_date=start_date, end_date=end_date)
 
-            '''
-            计算年化的波动率
-            计算方法如下：
-            new_std = sqrt((init_std**2 + (1+init_ret)**2)**ret_freq - (1+init_ret)**(2*ret_freq))
-            init_std和init_ret使用样本标准差和样本均值计算
-            @param:
-                rets: 需要计算年化波动率的收益率序列，为pd.Series类型
-                ret_freq: 一年的区间数（例如，12表示月度数据年化，250表示日数据年化）
-            @return:
-                按照上述方法计算的年化波动率
-            '''
-            init_std = rets.std()
-            init_ret = rets.mean()
-            return sqrt((init_std ** 2 + (1 + init_ret) ** 2) ** ret_freq - (1 + init_ret) ** (2 * ret_freq))
+        # 参考：
+        import statsmodels.formula.api as sm
+        simple = sm.ols(formula='amzn ~ spy', data=df).fit()
+        print(simple.summary())
+
+        # TODO: 算标准差的时候，是每天都算一次么？类滑动窗口（TODO，可以用之前写的计算滑动窗酷的工具类，貌似用shift实现的）
 
         df_daily = datasource_utils.reset_index(df_daily)
         factors = df_daily['CLV']

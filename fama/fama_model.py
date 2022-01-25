@@ -1,23 +1,15 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Aug  4 19:53:56 2020
-https://www.cxyzjd.com/article/nv_144/108891000
-@author: 12767
-"""
-import utils
-utils.init_logger()
-import pandas as pd
-import seaborn as sns
-import matplotlib as mpl
 import logging
 
+import pandas as pd
+
+import utils
+
+utils.init_logger()
+
+from datasource import datasource_factory
+
 logger = logging.getLogger(__name__)
-sns.set()
-mpl.rcParams['font.sans-serif'] = 'WenQuanYi Micro Hei'
-pro = utils.tushare_login()
-
-
-
+datasource = datasource_factory.get()
 
 
 # %%定义计算函数
@@ -33,7 +25,6 @@ def cal_smb_hml(df):
     - HMI：账面市值比，B/M，1/pb (PB是市净率=总市值/净资产)
         HMI = (BH+SH)/2 - (BL+SL)/2
     """
-
 
     # 划分大小市值公司
     df['SB'] = df['circ_mv'].map(lambda x: 'B' if x >= df['circ_mv'].median() else 'S')
@@ -56,7 +47,7 @@ def cal_smb_hml(df):
     # 以SL为例子：Small+Low
     #    小市值+低账面市值比，的一组，比如100只股票，把他们的当期收益"**按照市值加权**"后，汇总到一起
     #    每期，得到的SL是一个数，
-    R_SL = (df_SL['pct_chg'] * df_SL['circ_mv'] / 100).sum() / df_SL['circ_mv'].sum() # 按市值加权算平均收益率
+    R_SL = (df_SL['pct_chg'] * df_SL['circ_mv'] / 100).sum() / df_SL['circ_mv'].sum()  # 按市值加权算平均收益率
     R_SM = (df_SM['pct_chg'] * df_SM['circ_mv'] / 100).sum() / df_SM['circ_mv'].sum()
     R_SH = (df_SH['pct_chg'] * df_SH['circ_mv'] / 100).sum() / df_SH['circ_mv'].sum()
     R_BL = (df_BL['pct_chg'] * df_BL['circ_mv'] / 100).sum() / df_BL['circ_mv'].sum()
@@ -70,20 +61,20 @@ def cal_smb_hml(df):
     return smb, hml, R_SL, R_SM, R_SH, R_BL, R_BM, R_BH
 
 
-def calculate_factors(index_code="000905.SH", stock_num = 50, start_date='20190101', end_date='20200801'):
+def calculate_factors(index_code="000905.SH", stock_num=50, start_date='20190101', end_date='20200801'):
     # %%计算并存储数据
     data = []
 
     # 获取一段时间内的历史交易日
-    df_cal = pro.trade_cal(start_date=start_date, end_date=end_date)
+    df_cal = datasource.trade_cal(start_date=start_date, end_date=end_date)
     df_cal = df_cal.query('(exchange=="SSE") & (is_open==1)')  # 筛选，清除非交易日，SSE上交所/SZSE深交所，0休市，1交易
     trade_dates = df_cal.cal_date.tolist()
-    logger.debug("得到 %r~%r %d 个交易日",start_date,end_date,len(df_cal))
+    logger.debug("得到 %r~%r %d 个交易日", start_date, end_date, len(df_cal))
 
     # 获得股票池
-    df = pro.index_weight(index_code=index_code, start_date=start_date, end_date=end_date)
-    logger.debug("获得股票池%d个股票",len(df))
-    df = df.sample(frac=1) # shuffle
+    df = datasource.index_weight(index_code=index_code, start_date=start_date, end_date=end_date)
+    logger.debug("获得股票池%d个股票", len(df))
+    df = df.sample(frac=1)  # shuffle
     df = df[:stock_num]
     stocks = ",".join(df['con_code'].unique().tolist())
     logger.debug("保留股票池%d个股票分析使用", len(df))
@@ -101,9 +92,9 @@ def calculate_factors(index_code="000905.SH", stock_num = 50, start_date='201901
     # %%开始获取数据
     for date in trade_dates:
         # 获取月线行情
-        df_daily = pro.daily(trade_date=date, ts_code=stocks) # ts_code不能超过50个股票
+        df_daily = datasource.daily(trade_date=date, ts_code=stocks)  # ts_code不能超过50个股票
         # 获取该日期所有股票的基本面指标，里面有市值信息
-        df_basic = pro.daily_basic(trade_date=date, ts_code=stocks)
+        df_basic = datasource.daily_basic(trade_date=date, ts_code=stocks)
         # 数据融合——只保留两个表中公共部分的信息
         df = pd.merge(df_daily, df_basic, on='ts_code', how='inner')
         # 返回的 smb，hml，都是一个数（当期的一个数）
@@ -118,12 +109,13 @@ def calculate_factors(index_code="000905.SH", stock_num = 50, start_date='201901
     # df_tfm['trade_date'] = pd.to_datetime(df_tfm.trade_date)
     # df_tfm = df_tfm.set_index('trade_date')
     df_tfm.to_excel('data/three_factor_model.xlsx')
+    return df_tfm
 
 
 # python -m fama.factor
 if __name__ == '__main__':
     # index_code="000905.SH"，使用中证500股票池
     calculate_factors(index_code="000905.SH",
-                      stock_num = 10,
+                      stock_num=10,
                       start_date='20200101',
                       end_date='20200201')

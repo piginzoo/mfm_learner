@@ -15,4 +15,7 @@ def test_ivff():
     stocks = stocks.iloc[:,0].unique()
     stocks = stocks[:5].tolist()
     df = ivff.calculate(stocks, start_date, end_date)
+    df = df.reset_index()
+    df = df.set_index(['datetime','code'])
+    df = df.unstack('code')
     print(df)

@@ -62,6 +62,7 @@ class IVFFFactor(Factor):
         # 获取指数收益率信息
         df_index = self.datasource.index_daily(index_code=self.index_code, start_date=start_date, end_date=end_date)
         df_index = df_index[['datetime','pct_chg']]
+        df_index.columns=['datetime', 'market']
         df_index = datasource_utils.reset_index(df_index,date_only=True)
         logger.debug("获得[%s]指数日收益，作为市场收益率:%d行", self.index_code, len(df_index))
         return df_index
@@ -124,12 +125,13 @@ class IVFFFactor(Factor):
             r_i = α_i + b1 * r_m_i + b2 * smb_i + b3 * hml_i + e_i 
             某一天（截面上），做回归，r_i,r_m_i，smb_i，hml_i 已知，回归后，得到e_i(残差)
             """
-            ols_result = sm.ols(formula='pct_chg ~ market + smb + hml', data=df_data).fit()
+            print(df_data.info())
+            ols_result = sm.ols(formula='pct_chg ~ market + SMB + HML', data=df_data).fit()
             residuals = ols_result.resid
             df_data['vi'] = residuals
             logger.debug("计算完股票[%s]的残差：%d 条",name,len(residuals))
             results.append(df_data[['code','vi']])
-        return pd.concat(results,axis=1)
+        return pd.concat(results,axis=0)
 
 
         # df_residuals = self.___calculate_residuals(residuals,time_window)

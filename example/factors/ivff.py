@@ -60,8 +60,8 @@ class IVFFFactor(Factor):
 
     def get_market(self, start_date, end_date):
         # 获取指数收益率信息
-        df_index = self.datasource.index_daily(ts_code=self.index_code, start_date=start_date, end_date=end_date)
-        df_index = df_index['pct_chg']
+        df_index = self.datasource.index_daily(index_code=self.index_code, start_date=start_date, end_date=end_date)
+        df_index = df_index[['datetime','pct_chg']]
         df_index = datasource_utils.reset_index(df_index,date_only=True)
         logger.debug("获得[%s]指数日收益，作为市场收益率:%d行", self.index_code, len(df_index))
         return df_index
@@ -95,17 +95,35 @@ class IVFFFactor(Factor):
         df_market = self.get_market(start_date, end_date)
 
         # 合并市场数据到fama数据中
-        df_fama = df_fama.merge(df_market)
+        df_fama = df_fama.merge(df_market,on=['datetime'], how='inner')
+
 
         """
         # 参考：
         - https://blog.csdn.net/CoderPai/article/details/82982146 
         - https://zhuanlan.zhihu.com/p/261031713
         formula里直接指定Y和X_i，就是dataframe中的列名，酷
+        
         """
         results = []
         for name,df_stock in df_daily.groupby('code'):
-            df_data = df_fama.merge(df_stock)
+            """
+            date        smb         hml         stock1
+            2016-06-24	0.165260	0.002198	0.085632	-0.078074	0.173832	0.214377	0.068445
+            2016-06-27	0.165537	0.003583	0.063299	-0.048674	0.180890	0.202724	0.081748
+            2016-06-28	0.135215	0.010403	0.059038	-0.034879	0.111691	0.122554	0.042489
+            2016-06-29	0.068774	0.019848	0.058476	-0.049971	0.042805	0.053339	0.079592
+            2016-06-30	0.039431	0.012271	0.037432	-0.027272	0.010902	0.077293	-0.050667
+            ---------------------------------------------------------------------------------------------
+
+            """
+
+            df_data = df_fama.merge(df_stock,on=['datetime'], how='inner')
+
+            """
+            r_i = α_i + b1 * r_m_i + b2 * smb_i + b3 * hml_i + e_i 
+            某一天（截面上），做回归，r_i,r_m_i，smb_i，hml_i 已知，回归后，得到e_i(残差)
+            """
             ols_result = sm.ols(formula='pct_chg ~ market + smb + hml', data=df_data).fit()
             residuals = ols_result.resid
             df_data['vi'] = residuals

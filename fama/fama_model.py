@@ -91,11 +91,11 @@ def calculate_factors(index_code="000905.SH", stock_num=50, start_date='20190101
     # %%开始获取数据
     for date in trade_dates:
         # 获取月线行情
-        df_daily = datasource.daily(trade_date=date, ts_code=stocks)  # ts_code不能超过50个股票
+        df_daily = datasource.daily(start_date=date, end_date=end_date, ts_code=stocks)  # ts_code不能超过50个股票
         # 获取该日期所有股票的基本面指标，里面有市值信息
-        df_basic = datasource.daily_basic(trade_date=date, ts_code=stocks)
+        df_basic = datasource.daily_basic(start_date=date, end_date=end_date, ts_code=stocks)
         # 数据融合——只保留两个表中公共部分的信息
-        df = pd.merge(df_daily, df_basic, on='ts_code', how='inner')
+        df = pd.merge(df_daily, df_basic, on='code', how='inner')
         # 返回的 smb，hml，都是一个数（当期的一个数）
         # 这个数是对股票池中的每一个股票都是一样的，它是因子的收益率，可不是因子（也就是因子暴露，简称因子）噢
         # 每个股票的因子暴露得单独算，用回归来跑，每期，每支股票都有自己的风险暴露的

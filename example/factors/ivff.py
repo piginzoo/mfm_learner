@@ -2,6 +2,9 @@
 
 import logging
 
+import statsmodels.formula.api as sm
+import numpy as np
+import pandas as pd
 from datasource import datasource_utils
 from example.factors.factor import Factor
 from fama import fama_model
@@ -13,8 +16,13 @@ logger = logging.getLogger(__name__)
 
 参考：
 - https://www.joinquant.com/view/community/detail/b27081ecc7bccfc7acc484f8a63e2459
+- https://www.joinquant.com/view/community/detail/1813dae5165ee3c5c81e2408d7fe576f
 - https://zhuanlan.zhihu.com/p/30158144
+- https://zhuanlan.zhihu.com/p/379585598
+- https://mp.weixin.qq.com/s/k_2ltrIQ7jkgAKhDc7Vo2A
+- https://blog.csdn.net/FightingBob/article/details/106791144
 - https://uqer.datayes.com/v3/community/share/58db552a6d08bb0051c52451
+
 
 特质波动率(Idiosyncratic Volatility, IV)与预期收益率的负向关系既不符合经典资产定价理论，
 也不符合基于不完全信息的定价理论，因此学术界称之为“特质波动率之谜”。
@@ -42,25 +50,70 @@ logger = logging.getLogger(__name__)
 
 class IVFFFactor(Factor):
 
-    def __init__(self):
+    def __init__(self,index_code="000905.SH"):
+        """
+        :param index_code: 使用的指数股票池代码
+        :param time_window: 计算
+        """
         super().__init__()
-        self.index_code = "000905.SH"  # TODO: 暂时用这个，未来需要外部配置
+        self.index_code = index_code
 
-    def calculate(self, stock_codes, start_date, end_date, df_daily=None):
-        if df_daily is None:
-            df_daily = datasource_utils.load_daily_data(self.datasource, stock_codes, start_date, end_date)
+    def get_market(self, start_date, end_date):
+        # 获取指数收益率信息
+        df_index = self.datasource.index_daily(ts_code=self.index_code, start_date=start_date, end_date=end_date)
+        df_index = df_index['pct_chg']
+        df_index = datasource_utils.reset_index(df_index,date_only=True)
+        logger.debug("获得[%s]指数日收益，作为市场收益率:%d行", self.index_code, len(df_index))
+        return df_index
 
-        df_fama = fama_model.calculate_factors(index_code=self.index_code, stock_num=50, start_date=start_date, end_date=end_date)
+    # TODO: 算标准差的时候，是每天都算一次么？类滑动窗口（TODO，可以用之前写的计算滑动窗酷的工具类，貌似用shift实现的）
+    def ___calculate_residuals(self, residuals,time_window):
+        result = []
+        for i in range(residuals):
+            sub_residuals = residuals[i:i + time_window]
+            if len(sub_residuals) < time_window: result.append(np.nan)
+            result.append(sub_residuals.std())
+        return result
 
+    def calculate(self, stock_codes, start_date, end_date):
+
+        """
+        各只股票信息
+        """
+        df_daily = datasource_utils.load_daily_data(self.datasource, stock_codes, start_date, end_date)
+        df_daily = datasource_utils.reset_index(df_daily,date_only=True)
+
+        """
+        df_fama[date | smb, hml, sl, sm, sh, bl, bm, bh]
+        index是date
+        """
+        df_fama = fama_model.calculate_factors(index_code=self.index_code,
+                                               stock_num=10,
+                                               start_date=start_date,
+                                               end_date=end_date)
+
+        df_market = self.get_market(start_date, end_date)
+
+        # 合并市场数据到fama数据中
+        df_fama = df_fama.merge(df_market)
+
+        """
         # 参考：
-        import statsmodels.formula.api as sm
-        simple = sm.ols(formula='amzn ~ spy', data=df).fit()
-        print(simple.summary())
+        - https://blog.csdn.net/CoderPai/article/details/82982146 
+        - https://zhuanlan.zhihu.com/p/261031713
+        formula里直接指定Y和X_i，就是dataframe中的列名，酷
+        """
+        results = []
+        for name,df_stock in df_daily.groupby('code'):
+            df_data = df_fama.merge(df_stock)
+            ols_result = sm.ols(formula='pct_chg ~ market + smb + hml', data=df_data).fit()
+            residuals = ols_result.resid
+            df_data['vi'] = residuals
+            logger.debug("计算完股票[%s]的残差：%d 条",name,len(residuals))
+            results.append(df_data[['code','vi']])
+        return pd.concat(results,axis=1)
 
-        # TODO: 算标准差的时候，是每天都算一次么？类滑动窗口（TODO，可以用之前写的计算滑动窗酷的工具类，貌似用shift实现的）
 
-        df_daily = datasource_utils.reset_index(df_daily)
-        factors = df_daily['CLV']
-        logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(factors))
-
-        return factors
+        # df_residuals = self.___calculate_residuals(residuals,time_window)
+        # df_residuals = datasource_utils.reset_index(df_residuals)
+        # return df_residuals

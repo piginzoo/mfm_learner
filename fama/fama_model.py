@@ -2,11 +2,11 @@ import logging
 
 import pandas as pd
 
-import utils
+from utils import utils
 
 utils.init_logger()
 
-from datasource import datasource_factory
+from datasource import datasource_factory, datasource_utils
 
 logger = logging.getLogger(__name__)
 datasource = datasource_factory.get()
@@ -67,12 +67,11 @@ def calculate_factors(index_code="000905.SH", stock_num=50, start_date='20190101
 
     # 获取一段时间内的历史交易日
     df_cal = datasource.trade_cal(start_date=start_date, end_date=end_date)
-    df_cal = df_cal.query('(exchange=="SSE") & (is_open==1)')  # 筛选，清除非交易日，SSE上交所/SZSE深交所，0休市，1交易
-    trade_dates = df_cal.cal_date.tolist()
+    trade_dates = df_cal.tolist()
     logger.debug("得到 %r~%r %d 个交易日", start_date, end_date, len(df_cal))
 
     # 获得股票池
-    df = datasource.index_weight(index_code=index_code, start_date=start_date, end_date=end_date)
+    df = datasource.index_weight(index_code=index_code, start_date=start_date)
     logger.debug("获得股票池%d个股票", len(df))
     df = df.sample(frac=1)  # shuffle
     df = df[:stock_num]
@@ -108,7 +107,8 @@ def calculate_factors(index_code="000905.SH", stock_num=50, start_date='20190101
     df_tfm = pd.DataFrame(data, columns=['trade_date', 'SMB', 'HML', 'SL', 'SM', 'SH', 'BL', 'BM', 'BH'])
     # df_tfm['trade_date'] = pd.to_datetime(df_tfm.trade_date)
     # df_tfm = df_tfm.set_index('trade_date')
-    df_tfm.to_excel('data/three_factor_model.xlsx')
+    df_tfm.to_excel('data/fama_ff3.xlsx')
+    df_tfm = datasource_utils.reset_index(df_tfm, date_only=True)
     return df_tfm
 
 

@@ -19,6 +19,7 @@ period_window = 10
     
 参考：
     https://zhuanlan.zhihu.com/p/96888358
+    https://zhuanlan.zhihu.com/p/379269953
 """
 
 

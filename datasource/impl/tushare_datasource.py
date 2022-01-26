@@ -109,7 +109,8 @@ class TushareDataSource(DataSource):
     # 获得指数包含的股票，从开始日期找1年
     # https://tushare.pro/document/2?doc_id=96
     @post_query
-    def index_weight(self, index_code, trade_date, fields=None):
+    @cache(BASE_DIR)
+    def index_weight(self, index_code, start_date):
         """
         这个返回数据量太大，每天300条，10天就300条，常常触发5000条限制，
         所以我的办法就是用start_date，去取，如果没有，就去取下个月的这个日子的，直到取得
@@ -119,30 +120,20 @@ class TushareDataSource(DataSource):
         """
         count = 0
         df = None
-        original_trade_date = trade_date
         while count < 12:  # 尝试1年的（12个30天）
-
-            # 看有缓存么？如果有返回
-            df = _get_cache('index_weight', index_code, start_date=trade_date, end_date=trade_date)
-            if df is not None:
-                return df['con_code'].unique()
-
             _random_sleep()
-            df = self.pro.index_weight(index_code=index_code, start_date=trade_date, end_date=trade_date, fields=fields)
-            logger.debug("获得日期%s的指数%s的成分股：%d 个", trade_date, index_code, len(df))
+            df = self.pro.index_weight(index_code=index_code, start_date=start_date, end_date=start_date)
+            logger.debug("获得日期%s的指数%s的成分股：%d 个", start_date, index_code, len(df))
             if len(df) > 0:
                 break
-
-            trade_date = datetime.datetime.strptime(trade_date, "%Y%m%d") + datetime.timedelta(days=30)
-            trade_date = trade_date.strftime("%Y%m%d")
+            start_date = datetime.datetime.strptime(start_date, "%Y%m%d") + datetime.timedelta(days=30)
+            start_date = start_date.strftime("%Y%m%d")
             count += 1
 
-        assert df is not None or len(df) == 0, "取得index_weight失败：" + trade_date
-
-        logger.debug("获得日期%s的指数%s的成分股：%d 个", trade_date, index_code, len(df))
+        assert df is not None or len(df) == 0, "取得index_weight失败：" + start_date
+        logger.debug("获得日期%s的指数%s的成分股：%d 个", start_date, index_code, len(df))
         _check_lenght(df)
-        _set_cache('index_weight', df, index_code, original_trade_date, original_trade_date)
-        return df['con_code'].unique()
+        return df['con_code']
 
     # https://tushare.pro/document/2?doc_id=181
     @post_query

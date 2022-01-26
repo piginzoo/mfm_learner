@@ -153,6 +153,8 @@ datasource: 'tushare'
 - [优矿提供的因子库列表](https://uqer.datayes.com/data/search/MktStockFactorsOneDayGet)
 - [聚宽提供的因子列表](https://www.joinquant.com/help/api/help#name:factor_values)
 - [万矿社区策略和研究汇总](https://www.windquant.com/qntcloud/article?3d622808-4060-41f1-ad69-6abc42a246bc)
+- [各平台开源的选股策略汇总](https://www.jianshu.com/p/e025812bba01)
+- [BigQuant多因子汇总](https://bigquant.com/wiki/doc/yinzi-P6fkGbfao2)
 - [动量因子](https://zhuanlan.zhihu.com/p/379269953)
 - [动量类因子](https://www.windquant.com/qntcloud/article?3aef2d11-8fab-427b-a6b5-ef50cdbe997b)
 

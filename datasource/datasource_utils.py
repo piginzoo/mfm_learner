@@ -11,47 +11,24 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
-def reset_index(df, date_only=False):
+def reset_index(df, date_only=False, date_format=None):
     """把索引设置成[日期+股票代码]的复合索引"""
     assert 'datetime' in df.columns, df.columns
     if date_only:
         # 如果是日期类型了，无需再转了
         if not is_datetime(df['datetime']):
-            df['datetime'] = to_datetime(df['datetime'])
+            df['datetime'] = to_datetime(df['datetime'],date_format)
         df = df.set_index('datetime')
     else:
         assert 'code' in df.columns, df.columns
-        df['datetime'] = to_datetime(df['datetime'])
+        df['datetime'] = to_datetime(df['datetime'],date_format)
         df = df.set_index(['datetime', 'code'])
     return df
 
 
-def __test_dateformat(s_date, format):
-    try:
-        print(s_date)
-        datetime.strptime(s_date, format)
-    except ValueError:
-        return False
-    return True
-
-
-def __get_dateformat(value, formats):
-    if "," in formats:
-        formats = formats.split(",")
-    else:
-        formats = [formats]
-
-    for f in formats:
-        if __test_dateformat(value, f): return f
-    return None
-
-
-def to_datetime(series):
-    assert type(series) == Series
-    test_value = series[0]
-    format = __get_dateformat(test_value, CONF['dateformat'])
-    if format is None: raise ValueError("无法用格式：%s 去格式化值 %s", CONF['dateformat'], test_value)
-    return pd.to_datetime(series, format=format)  # 时间为日期格式，tushare是str
+def to_datetime(series,date_format=None):
+    if date_format is None: date_format = CONF['dateformat']
+    return pd.to_datetime(series, format=date_format)  # 时间为日期格式，tushare是str
 
 
 def load_daily_data(datasource, stock_codes, start_date, end_date):

@@ -14,11 +14,12 @@ def make_dummy_data():
     data1 = pd.DataFrame(data1,
                          columns=["code", "datetime", "BP", "CFP", "EP", "ILLIQUIDITY", "REVS20", "SRMI", "VOL20"])
     data1['datetime'] = pd.to_datetime(data1['datetime'], format='%Y-%m-%d')  # 时间为日期格式，tushare是str
-    data1 = data1.set_index(["datetime", "code"])
+    data1 = data1.set_index(["datetime"])
     return data1
 
 
 # https://blog.csdn.net/maymay_/article/details/80241627
+# https://zhuanlan.zhihu.com/p/91100281
 def test_rolling():
     s = [1, 2, 3, 5, 6, 10, 12, 14, 12, 30]
     s1 = pd.Series(s).rolling(window=3).mean()
@@ -33,11 +34,16 @@ def test_rolling():
     print("after rolling:")
     print(df)
 
-# https://zhuanlan.zhihu.com/p/91100281
-def test_rolling_appy():
-    pass
-
+# https://blog.csdn.net/wangshuang1631/article/details/52314944
+def test_resample():
+    df = make_dummy_data()
+    print(df)
+    df_s = df[['EP', 'BP']].resample('3D').agg(['min', 'max', 'sum'])
+    print(df_s)
+    print(df.index.freq,df_s.index.freq)
+    df.index.freq = df_s.index.freq
 
 # python -m test.toy.test_pandas
 if __name__ == '__main__':
     test_rolling()
+    test_resample()

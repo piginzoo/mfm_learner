@@ -109,7 +109,7 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
         create_information_tear_sheet(factor_data, group_neutral, by_group, set_context=False, factor_name=factor_name)
 
     logger.debug("ic_data(只显示3行):\n%r", ic_data.head(3))
-    logger.debug("t_stat(只显示3行):\n%r", t_values.head(3))  # 这个是IC们的均值是不是0的检验T值
+    logger.debug("t_stat(只显示3行):\n%r", t_values[:3])  # 这个是IC们的均值是不是0的检验T值
     # print("p_value:", p_value)
     # print("skew:", skew)
     # print("kurtosis:", kurtosis)

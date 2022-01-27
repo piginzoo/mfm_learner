@@ -111,4 +111,4 @@ class TurnOverFactor(Factor):
             data['bias_turn_6m'], \
             data['bias_std_turn_1m'], \
             data['bias_std_turn_3m'], \
-            data['bias_std_turn_6m'], \
+            data['bias_std_turn_6m']

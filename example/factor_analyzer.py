@@ -43,7 +43,6 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods):
     """
     stock_codes = get_stocks(stock_pool, start_date, end_date)
 
-
     # 此接口获取的数据为未复权数据，回测建议使用复权数据，这里为批量获取股票数据做了简化
     logger.debug("股票池：%r", stock_codes)
 
@@ -58,12 +57,17 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods):
     factors = factor_utils.get_factor(factor_name, stock_codes, start_date, end_date)
 
     if type(factors) == list or tuple:
-        for factor in factors: test_1factor_by_alphalens(factor_name, factor, df_stocks, index_prices, periods)
+        return [test_1factor_by_alphalens("{}/{}".format(factor_name, factor.name),
+                                                         factor,
+                                                         df_stocks,
+                                                         index_prices,
+                                                         periods) \
+                for factor in factors]
     else:
-        test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, periods)
+        return test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, periods)
 
 
-def test_1factor_by_alphalens(factor_name, factors, df_stocks,index_prices, periods):
+def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, periods):
     factors = factor_utils.preprocess(factors)
 
     # 中性化后的
@@ -96,14 +100,14 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks,index_prices, peri
     # 临时保存一下数据，for 单元测试用
     # mean_quantile_ret_bydate.to_csv("test/data/mean_quantile_ret_bydate.csv")
 
-    print("factor_returns 因子和股票收益率整合数据\n", factor_returns)
-    print("mean_quantile_ret_bydate 分层的收益率的每期数据，这个最重要\n", mean_quantile_ret_bydate)  # !!!
+    logger.debug("factor_returns 因子和股票收益率整合数据(只显示3行)\n%r", factor_returns.head(3))
+    logger.debug("mean_quantile_ret_bydate 分层的收益率的每期数据，这个最重要(只显示3行)\n:%r", mean_quantile_ret_bydate.head(3))  # !!!
 
     ic_data, (t_values, p_value, skew, kurtosis) = \
         create_information_tear_sheet(factor_data, group_neutral, by_group, set_context=False, factor_name=factor_name)
 
-    print("ic_data:", ic_data)
-    print("t_stat:", t_values)  # 这个是IC们的均值是不是0的检验T值
+    logger.debug("ic_data(只显示3行):\n%r", ic_data.head(3))
+    logger.debug("t_stat(只显示3行):\n%r", t_values.head(3))  # 这个是IC们的均值是不是0的检验T值
     # print("p_value:", p_value)
     # print("skew:", skew)
     # print("kurtosis:", kurtosis)
@@ -323,12 +327,12 @@ def filterd_by_period_quantile(mean_quantile_ret_bydate, periods):
         __returns.reset_index(drop=True)  # 上面的apply很诡异，会造成一个莫名的联合index，没用，drop掉
         __returns = __returns.set_index(["factor_quantile", "date"])
 
-        logger.debug("每隔%d天挑出来的这%d累计收益率:\n%r", days, days, __returns.head(100))
+        logger.debug("每隔%d天挑出来的这%d累计收益率(只显示3行):\n%r", days, days, __returns.head(3))
 
         # 还要按照每组，计算这个组内的，累计收益率
         __returns = __returns.groupby('factor_quantile').apply(lambda df: (1 + df).cumprod() - 1)
 
-        logger.debug("每隔%d天，从开始的累计收益率:\n%r", days, __returns.head(100))
+        logger.debug("每隔%d天，从开始的累计收益率(只显示3行):\n%r", days, __returns.head(3))
 
         retuns_filterd_by_period_quantile.append(__returns)
         logger.debug("按照%d天从分组收益率%d行中，过滤出%d行", days, len(mean_quantile_ret_bydate), len(__returns))
@@ -427,4 +431,4 @@ if __name__ == '__main__':
 
     # 测试单一因子
     __score = test_by_alphalens("turnover", stock_pool, start, end, periods)
-    logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, "turnover", __score.tolist())
+    logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, "turnover", __score)

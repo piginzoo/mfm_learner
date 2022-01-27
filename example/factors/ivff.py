@@ -125,13 +125,17 @@ class IVFFFactor(Factor):
             r_i = α_i + b1 * r_m_i + b2 * smb_i + b3 * hml_i + e_i 
             某一天（截面上），做回归，r_i,r_m_i，smb_i，hml_i 已知，回归后，得到e_i(残差)
             """
-            print(df_data.info())
+            # print(df_data.info())
             ols_result = sm.ols(formula='pct_chg ~ market + SMB + HML', data=df_data).fit()
             residuals = ols_result.resid
             df_data['vi'] = residuals
             logger.debug("计算完股票[%s]的残差：%d 条",name,len(residuals))
             results.append(df_data[['code','vi']])
-        return pd.concat(results,axis=0)
+        df = pd.concat(results,axis=0)
+        df = df.reset_index() # 之前仅用date作为所以，所以要reset后，设置date+code，符合因子的格式规范
+        df = datasource_utils.reset_index(df)
+        df = df.iloc[:,0] # 转成Series
+        return df
 
 
         # df_residuals = self.___calculate_residuals(residuals,time_window)

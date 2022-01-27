@@ -56,7 +56,7 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods):
     # 获得因子信息
     factors = factor_utils.get_factor(factor_name, stock_codes, start_date, end_date)
 
-    if type(factors) == list or tuple:
+    if type(factors) == list or type(factors) == tuple:
         return [test_1factor_by_alphalens("{}/{}".format(factor_name, factor.name),
                                                          factor,
                                                          df_stocks,
@@ -430,5 +430,5 @@ if __name__ == '__main__':
     #     logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, factor_name, __score.tolist())
 
     # 测试单一因子
-    __score = test_by_alphalens("turnover", stock_pool, start, end, periods)
-    logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, "turnover", __score)
+    __score = test_by_alphalens("ivff", stock_pool, start, end, periods)
+    logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, "ivff", __score)

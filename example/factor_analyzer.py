@@ -82,7 +82,9 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
     prices - 行情数据，一般都是收盘价，index=[日期]，列是所有的股票
     groups - 行业归属数据，就是每天、每只股票隶属哪个行业：index=[日期], 列是：[股票，它归属的行业代码]
     """
+    print(factors.index)
     factor_data = get_clean_factor_and_forward_returns(factors, prices=close, periods=periods)
+
 
     # Alphalens 有一个特别强大的功能叫 tears 模块，它会生成一张很大的表图，
     # 里面是一张张被称之为撕页(tear sheet)的图片，记录所有与回测相关的 结果

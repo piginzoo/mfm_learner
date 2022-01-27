@@ -1,32 +1,35 @@
 import logging
 
 import pandas as pd
-from pandas import Series
+from pandas.api.types import is_datetime64_any_dtype as is_datetime
 
 from datasource import datasource_factory as ds_factory
 from utils import CONF
-from pandas.api.types import is_datetime64_any_dtype as is_datetime
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 
 def reset_index(df, date_only=False, date_format=None):
-    """把索引设置成[日期+股票代码]的复合索引"""
+    """
+    把索引设置成[日期+股票代码]的复合索引
+    """
+
+    if date_format is None: date_format = CONF['dateformat']
+
     assert 'datetime' in df.columns, df.columns
     if date_only:
         # 如果是日期类型了，无需再转了
         if not is_datetime(df['datetime']):
-            df['datetime'] = to_datetime(df['datetime'],date_format)
+            df['datetime'] = to_datetime(df['datetime'], date_format)
         df = df.set_index('datetime')
     else:
         assert 'code' in df.columns, df.columns
-        df['datetime'] = to_datetime(df['datetime'],date_format)
+        df['datetime'] = to_datetime(df['datetime'], date_format)
         df = df.set_index(['datetime', 'code'])
     return df
 
 
-def to_datetime(series,date_format=None):
+def to_datetime(series, date_format=None):
     if date_format is None: date_format = CONF['dateformat']
     return pd.to_datetime(series, format=date_format)  # 时间为日期格式，tushare是str
 

@@ -11,6 +11,7 @@ from example.factors.clv import CLVFactor
 from example.factors.market_value import MarketValueFactor
 from example.factors.momentum import MomentumFactor
 from example.factors.peg import PEGFactor
+from example.factors.turnover_rate import TurnOverFactor
 from utils import utils
 
 logger = logging.getLogger(__name__)
@@ -348,7 +349,8 @@ FACTORS = {
     'market_value': MarketValueFactor(),
     "momentum": MomentumFactor(),
     "peg": PEGFactor(),
-    "clv": CLVFactor()
+    "clv": CLVFactor(),
+    "turnover": TurnOverFactor()
 }
 FACTORS_LONG_SHORT = [-1, 1, 1, 1]  # 因子的多空性质
 
@@ -368,8 +370,16 @@ def get_factor(name, stock_codes, start_date, end_date):
     else:
         raise ValueError("无法识别的因子名称：" + name)
     if not os.path.exists("data/factors"): os.makedirs("data/factors")
-    factor_path = os.path.join("data/factors", name + ".csv")
-    factors.to_csv(factor_path)
+
+    #  有可能一个因子类，返回多个因子，比如换手率因子，就有1月，3月，6月的换手率
+    if type(factors)==list or tuple:
+        for factor in factors:
+            factor_path = os.path.join("data/factors", "{}_{}.csv".format(name,factor.name))
+            factor.to_csv(factor_path)
+    else:
+        factor_path = os.path.join("data/factors", name + ".csv")
+        factors.to_csv(factor_path)
+
     return factors
 
 

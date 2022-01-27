@@ -49,12 +49,11 @@ class TurnOverFactor(Factor):
         df_daily_basic = df_daily_basic[['datetime', 'code', 'turnover_rate_f', 'circ_mv']]
         df_daily_basic.columns = ['datetime', 'code', 'turnover_rate', 'circ_mv']
 
-        data = self.calculate_turnover_rate(df_daily_basic)
+        datas = self.calculate_turnover_rate(df_daily_basic)
 
-        logger.debug("一共加载%s~%s %d条 换手率 数据", start_date, end_date, len(data))
-        data = datasource_utils.reset_index(data)
+        logger.debug("一共加载%s~%s %d条 换手率 数据", start_date, end_date, len(datas[0]))
 
-        return data
+        return datas
 
     """
     nanmean:忽略nan，不参与mean，例：
@@ -96,4 +95,20 @@ class TurnOverFactor(Factor):
         data['bias_std_turn_1m'] = data['std_turn_1m'] / data['std_turn_2y'] - 1
         data['bias_std_turn_3m'] = data['std_turn_3m'] / data['std_turn_2y'] - 1
         data['bias_std_turn_6m'] = data['std_turn_6m'] / data['std_turn_2y'] - 1
-        return data
+
+        data = datasource_utils.reset_index(data)
+
+        return \
+            data['turn_1m'], \
+            data['turn_3m'], \
+            data['turn_6m'], \
+            data['turn_2y'], \
+            data['std_turn_1m'], \
+            data['std_turn_3m'], \
+            data['std_turn_6m'], \
+            data['bias_turn_1m'], \
+            data['bias_turn_3m'], \
+            data['bias_turn_6m'], \
+            data['bias_std_turn_1m'], \
+            data['bias_std_turn_3m'], \
+            data['bias_std_turn_6m'], \

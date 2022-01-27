@@ -1,4 +1,5 @@
 import logging
+
 from utils import utils
 
 utils.init_logger()
@@ -9,7 +10,6 @@ import numpy as np
 import pandas as pd
 from alphalens import tears
 from pandas import Series, DataFrame
-
 
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
@@ -27,12 +27,13 @@ def get_stocks(stock_pool, start_date, end_date):
     stock_codes = datasource.index_weight(stock_pool, start_date)
     assert stock_codes is not None and len(stock_codes) > 0, stock_codes
     stock_codes = stock_codes[:stock_num]
-    if type(stock_codes) == np.ndarray: stock_codes = stock_codes.tolist()
+    print(stock_codes)
+    stock_codes = stock_codes.tolist()
     logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
     return stock_codes
 
 
-def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, stock_num):
+def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods):
     """
     用AlphaLens有个细节，就是你要防止未来函数，
 
@@ -42,23 +43,34 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods, st
     """
     stock_codes = get_stocks(stock_pool, start_date, end_date)
 
+
+    # 此接口获取的数据为未复权数据，回测建议使用复权数据，这里为批量获取股票数据做了简化
+    logger.debug("股票池：%r", stock_codes)
+
+    # 加载股票的行情数据
+    df_stocks = datasource.daily(stock_codes, start_date=start_date, end_date=end_date)
+    df_stocks = datasource_utils.reset_index(df_stocks)
+
     # 获得指数（股票池）信息
     index_prices = datasource.index_daily(stock_pool, start_date=start_date, end_date=end_date)
+
     # 获得因子信息
     factors = factor_utils.get_factor(factor_name, stock_codes, start_date, end_date)
+
+    if type(factors) == list or tuple:
+        for factor in factors: test_1factor_by_alphalens(factor_name, factor, df_stocks, index_prices, periods)
+    else:
+        test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, periods)
+
+
+def test_1factor_by_alphalens(factor_name, factors, df_stocks,index_prices, periods):
     factors = factor_utils.preprocess(factors)
 
     # 中性化后的
     factors = factor_utils.neutralize(factors)
 
-    # 此接口获取的数据为未复权数据，回测建议使用复权数据，这里为批量获取股票数据做了简化
-    logger.debug("股票池：%r", stock_codes)
-
-    df = datasource.daily(stock_codes, start_date=start_date, end_date=end_date)
-    df = datasource_utils.reset_index(df)
-
     # column为股票代码，index为日期，值为收盘价
-    close = df.pivot_table(index='datetime', columns='code', values='close')
+    close = df_stocks.pivot_table(index='datetime', columns='code', values='close')
 
     """
     这个是数据规整，
@@ -406,9 +418,13 @@ if __name__ == '__main__':
     stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 逐一测试因子们
-    scores = []
-    for factor_name, _ in factor_utils.FACTORS.items():
-        __score = test_by_alphalens(factor_name, stock_pool, start, end, periods, stock_num)
-        scores.append([factor_name, __score])
-    for factor_name, __score in scores:
-        logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, factor_name, __score.tolist())
+    # scores = []
+    # for factor_name, _ in factor_utils.FACTORS.items():
+    #     __score = test_by_alphalens(factor_name, stock_pool, start, end, periods, stock_num)
+    #     scores.append([factor_name, __score])
+    # for factor_name, __score in scores:
+    #     logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, factor_name, __score.tolist())
+
+    # 测试单一因子
+    __score = test_by_alphalens("turnover", stock_pool, start, end, periods)
+    logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, "turnover", __score.tolist())

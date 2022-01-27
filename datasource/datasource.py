@@ -79,6 +79,8 @@ def _get_cache(dir, func, args, kwargs, str_fields=None):
     for str_field in str_fields:
         if str_field in df.columns: df[str_field] = df[str_field].astype(str)
 
+    if len(df.columns)==1: df = df.iloc[:,0] # 如果只有一列，转成Series
+
     return df
 
 

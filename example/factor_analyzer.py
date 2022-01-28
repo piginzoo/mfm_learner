@@ -82,7 +82,8 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
     prices - 行情数据，一般都是收盘价，index=[日期]，列是所有的股票
     groups - 行业归属数据，就是每天、每只股票隶属哪个行业：index=[日期], 列是：[股票，它归属的行业代码]
     """
-    print(factors.index)
+    print(factors)
+    print(close)
     factor_data = get_clean_factor_and_forward_returns(factors, prices=close, periods=periods)
 
 

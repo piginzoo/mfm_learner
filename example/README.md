@@ -150,6 +150,9 @@ datasource: 'tushare'
 - [《因子投资：方法与实践》](https://book.douban.com/subject/35192979/)，石川大佬的书，经典的和，很多细节讨论很深入
 
 ## 实现的因子
+
+我自己的实现的因子d
+
 - [优矿提供的因子库列表](https://uqer.datayes.com/data/search/MktStockFactorsOneDayGet)
 - [聚宽提供的因子列表](https://www.joinquant.com/help/api/help#name:factor_values)
 - [万矿社区策略和研究汇总](https://www.windquant.com/qntcloud/article?3d622808-4060-41f1-ad69-6abc42a246bc)

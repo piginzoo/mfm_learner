@@ -152,6 +152,13 @@ class IVFFFactor(Factor):
         df = df.reset_index()  # 之前仅用date作为所以，所以要reset后，设置date+code，符合因子的格式规范
         df = datasource_utils.reset_index(df)  # 将 date+code设为索引
         df = df.iloc[:, 0]  # 转成Series，因子都默认是Series类型
+
+        df = df.dropna()
+
+        date_index = df.index.get_level_values('datetime')
+
+        logger.debug("特异波动率因子%d条,日期：%r ~ %r", len(df), date_index[0], date_index[-1])
+
         return df
 
         # df_residuals = self.___calculate_residuals(residuals,time_window)

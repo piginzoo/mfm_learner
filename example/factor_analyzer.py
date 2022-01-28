@@ -77,8 +77,7 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
     df_stock_close = df_stocks.pivot_table(index='datetime', columns='code', values='close')
 
     # 过滤掉，factor因子中不包含的日期，为了将来对齐用，否则，报一个很诡异的datetime的set freq的异常
-    import pdb;pdb.set_trace()
-    df_stock_close = df_stock_close[factors.index.get_level_values('datetime')]
+    df_stock_close = df_stock_close[df_stock_close.index.isin(factors.index.get_level_values('datetime'))]
 
     """
     这个是数据规整，

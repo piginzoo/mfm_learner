@@ -112,9 +112,29 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
 
     logger.debug("ic_data(只显示3行):\n%r", ic_data.head(3))
     logger.debug("t_stat(只显示3行):\n%r", t_values[:3])  # 这个是IC们的均值是不是0的检验T值
-    # print("p_value:", p_value)
-    # print("skew:", skew)
-    # print("kurtosis:", kurtosis)
+
+    # 虽然前面有统计，我还是自己算一遍，
+    # 不用绝对值，因为，在意方向
+    ic_data_mean = ic_data.apply(np.mean)
+    ic_data_std = ic_data.apply(np.std)
+    logger.debug("IC的均值  : \n%r" , ic_data_mean)
+    logger.debug("IC的标注差: \n%r", ic_data_std)
+
+    """
+    上面的t_value和p_value，是检验的啥？
+    T检验，H_0假设是 ic_data的均值=0(popmean)， 参考：http://www.noobyard.com/article/p-dihbhkqa-nw.html
+    IC均值为0，就意味着因子和收益不相关啊，
+    所以，这个H_0的t值，我们期盼的是越大越好，越大说明p_value（概率）越小，原假设越不成立，
+    即IC（均值）等于0就的可能性越小，这样，这个因子越有效。
+    """
+    logger.debug("IC均值为0的T值(越大越好>2):\n%r", t_values)
+
+    """
+    IC值的分布，其实不用太在意是不是正态分布，这里考察偏度和峰度，我自己觉得没有太多意义，
+    因为，如果好的话，所有的IC(每天一个IC值)都应该是均匀分布，好的话，都是1，都是正相关（极端地想）。
+    """
+    logger.debug("IC分布的偏度:\n%r", skew)
+    logger.debug("IC分布的峰度:\n%r", kurtosis)
 
     __score, retuns_filterd_by_period_quantile = score(ic_data, t_values, mean_quantile_ret_bydate, periods)
 
@@ -434,5 +454,5 @@ if __name__ == '__main__':
     #     logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, factor_name, __score.tolist())
 
     # 测试单一因子
-    __score = test_by_alphalens("ivff", stock_pool, start, end, periods)
+    __score = test_by_alphalens("clv", stock_pool, start, end, periods)
     logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, "ivff", __score)

@@ -65,7 +65,8 @@ def init_logger():
     logging.getLogger('fontTools.ttLib.ttFont').disabled = True
     warnings.filterwarnings("ignore")
     warnings.filterwarnings("ignore", module="matplotlib")
-
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
 class MyPlot(Plot_OldSync):
     def show(self):

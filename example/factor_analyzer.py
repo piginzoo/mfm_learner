@@ -74,7 +74,10 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
     factors = factor_utils.neutralize(factors)
 
     # column为股票代码，index为日期，值为收盘价
-    close = df_stocks.pivot_table(index='datetime', columns='code', values='close')
+    df_stock_close = df_stocks.pivot_table(index='datetime', columns='code', values='close')
+
+    # 过滤掉，factor因子中不包含的日期，为了将来对齐用，否则，报一个很诡异的datetime的set freq的异常
+    df_stock_close = df_stock_close[df_stock_close.index.isin(factors.index.get_level_values('datetime'))]
 
     """
     这个是数据规整，
@@ -82,8 +85,7 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
     prices - 行情数据，一般都是收盘价，index=[日期]，列是所有的股票
     groups - 行业归属数据，就是每天、每只股票隶属哪个行业：index=[日期], 列是：[股票，它归属的行业代码]
     """
-    print(factors.index)
-    factor_data = get_clean_factor_and_forward_returns(factors, prices=close, periods=periods)
+    factor_data = get_clean_factor_and_forward_returns(factors, prices=df_stock_close, periods=periods)
 
 
     # Alphalens 有一个特别强大的功能叫 tears 模块，它会生成一张很大的表图，
@@ -110,9 +112,29 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
 
     logger.debug("ic_data(只显示3行):\n%r", ic_data.head(3))
     logger.debug("t_stat(只显示3行):\n%r", t_values[:3])  # 这个是IC们的均值是不是0的检验T值
-    # print("p_value:", p_value)
-    # print("skew:", skew)
-    # print("kurtosis:", kurtosis)
+
+    # 虽然前面有统计，我还是自己算一遍，
+    # 不用绝对值，因为，在意方向
+    ic_data_mean = ic_data.apply(np.mean)
+    ic_data_std = ic_data.apply(np.std)
+    logger.debug("IC的均值  : \n%r" , ic_data_mean)
+    logger.debug("IC的标注差: \n%r", ic_data_std)
+
+    """
+    上面的t_value和p_value，是检验的啥？
+    T检验，H_0假设是 ic_data的均值=0(popmean)， 参考：http://www.noobyard.com/article/p-dihbhkqa-nw.html
+    IC均值为0，就意味着因子和收益不相关啊，
+    所以，这个H_0的t值，我们期盼的是越大越好，越大说明p_value（概率）越小，原假设越不成立，
+    即IC（均值）等于0就的可能性越小，这样，这个因子越有效。
+    """
+    logger.debug("IC均值为0的T值(越大越好>2):\n%r", t_values)
+
+    """
+    IC值的分布，其实不用太在意是不是正态分布，这里考察偏度和峰度，我自己觉得没有太多意义，
+    因为，如果好的话，所有的IC(每天一个IC值)都应该是均匀分布，好的话，都是1，都是正相关（极端地想）。
+    """
+    logger.debug("IC分布的偏度:\n%r", skew)
+    logger.debug("IC分布的峰度:\n%r", kurtosis)
 
     __score, retuns_filterd_by_period_quantile = score(ic_data, t_values, mean_quantile_ret_bydate, periods)
 
@@ -432,5 +454,5 @@ if __name__ == '__main__':
     #     logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, factor_name, __score.tolist())
 
     # 测试单一因子
-    __score = test_by_alphalens("ivff", stock_pool, start, end, periods)
+    __score = test_by_alphalens("clv", stock_pool, start, end, periods)
     logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, "ivff", __score)

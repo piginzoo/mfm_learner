@@ -13,6 +13,19 @@ ROWS = None
 logger = logging.getLogger(__name__)
 
 
+def __is_table_exist(engine, name):
+    return sqlalchemy.inspect(engine).has_table(name)
+
+
+def __is_table_index_exist(engine, name):
+    if not __is_table_exist(engine, name):
+        return False
+
+    indices = sqlalchemy.inspect(engine).get_indexes(name)
+    return indices and len(indices) > 0
+
+
+
 def filter_duplicated(df, table_name, db_engine):
     if 'trade_date' in df.columns:
         date_column = 'trade_date'
@@ -25,6 +38,11 @@ def filter_duplicated(df, table_name, db_engine):
     latest_date_in_file = df.head(1)[date_column].item()  # 文件中最老日期
     sql = 'select * from {} where {}>=\'{}\''.format(table_name, date_column, latest_date_in_file)
     logger.debug("SQL: %s", sql)
+
+    if not __is_table_exist(db_engine, table_name):
+        logger.debug("表[%s]在数据库中不存在",table_name)
+        return df
+
     df_db = pd.read_sql(sql, db_engine)
     if len(df_db) == 0:
         logger.debug("导入文件和数据库，没有交集数据")
@@ -70,9 +88,6 @@ def import_file(file, table_name):
 
     logger.debug("读取 [%.2f] 秒, [%d] 条, %s", time.time() - start_time, len(df), file)
     start_time = time.time()
-    if len(df) == 0:
-        logger.warning("[警告] 数据条数为0，不予导入")
-        return
 
     """
     # 防止重复导入
@@ -83,6 +98,11 @@ def import_file(file, table_name):
 
     df = filter_duplicated(df, table_name, db_engine)
 
+    if len(df) == 0:
+        logger.warning("[警告] 数据条数为0，不予导入")
+        return
+
+
     # 入库，指定字段的类型（没有就忽略），指定成VARHCAR原因是要建索引，不能为Text类型
     dtype_dic = {
         'ts_code': sqlalchemy.types.VARCHAR(length=9),
@@ -92,6 +112,10 @@ def import_file(file, table_name):
     df.to_sql(table_name, db_engine, index=False, if_exists='append', dtype=dtype_dic, chunksize=1000)
     logger.debug("导入 [%.2f] 秒, df[%d条]=>db[表%s] ", time.time() - start_time, len(df), table_name)
     start_time = time.time()
+
+    if __is_table_index_exist(db_engine,table_name):
+        logger.debug("表[%s]已经具有了索引，无需再创建", table_name)
+        return
 
     # 创建索引，需要单的sql处理
     index_sql = None

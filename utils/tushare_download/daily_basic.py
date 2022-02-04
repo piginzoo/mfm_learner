@@ -1,9 +1,10 @@
 import datetime
 import logging
+import math
 import time
 
 import pandas as pd
-
+import numpy as np
 import utils.utils
 from utils import utils
 from utils.tushare_download.base_downloader import BaseDownload
@@ -25,9 +26,14 @@ class DailyBasic(BaseDownload):
 
         logger.debug("准备下载 %s~%s, %d 只股票的基本信息", start_date, end_date, len(stock_codes))
 
+        # TODO: 没测试呢
+        stock_num_once = self.calculate_best_fetch_stock_num(start_date,end_date)
+        stock_codes_array = np.split(stock_codes, math.ceil(len(stock_codes)/stock_num_once))
+        stock_codes_array = [",".join(stocks) for stocks in stock_codes_array]
+
         df_daily_basic = []
-        pbar = tqdm(total=len(stock_codes))
-        for i, ts_code in enumerate(stock_codes):
+        pbar = tqdm(total=len(stock_codes_array))
+        for i, ts_code in enumerate(stock_codes_array):
             df = self.retry_call(func=self.pro.daily_basic,
                                  ts_code=ts_code,
                                  start_date=start_date,

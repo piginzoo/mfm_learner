@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 
 RETRY = 5  # 尝试几次
 WAIT = 1  # 每次delay时常(秒)
-CALL_INTERVAL = 0.2 # 200毫秒
+CALL_INTERVAL = 0.15 # 150毫秒,1分钟400次
+TRADE_DAYS_PER_YEAR = 252 # 1年的交易日
+MAX_RECORDS = 4800 # 最多一次的下载行数，tushare是5000，稍微降一下到4800
 
 class BaseDownload():
 
@@ -24,6 +26,15 @@ class BaseDownload():
         self.save_dir = "data/tushare_download"
         if not os.path.exists(self.save_dir): os.makedirs(self.save_dir)
         self.call_interval = CALL_INTERVAL
+
+    def calculate_best_fetch_stock_num(self,start_date,end_date):
+
+        """计算最多可以下载多少只股票"""
+        delta = utils.date2str(start_date) - utils.date2str(end_date)
+        days = delta.days
+        record_num_per_stock = math.floor(days * TRADE_DAYS_PER_YEAR/365)
+        return math.floor(MAX_RECORDS/record_num_per_stock)
+
 
     def to_db(self, df, table_name):
         start_time = time.time()
@@ -40,7 +51,6 @@ class BaseDownload():
         Tushare Exception: 抱歉，您每分钟最多访问该接口400次，权限的具体详情访问：https://tushare.pro/document/1?doc_id=108
         每200毫秒调用一次，比较安全，大概是一分钟最多是5*60=300次
         """
-
 
         while self.retry_count < RETRY:
             try:

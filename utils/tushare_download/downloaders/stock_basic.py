@@ -1,9 +1,6 @@
-import pandas as pd
 import tushare as ts
-from pandas import DataFrame
 
-import utils.utils
-from utils.tushare_download.base_downloader import BaseDownload
+from utils.tushare_download.downloaders.base_downloader import BaseDownload
 
 pro = ts.pro_api()
 

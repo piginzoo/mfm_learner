@@ -5,6 +5,7 @@ import time
 
 import sqlalchemy
 import tushare
+import pandas as pd
 
 from utils import utils, CONF
 
@@ -28,13 +29,21 @@ class BaseDownload():
         self.call_interval = CALL_INTERVAL
 
     def calculate_best_fetch_stock_num(self,start_date,end_date):
-
-        """计算最多可以下载多少只股票"""
-        delta = utils.date2str(start_date) - utils.date2str(end_date)
+        """
+        计算最多可以下载多少只股票:
+        4800/一只股票的条数，
+        1只股票条数=天数/365*252
+        """
+        delta = utils.str2date(end_date) - utils.str2date(start_date)
         days = delta.days
         record_num_per_stock = math.floor(days * TRADE_DAYS_PER_YEAR/365)
-        return math.floor(MAX_RECORDS/record_num_per_stock)
+        stock_num = math.floor(MAX_RECORDS/record_num_per_stock)
+        logger.debug("下载优化:共%d天,每只股票%d条,每次下载4800条，所以，可以一次可下载%d只股票",days,record_num_per_stock,stock_num)
+        return stock_num
 
+    def get_stock_codes(self):
+        df = pd.read_sql('select * from stock_basic', self.db_engine)
+        return df['ts_code']
 
     def to_db(self, df, table_name):
         start_time = time.time()
@@ -65,4 +74,6 @@ class BaseDownload():
         raise RuntimeError("尝试调用Tushare API多次失败......")
 
     def save(self, name, df):
-        df.to_csv(os.path.join(self.save_dir,name))
+        file_path = os.path.join(self.save_dir,name)
+        df.to_csv(file_path)
+        return file_path

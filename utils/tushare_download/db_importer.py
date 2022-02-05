@@ -138,8 +138,8 @@ def main(dir, file, table_name):
 """
 # 导入单个文件
 python -m utils.tushare_download.db_importer \
-    -f data/tushare_download/df_daily_basic_20210630_20220203.csv \
-    -t  daily_basic
+    -f data/tushare_download/daily_hfq_20210630_20220204.csv \
+    -t  daily_hfq
 
 # 导入所有的
 python -m utils.tushare_download.db_importer \

@@ -10,13 +10,13 @@ import numpy as np
 import pandas as pd
 from alphalens import tears
 from pandas import Series, DataFrame
-
+import statsmodels.api as sm
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
 
 import matplotlib
 from alphalens.tears import create_information_tear_sheet, create_returns_tear_sheet
-from alphalens.utils import get_clean_factor_and_forward_returns
+from alphalens.utils import get_clean_factor_and_forward_returns, get_forward_returns_columns
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +58,10 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods):
 
     if type(factors) == list or type(factors) == tuple:
         return [test_1factor_by_alphalens("{}/{}".format(factor_name, factor.name),
-                                                         factor,
-                                                         df_stocks,
-                                                         index_prices,
-                                                         periods) \
+                                          factor,
+                                          df_stocks,
+                                          index_prices,
+                                          periods) \
                 for factor in factors]
     else:
         return test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, periods)
@@ -86,7 +86,6 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
     groups - 行业归属数据，就是每天、每只股票隶属哪个行业：index=[日期], 列是：[股票，它归属的行业代码]
     """
     factor_data = get_clean_factor_and_forward_returns(factors, prices=df_stock_close, periods=periods)
-
 
     # Alphalens 有一个特别强大的功能叫 tears 模块，它会生成一张很大的表图，
     # 里面是一张张被称之为撕页(tear sheet)的图片，记录所有与回测相关的 结果
@@ -117,7 +116,7 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
     # 不用绝对值，因为，在意方向
     ic_data_mean = ic_data.apply(np.mean)
     ic_data_std = ic_data.apply(np.std)
-    logger.debug("IC的均值  : \n%r" , ic_data_mean)
+    logger.debug("IC的均值  : \n%r", ic_data_mean)
     logger.debug("IC的标注差: \n%r", ic_data_std)
 
     """
@@ -136,17 +135,86 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
     logger.debug("IC分布的偏度:\n%r", skew)
     logger.debug("IC分布的峰度:\n%r", kurtosis)
 
-    __score, retuns_filterd_by_period_quantile = score(ic_data, t_values, mean_quantile_ret_bydate, periods)
+    __score, retuns_filterd_by_period_quantile = \
+        score(ic_data, t_values, mean_quantile_ret_bydate, periods)
 
     # 画出因子的多个期间的累计收益率的发散图
-    plot_quantile_cumulative_returns(retuns_filterd_by_period_quantile, factor_name, periods, index_prices)
+    plot_quantile_cumulative_returns(retuns_filterd_by_period_quantile,
+                                     factor_name,
+                                     periods,
+                                     index_prices)
 
     # create_turnover_tear_sheet(factor_data, set_context=False,factor_name=factor_name)
     return __score
 
 
+def factor_returns_regression(factor_data):
+    """
+    入参，factor_data:
+           ----------------------------------------------
+                      |       | 1D  | 5D  | 10D  |factor|
+           ----------------------------------------------
+               date   | asset |     |     |      |      |
+           ----------------------------------------------
+                      | AAPL  | 0.09|-0.01|-0.079|  0.5 |
+                      -----------------------------------
+                      | BA    | 0.02| 0.06| 0.020| -1.1 |
+                      -----------------------------------
+           2014-01-01 | CMG   | 0.03| 0.09| 0.036|  1.7 |
+                      -----------------------------------
+        返回:
+        t_values: shape[Days,Periods]
+        factor_returns: shape[Days,Periods]
+        Days，就是有多少天，如2020-1-1~2022-1-1
+        Period，就是调仓周期，如[1,5,20]
+    """
+
+    def cross_section_regression(date_data):
+        """
+        截面回归，每一天，50只股票的收益，50只股票的因子，
+        回归出：因子收益率、T值
+
+        R_i = alpha + beta_i * f + e_i
+        f就是因子收益
+        """
+
+        def regression(returns, factors):
+            model = sm.OLS(factors, returns)  # 定义x，y
+            results = model.fit()
+            t_values = results.tvalues
+            factor_return = results.params[1]
+            return t_values#, factor_return
+
+        factors = date_data['factor']
+        # get_forward_returns_columns会返回1D,2D,...的列名，是alphalens内嵌的函数
+        # 针对每个日子，都进行处理
+        tvalues_returns_of_each_period = \
+            date_data[get_forward_returns_columns(date_data.columns)]. \
+                apply(func=regression, args=(factors))
+
+        return tvalues_returns_of_each_period
+
+    # 因为要重新分组，所以先拷贝一个
+    factor_data = factor_data.copy()
+    # 按照日期分组
+    grouper = [factor_data.index.get_level_values('datetime')]
+    # 按照日期分组计算
+    returns_and_tvalues = factor_data.groupby(grouper).apply(cross_section_regression)
+
+    return returns_and_tvalues
+
+
 def score(ic_data, t_values, mean_quantile_ret_bydate, periods):
     """
+    参数：
+    :param ic_data: 相关性数值，shape[Days,N],
+            days是多少天,比如从2020-1-1~2022-1-1，
+            N就是调仓周期periods，就是1D，5D，20D
+    :param t_values:
+    :param mean_quantile_ret_bydate: 按照每天计算的平均的分组(quantile)的收益率
+            比如 2020-1-1，第一组，平均收益率是0.0021
+    :param periods: 就是调仓周期，如[1,5,20]
+
     基本思路是，不想看各种生成plot图，也可以评价出来一个因子好不好，通过给他打分，还知道有多好
     当然，图也留着，测试用，对照用。
 

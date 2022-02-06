@@ -179,29 +179,44 @@ def factor_returns_regression(factor_data):
         """
 
         def regression(returns, factors):
-            model = sm.OLS(factors, returns)  # 定义x，y
+            factors = sm.add_constant(factors)
+            model = sm.OLS(returns,factors)  # 定义x，y
             results = model.fit()
-            t_values = results.tvalues
+            t_value = results.tvalues[1]
             factor_return = results.params[1]
-            return t_values#, factor_return
+            # import pdb;pdb.set_trace()
+            return t_value, factor_return
 
         factors = date_data['factor']
         # get_forward_returns_columns会返回1D,2D,...的列名，是alphalens内嵌的函数
         # 针对每个日子，都进行处理
-        tvalues_returns_of_each_period = \
-            date_data[get_forward_returns_columns(date_data.columns)]. \
-                apply(func=regression, args=(factors))
-
-        return tvalues_returns_of_each_period
+        tvalues = []
+        factor_returns = []
+        # import pdb;pdb.set_trace()
+        for column in get_forward_returns_columns(date_data.columns):
+            returns = date_data[column]
+            t_value, factor_return = regression(returns, factors)  # 这个是一天
+            tvalues.append(t_value)
+            factor_returns.append(factor_return)
+        return tvalues,factor_returns
 
     # 因为要重新分组，所以先拷贝一个
     factor_data = factor_data.copy()
     # 按照日期分组
-    grouper = [factor_data.index.get_level_values('datetime')]
-    # 按照日期分组计算
-    returns_and_tvalues = factor_data.groupby(grouper).apply(cross_section_regression)
+    groups = factor_data.groupby(level='datetime')
 
-    return returns_and_tvalues
+    df_factor_returns = []
+    df_tavlues = []
+    for name, df_cross_section in groups:
+        # 按照日期分组计算
+        tvalues,factor_returns = cross_section_regression(df_cross_section)
+        df_factor_returns.append(factor_returns)
+        df_tavlues.append(tvalues)
+    column_names = get_forward_returns_columns(factor_data.columns)
+    date_index = factor_data.index.unique(level='datetime')
+    df_tavlues = DataFrame(df_tavlues,index=date_index, columns=column_names)
+    df_factor_returns = DataFrame(df_factor_returns, index=date_index,columns=column_names)
+    return df_tavlues,df_factor_returns
 
 
 def score(ic_data, t_values, mean_quantile_ret_bydate, periods):

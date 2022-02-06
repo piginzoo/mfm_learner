@@ -19,3 +19,4 @@ baostock
 akshare
 python-Levenshtein
 quantstats
+backtrader_plotting

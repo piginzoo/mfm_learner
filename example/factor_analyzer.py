@@ -135,6 +135,8 @@ def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, per
     logger.debug("IC分布的偏度:\n%r", skew)
     logger.debug("IC分布的峰度:\n%r", kurtosis)
 
+    df_tavlues, df_factor_returns = factor_returns_regression(factor_data)
+
     __score, retuns_filterd_by_period_quantile = \
         score(ic_data, t_values, mean_quantile_ret_bydate, periods)
 
@@ -192,7 +194,7 @@ def factor_returns_regression(factor_data):
         # 针对每个日子，都进行处理
         tvalues = []
         factor_returns = []
-        # import pdb;pdb.set_trace()
+
         for column in get_forward_returns_columns(date_data.columns):
             returns = date_data[column]
             t_value, factor_return = regression(returns, factors)  # 这个是一天
@@ -322,6 +324,8 @@ def score(ic_data, t_values, mean_quantile_ret_bydate, periods):
     这样就可以评价一个因子好不好，且给出解释原因，且，可以参考图，相互验证，赞了！
     debug/clv/
     """
+
+
 
 
 def calc_monotony(mean_quantile_ret_bydate, periods):

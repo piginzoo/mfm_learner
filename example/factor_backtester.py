@@ -174,6 +174,13 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
     cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
 
+    from backtrader_plotting import Bokeh
+    from backtrader_plotting.schemes import Tradimo
+    b = Bokeh(stype='bar', tabs="multi")#,scheme=Tradimo())
+    cerebro.plot(b)
+
+
+
 
 # python -m example.factor_backtester
 if __name__ == '__main__':

@@ -48,8 +48,9 @@ def __generate_mock_column(stocks, dates, column_name):
     for d in dates:
         for s in stocks:
             df = df.append([[d, s, random()]])
-    df.columns = ['datetime', 'code', column_name]
-    df = datasource_utils.reset_index(df)
+    df.columns = ['date', 'asset', column_name] # 这个列名是alphalens要求的
+    df['date'] = datasource_utils.to_datetime(df['date'])
+    df = df.set_index(['date', 'asset'])
     return df
 
 # python -m test.unitest.test_utils

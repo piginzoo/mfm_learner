@@ -7,22 +7,11 @@ import os
 import argparse
 
 from utils import utils
+from utils.tushare_download.download_utils import is_table_index_exist, is_table_exist
 
 ROWS = None
 
 logger = logging.getLogger(__name__)
-
-
-def __is_table_exist(engine, name):
-    return sqlalchemy.inspect(engine).has_table(name)
-
-
-def __is_table_index_exist(engine, name):
-    if not __is_table_exist(engine, name):
-        return False
-
-    indices = sqlalchemy.inspect(engine).get_indexes(name)
-    return indices and len(indices) > 0
 
 
 
@@ -39,7 +28,7 @@ def filter_duplicated(df, table_name, db_engine):
     sql = 'select * from {} where {}>=\'{}\''.format(table_name, date_column, latest_date_in_file)
     logger.debug("SQL: %s", sql)
 
-    if not __is_table_exist(db_engine, table_name):
+    if not is_table_exist(db_engine, table_name):
         logger.debug("表[%s]在数据库中不存在",table_name)
         return df
 
@@ -113,7 +102,7 @@ def import_file(file, table_name):
     logger.debug("导入 [%.2f] 秒, df[%d条]=>db[表%s] ", time.time() - start_time, len(df), table_name)
     start_time = time.time()
 
-    if __is_table_index_exist(db_engine,table_name):
+    if is_table_index_exist(db_engine,table_name):
         logger.debug("表[%s]已经具有了索引，无需再创建", table_name)
         return
 

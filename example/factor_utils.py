@@ -403,7 +403,7 @@ def get_factors(stock_codes, factor_names, start_date, end_date):
 
 
 def get_factor_from_db(name, start_date, end_date):
-    df = pd.read_sql_query('select * from factor_{} where start_date>=\'{}\' and end_date<=\'{}\''.
+    df = pd.read_sql_query('select * from factor_{} where datetime>=\'{}\' and datetime<=\'{}\''.
                            format(name, start_date, end_date),
                            con=utils.connect_db())
     return df
@@ -421,3 +421,9 @@ def factor2db(name, factor):
         return [__factor2db_one(__name, __factor) for __name, __factor in zip(name, factor)]
     else:
         return __factor2db_one(name, factor)
+
+# python -m example.factor_utils
+if __name__ == '__main__':
+    df = get_factor_from_db("clv","20210101","20210801")
+    print(df.head(3))
+    print(len(df))

@@ -3,42 +3,42 @@ import logging
 import math
 import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+from tqdm import tqdm
+
 import utils.utils
 from utils import utils
 from utils.tushare_download.downloaders.base_downloader import BaseDownload
-from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
 fields = 'ts_code, trade_date, close, turnover_rate, turnover_rate_f, volume_ratio, pe, pe_ttm, pb, ps, ps_ttm, dv_ratio, dv_ttm, total_share, float_share, free_share, total_mv, circ_mv'
+TRADE_DAYS_PER_YEAR = 252  # 1年的交易日
+MAX_RECORDS = 4800  # 最多一次的下载行数，tushare是5000，稍微降一下到4800
 
 
 class BatchDownloader(BaseDownload):
     """
-    用于批量下载
+    用于下载所有的股票，一只一只股票的，批量下载
     """
 
-    def get_table_name(self):
-        raise NotImplemented()
+    def get_stock_codes(self):
+        df = pd.read_sql('select * from stock_basic', self.db_engine)
+        return df['ts_code']
 
-    def get_date_column_name(self):
-        raise NotImplemented()
-
-    def get_start_date(self):
-        return '20210630'
-
-        utils.str2date(latest_date)
-        # TODO date +1
-
-        table_name = self.get_table_name()
-        date_column_name = self.get_date_column_name()
-        df = pd.read_sql('select max({}) from {}'.format(date_column_name, table_name), self.db_engine)
-        assert len(df) == 1
-        latest_date = df.iloc[:, 0].item()
-        logger.debug("数据库中表[%s]的最后日期[%s]为：%s", table_name, date_column_name, latest_date)
-        return latest_date
+    def calculate_best_fetch_stock_num(self, start_date, end_date):
+        """
+        计算最多可以下载多少只股票:
+        4800/一只股票的条数，
+        1只股票条数=天数/365*252
+        """
+        delta = utils.str2date(end_date) - utils.str2date(start_date)
+        days = delta.days
+        record_num_per_stock = math.floor(days * TRADE_DAYS_PER_YEAR / 365)
+        stock_num = math.floor(MAX_RECORDS / record_num_per_stock)
+        logger.debug("下载优化:共%d天,每只股票%d条,每次下载4800条，所以，可以一次可下载%d只股票", days, record_num_per_stock, stock_num)
+        return stock_num
 
     def optimized_batch_download(self, func, multistocks, **kwargs):
         """

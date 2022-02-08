@@ -46,9 +46,9 @@ def calculate_and_save(factor_name, factor, start_date, end_date, index_code, st
 """
 python -m example.factor_creator \
     --factor clv \
-    --start 20210101 \
-    --end 20210801 \
-    --num 10 \
+    --start 20080101 \
+    --end 20211230 \
+    --num 100000 \
     --index 000905.SH 
 
 python -m example.factor_creator \

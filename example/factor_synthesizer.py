@@ -33,6 +33,7 @@ def synthesize(stock_pool, start_date, end_date):
     factors = {}
     for factor_key in factor_utils.FACTORS.keys():
         factors[factor_key] = factor_utils.get_factor(factor_key, stock_codes, start_date, end_date)
+
     logger.debug("开始合成因子：%r", factors.keys())
     combined_factor = multifactor_synthesize.synthesize(factors, None)
     return combined_factor

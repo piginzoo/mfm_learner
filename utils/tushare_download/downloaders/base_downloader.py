@@ -6,16 +6,15 @@ import time
 import sqlalchemy
 import tushare
 import pandas as pd
-
 from utils import utils, CONF
+from utils.tushare_download.download_utils import is_table_exist
 
 logger = logging.getLogger(__name__)
 
 RETRY = 5  # 尝试几次
 WAIT = 1  # 每次delay时常(秒)
 CALL_INTERVAL = 0.15 # 150毫秒,1分钟400次
-TRADE_DAYS_PER_YEAR = 252 # 1年的交易日
-MAX_RECORDS = 4800 # 最多一次的下载行数，tushare是5000，稍微降一下到4800
+EALIEST_DATE = '20080101' # 最早的数据日期
 
 class BaseDownload():
 
@@ -28,22 +27,31 @@ class BaseDownload():
         if not os.path.exists(self.save_dir): os.makedirs(self.save_dir)
         self.call_interval = CALL_INTERVAL
 
-    def calculate_best_fetch_stock_num(self,start_date,end_date):
-        """
-        计算最多可以下载多少只股票:
-        4800/一只股票的条数，
-        1只股票条数=天数/365*252
-        """
-        delta = utils.str2date(end_date) - utils.str2date(start_date)
-        days = delta.days
-        record_num_per_stock = math.floor(days * TRADE_DAYS_PER_YEAR/365)
-        stock_num = math.floor(MAX_RECORDS/record_num_per_stock)
-        logger.debug("下载优化:共%d天,每只股票%d条,每次下载4800条，所以，可以一次可下载%d只股票",days,record_num_per_stock,stock_num)
-        return stock_num
+    def get_table_name(self):
+        raise NotImplemented()
 
-    def get_stock_codes(self):
-        df = pd.read_sql('select * from stock_basic', self.db_engine)
-        return df['ts_code']
+    def get_date_column_name(self):
+        raise NotImplemented()
+
+    def get_start_date(self):
+
+        if not is_table_exist(self.db_engine, self.get_table_name()):
+            logger.debug("表[%s]在数据库中不存在，返回默认最早开始日期[%s]", self.get_table_name(),EALIEST_DATE)
+            return EALIEST_DATE
+
+        table_name = self.get_table_name()
+        date_column_name = self.get_date_column_name()
+        df = pd.read_sql('select max({}) from {}'.format(date_column_name, table_name), self.db_engine)
+        assert len(df) == 1
+        latest_date = df.iloc[:, 0].item()
+        if latest_date is None:
+            logger.debug("表[%s]中无数据，返回默认最早开始日期[%s]", self.get_table_name(), EALIEST_DATE)
+            return EALIEST_DATE
+
+        # 日期要往后错一天，比DB中的
+        latest_date = utils.tomorrow(latest_date)
+        logger.debug("数据库中表[%s]的最后日期[%s]为：%s", table_name, date_column_name, latest_date)
+        return latest_date
 
     def to_db(self, df, table_name):
         start_time = time.time()
@@ -63,6 +71,7 @@ class BaseDownload():
 
         while self.retry_count < RETRY:
             try:
+                # print(kwargs)
                 df = func(**kwargs)
                 return df
             except:

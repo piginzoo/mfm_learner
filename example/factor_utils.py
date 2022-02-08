@@ -374,9 +374,9 @@ def get_factor(name, stock_codes, start_date, end_date):
     if not os.path.exists("data/factors"): os.makedirs("data/factors")
 
     #  有可能一个因子类，返回多个因子，比如换手率因子，就有1月，3月，6月的换手率
-    if type(factors)==list or type(factors)==tuple:
+    if type(factors) == list or type(factors) == tuple:
         for factor in factors:
-            factor_path = os.path.join("data/factors", "{}_{}.csv".format(name,factor.name))
+            factor_path = os.path.join("data/factors", "{}_{}.csv".format(name, factor.name))
             factor.to_csv(factor_path)
     else:
         factor_path = os.path.join("data/factors", name + ".csv")
@@ -395,8 +395,29 @@ def get_factors(stock_codes, factor_names, start_date, end_date):
     """
     factor_dict = {}
     for i, factor_key in enumerate(FACTORS.keys()):
-        if factor_names and  not factor_key in factor_names: continue # 刨除不在factor_names的因子
+        if factor_names and not factor_key in factor_names: continue  # 刨除不在factor_names的因子
         factors = get_factor(factor_key, stock_codes, start_date, end_date)
         factors *= FACTORS_LONG_SHORT[i]  # 空方因子*(-1)
         factor_dict[factor_key] = to_panel_of_stock_columns(factors)
     return factor_dict
+
+
+def get_factor_from_db(name, start_date, end_date):
+    df = pd.read_sql_query('select * from factor_{} where start_date>=\'{}\' and end_date<=\'{}\''.
+                           format(name, start_date, end_date),
+                           con=utils.connect_db())
+    return df
+
+
+def __factor2db_one(name, df):
+    """直接替换旧数据"""
+    engine = utils.connect_db()
+    df.to_sql(f'factor_{name}', engine, index=False, if_exists='replace')
+    logger.debug("保存因子到数据库：表[%s]",f'factor_{name}')
+
+
+def factor2db(name, factor):
+    if type(name) == list:
+        return [__factor2db_one(__name, __factor) for __name, __factor in zip(name, factor)]
+    else:
+        return __factor2db_one(name, factor)

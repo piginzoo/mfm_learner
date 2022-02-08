@@ -61,6 +61,9 @@ class PEGFactor(Factor):
     def __init__(self):
         super().__init__()
 
+    def name(self):
+        return "peg"
+
     def calculate(self, stock_codes, start_date, end_date, df_daily=None):
         """
         # 计算股票的PEG值

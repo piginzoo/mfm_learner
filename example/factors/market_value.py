@@ -21,6 +21,10 @@ class MarketValueFactor(Factor):
     def __init__(self):
         super().__init__()
 
+    def name(self):
+        return "mv"
+
+
     def calculate(self, stock_codes, start_date, end_date):
         df_basic = self.datasource.daily_basic(stock_codes, start_date, end_date)
         df_basic = datasource_utils.reset_index(df_basic)

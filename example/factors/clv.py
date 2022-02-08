@@ -28,6 +28,9 @@ class CLVFactor(Factor):
     def __init__(self):
         super().__init__()
 
+    def name(self):
+        return "clv"
+
     def calculate(self, stock_codes, start_date, end_date, df_daily=None):
         if df_daily is None:
             df_daily = datasource_utils.load_daily_data(self.datasource, stock_codes, start_date, end_date)

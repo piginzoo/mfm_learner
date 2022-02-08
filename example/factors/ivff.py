@@ -59,6 +59,9 @@ class IVFFFactor(Factor):
         super().__init__()
         self.index_code = index_code
 
+    def name(self):
+        return "ivff"
+
     def get_market(self, start_date, end_date):
         # 获取指数收益率信息
         df_index = self.datasource.index_daily(index_code=self.index_code, start_date=start_date, end_date=end_date)

@@ -28,6 +28,9 @@ class MomentumFactor(Factor):
     def __init__(self):
         super().__init__()
 
+    def name(self):
+        return "momentum"
+
     def calculate(self, stock_codes, start_date, end_date, df_daily=None):
         """
         计算动量，动量，就是往前回溯period个周期，然后算收益，

@@ -9,16 +9,16 @@
 一般来说换手率因子的大小和股票的收益为负向关系，即换手率越高的股票预期收益越低，换手率越低的股票预期收益越高。
 
 四个构造出来的换手率类的因子（都是与股票的日均换手率相关）：
-- turn_Nm：个股最近N个月的日均换手率，表现了个股N个月内的流动性水平。N=1,3,6
-- bias_turn_Nm：个股最近N个月的日均换手率除以个股两年内日均换手率再减去1，代表了个股N个月内流动性的乖离率。N=1,3,6
-- std_turn_Nm：个股最近N个月的日换手率的标准差，表现了个股N个月内流动性水平的波动幅度。N=1,3,6
-- bias_std_turn_Nm：个股最近N个月的日换手率的标准差除以个股两年内日换手率的标准差再减去1，代表了个股N个月内流动性的波动幅度的乖离率。N=1,3,6
+- turnover_Nm：个股最近N个月的日均换手率，表现了个股N个月内的流动性水平。N=1,3,6
+- turnover_bias_Nm：个股最近N个月的日均换手率除以个股两年内日均换手率再减去1，代表了个股N个月内流动性的乖离率。N=1,3,6
+- turnover_std_Nm：个股最近N个月的日换手率的标准差，表现了个股N个月内流动性水平的波动幅度。N=1,3,6
+- turnover_bias_std_Nm：个股最近N个月的日换手率的标准差除以个股两年内日换手率的标准差再减去1，代表了个股N个月内流动性的波动幅度的乖离率。N=1,3,6
 
 这是4个因子哈，都是跟换手率相关的，他们之间具备共线性，是相关的，要用的时候，挑一个好的，或者，做因子正交化后再用。
 
 市值中性化：换手率类因子与市值类因子存在一定程度的负相关性，我们对换手率因子首先进行市值中性化处理，从而消除了大市值对于换手率因子表现的影响。
 
-知乎文章的结论：进行市值中性化处理之后，因子表现有明显提高。在本文的回测方法下，turn_1m和std_turn_1m因子表现较好。
+知乎文章的结论：进行市值中性化处理之后，因子表现有明显提高。在本文的回测方法下，turnover_1m和turnover_std_1m因子表现较好。
 """
 
 import logging
@@ -35,6 +35,21 @@ class TurnOverFactor(Factor):
 
     def __init__(self):
         super().__init__()
+
+    def name(self):
+        return ['turnover_1m',
+                'turnover_3m',
+                'turnover_6m',
+                'turnover_2y',
+                'turnover_std_1m',
+                'turnover_std_3m',
+                'turnover_std_6m',
+                'turnover_bias_1m',
+                'turnover_bias_3m',
+                'turnover_bias_6m',
+                'turnover_bias_std_1m',
+                'turnover_bias_std_3m',
+                'turnover_bias_std_6m']
 
     def calculate(self, stock_codes, start_date, end_date):
         df_daily_basic = self.datasource.daily_basic(stock_codes, start_date, end_date)
@@ -67,48 +82,48 @@ class TurnOverFactor(Factor):
     rolling:
         https://blog.csdn.net/maymay_/article/details/80241627
     # 定义因子计算逻辑
-    - turn_Nm：个股最近N个月的日均换手率，表现了个股N个月内的流动性水平。N=1,3,6
-    - bias_turn_Nm：个股最近N个月的日均换手率除以个股两年内日均换手率再减去1，代表了个股N个月内流动性的乖离率。N=1,3,6
-    - std_turn_Nm：个股最近N个月的日换手率的标准差，表现了个股N个月内流动性水平的波动幅度。N=1,3,6
-    - bias_std_turn_Nm：个股最近N个月的日换手率的标准差除以个股两年内日换手率的标准差再减去1，代表了个股N个月内流动性的波动幅度的乖离率。N=1,3,6
+    - turnover_Nm：个股最近N个月的日均换手率，表现了个股N个月内的流动性水平。N=1,3,6
+    - turnover_bias_Nm：个股最近N个月的日均换手率除以个股两年内日均换手率再减去1，代表了个股N个月内流动性的乖离率。N=1,3,6
+    - turnover_std_Nm：个股最近N个月的日换手率的标准差，表现了个股N个月内流动性水平的波动幅度。N=1,3,6
+    - turnover_bias_std_Nm：个股最近N个月的日换手率的标准差除以个股两年内日换手率的标准差再减去1，代表了个股N个月内流动性的波动幅度的乖离率。N=1,3,6
     """
 
     def calculate_turnover_rate(self, data):
         # N个月的日均换手率
-        data['turn_1m'] = data['turnover_rate'].rolling(window=20, min_periods=1).apply(func=np.nanmean)
-        data['turn_3m'] = data['turnover_rate'].rolling(window=60, min_periods=1).apply(func=np.nanmean)
-        data['turn_6m'] = data['turnover_rate'].rolling(window=120, min_periods=1).apply(func=np.nanmean)
-        data['turn_2y'] = data['turnover_rate'].rolling(window=480, min_periods=1).apply(func=np.nanmean)
+        data['turnover_1m'] = data['turnover_rate'].rolling(window=20, min_periods=1).apply(func=np.nanmean)
+        data['turnover_3m'] = data['turnover_rate'].rolling(window=60, min_periods=1).apply(func=np.nanmean)
+        data['turnover_6m'] = data['turnover_rate'].rolling(window=120, min_periods=1).apply(func=np.nanmean)
+        data['turnover_2y'] = data['turnover_rate'].rolling(window=480, min_periods=1).apply(func=np.nanmean)
 
         # N个月的日均换手率的标准差
-        data['std_turn_1m'] = data['turnover_rate'].rolling(window=20, min_periods=2).apply(func=np.nanstd)
-        data['std_turn_3m'] = data['turnover_rate'].rolling(window=60, min_periods=2).apply(func=np.nanstd)
-        data['std_turn_6m'] = data['turnover_rate'].rolling(window=120, min_periods=2).apply(func=np.nanstd)
-        data['std_turn_2y'] = data['turnover_rate'].rolling(window=480, min_periods=2).apply(func=np.nanstd)
+        data['turnover_std_1m'] = data['turnover_rate'].rolling(window=20, min_periods=2).apply(func=np.nanstd)
+        data['turnover_std_3m'] = data['turnover_rate'].rolling(window=60, min_periods=2).apply(func=np.nanstd)
+        data['turnover_std_6m'] = data['turnover_rate'].rolling(window=120, min_periods=2).apply(func=np.nanstd)
+        data['turnover_std_2y'] = data['turnover_rate'].rolling(window=480, min_periods=2).apply(func=np.nanstd)
 
         # N个月的日换手率 / 两年内日换手率 - 1，表示N个月流动性的乖离率
-        data['bias_turn_1m'] = data['turn_1m'] / data['turn_2y'] - 1
-        data['bias_turn_3m'] = data['turn_3m'] / data['turn_2y'] - 1
-        data['bias_turn_6m'] = data['turn_6m'] / data['turn_2y'] - 1
+        data['turnover_bias_1m'] = data['turnover_1m'] / data['turnover_2y'] - 1
+        data['turnover_bias_3m'] = data['turnover_3m'] / data['turnover_2y'] - 1
+        data['turnover_bias_6m'] = data['turnover_6m'] / data['turnover_2y'] - 1
 
         # N个月的日换手率的标准差 / 两年内日换手率的标准差 - 1，表示N个月波动幅度的乖离率
-        data['bias_std_turn_1m'] = data['std_turn_1m'] / data['std_turn_2y'] - 1
-        data['bias_std_turn_3m'] = data['std_turn_3m'] / data['std_turn_2y'] - 1
-        data['bias_std_turn_6m'] = data['std_turn_6m'] / data['std_turn_2y'] - 1
+        data['turnover_bias_std_1m'] = data['turnover_std_1m'] / data['turnover_std_2y'] - 1
+        data['turnover_bias_std_3m'] = data['turnover_std_3m'] / data['turnover_std_2y'] - 1
+        data['turnover_bias_std_6m'] = data['turnover_std_6m'] / data['turnover_std_2y'] - 1
 
         data = datasource_utils.reset_index(data)
 
         return \
-            data['turn_1m'], \
-            data['turn_3m'], \
-            data['turn_6m'], \
-            data['turn_2y'], \
-            data['std_turn_1m'], \
-            data['std_turn_3m'], \
-            data['std_turn_6m'], \
-            data['bias_turn_1m'], \
-            data['bias_turn_3m'], \
-            data['bias_turn_6m'], \
-            data['bias_std_turn_1m'], \
-            data['bias_std_turn_3m'], \
-            data['bias_std_turn_6m']
+            data['turnover_1m'], \
+            data['turnover_3m'], \
+            data['turnover_6m'], \
+            data['turnover_2y'], \
+            data['turnover_std_1m'], \
+            data['turnover_std_3m'], \
+            data['turnover_std_6m'], \
+            data['turnover_bias_1m'], \
+            data['turnover_bias_3m'], \
+            data['turnover_bias_6m'], \
+            data['turnover_bias_std_1m'], \
+            data['turnover_bias_std_3m'], \
+            data['turnover_bias_std_6m']

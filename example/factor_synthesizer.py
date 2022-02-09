@@ -102,14 +102,15 @@ if __name__ == '__main__':
     stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 调试用
-    start = "20200101"
+    start = "20180101"
     end = "20200901"
-    periods = [1, 5, 10]
+    periods = [10,20]
     stock_pool = '000905.SH'  # 中证500
-    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 测试JAQS多因子合成
     stock_codes = get_stocks(stock_pool, start, end)
+    stock_codes = stock_codes.tolist()
     factor_dict = factor_utils.get_factors(stock_codes, None, start, end)
     combinefactor = synthesize_by_jaqs(stock_codes, factor_dict, start, end)
     logger.debug("合成因子：")

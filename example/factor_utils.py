@@ -351,8 +351,8 @@ FACTORS = {
     "momentum": MomentumFactor(),
     "peg": PEGFactor(),
     "clv": CLVFactor(),
-    "turnover": TurnOverFactor(),
-    "ivff": IVFFFactor()
+    # "turnover": TurnOverFactor(),
+    # "ivff": IVFFFactor()
 }
 FACTORS_LONG_SHORT = [-1, 1, 1, 1]  # 因子的多空性质
 

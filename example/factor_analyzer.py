@@ -300,5 +300,5 @@ if __name__ == '__main__':
     #     logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, factor_name, __score.tolist())
 
     # 测试单一因子
-    test_by_alphalens("ivff", stock_pool, start, end, periods)
-    logger.debug("换仓周期%r的 [%s]因子得分", periods, "ivff")
+    test_by_alphalens("clv", stock_pool, start, end, periods)
+    logger.debug("换仓周期%r的 [%s]因子得分", periods, "clv")

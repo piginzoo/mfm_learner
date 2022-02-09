@@ -2,21 +2,19 @@ import logging
 import time
 
 import pandas as pd
-from backtrader.plot import Plot_OldSync
-
+import quantstats as qs
+import backtrader.analyzers as bta  # 添加分析函数
 from example.backtest.strategy_multifactors import MultiFactorStrategy
 from example.backtest.strategy_synthesis import SynthesizedFactorStrategy
 from utils import utils
 from utils.utils import MyPlot
 
 utils.init_logger()
-import matplotlib.pyplot as plt
 from backtrader.feeds import PandasData
 
 from datasource import datasource_factory, datasource_utils
 from example import factor_synthesizer, factor_utils
 import backtrader as bt  # 引入backtrader框架
-import backtrader.analyzers as bta  # 添加分析函数
 
 """
 用factor_tester.py中合成的多因子，做选择股票的策略 ，去选择中证500的股票，跑收益率回测。使用backtrader来做回测框架。
@@ -150,8 +148,15 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     cerebro.addstrategy(strategy_class, period, factor_data)
 
     # 添加分析对象
-    cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe")  # ,timeframe=bt.TimeFrame.Days)  # 夏普指数
+    # cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe")  # ,timeframe=bt.TimeFrame.Days)  # 夏普指数
+    # cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
+    cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe", timeframe=bt.TimeFrame.Days)  # 夏普指数
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
+    cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
+    cerebro.addanalyzer(bt.analyzers.PeriodStats, _name='period_stats')
+    cerebro.addanalyzer(bt.analyzers.AnnualReturn, _name='annual')
+    cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')  # 加入PyFolio分析者,这个是为了做quantstats分析用
+
 
     # 打印
     logger.debug('回测期间：%r ~ %r , 初始资金: %r', start_date, end_date, start_cash)
@@ -174,12 +179,42 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
     cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
 
-    from backtrader_plotting import Bokeh
-    from backtrader_plotting.schemes import Tradimo
-    b = Bokeh(stype='bar', tabs="multi")#,scheme=Tradimo())
-    cerebro.plot(b)
+
+    def format_print(title, results):
+        print(title, ":")
+        # print(results[0].analyzers)
+        for year, value in results.items():
+            print("\t %s : %r" % (year, value))
+
+    print("%d天调仓期结果：" % period)
+    format_print("回撤:", results[0].analyzers.DW.get_analysis())
+    format_print("收益:", results[0].analyzers.returns.get_analysis())
+    format_print("期间:", results[0].analyzers.period_stats.get_analysis())
+    format_print("年化:", results[0].analyzers.annual.get_analysis())
+    quant_statistics(results[0], period, "000000","我的多因子组合")
+
+    # from backtrader_plotting import Bokeh
+    # from backtrader_plotting.schemes import Tradimo
+    # b = Bokeh(stype='bar', tabs="multi")#,scheme=Tradimo())
+    # cerebro.plot(b)
 
 
+def quant_statistics(strat, period, code, name):
+    portfolio_stats = strat.analyzers.getbyname('PyFolio')  # 得到PyFolio分析者实例
+    # 以下returns为以日期为索引的资产日收益率系列
+    returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
+
+    returns.index = returns.index.tz_convert(None)  # 索引的时区要设置一下，否则出错
+
+    # 输出html策略报告,rf为无风险利率
+    qs.reports.html(returns,
+                    output='debug/stats_{}{}_{}.html'.format(code, name, period),
+                    title='{}日调仓的定投[{}{}]基金的绩效报告'.format(period, code, name), rf=0.0)
+
+    print(qs.reports.metrics(returns=returns, mode='full'))
+    df = qs.reports.metrics(returns=returns, mode='full', display=False)
+    print("返回的QuantStats报表：\n%r", df)
+    qs.reports.basic(returns)
 
 
 # python -m example.factor_backtester
@@ -194,11 +229,11 @@ if __name__ == '__main__':
     stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     # 测试
-    start_date = "20200101"  # 开始日期
-    end_date = "20201231"  # 结束日期
+    start_date = "20180101"  # 开始日期
+    end_date = "20200901"  # 结束日期
     stock_pool_index = '000905.SH'  # 股票池为中证500
     period = 22  # 调仓周期
-    stock_num = 10  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
 
     factor_names = list(factor_utils.FACTORS.keys())
     factor_policy = "single"  # synthesis| single 是合成，还是单独使用

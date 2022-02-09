@@ -1,7 +1,3 @@
-import datetime
-
-import tushare as ts
-
 from utils.tushare_download.downloaders.base_downloader import BaseDownload
 
 """
@@ -14,7 +10,6 @@ city        str     Y 所在城市
 employees   int     Y 员工人数
 """
 import logging
-import pandas as pd
 from utils import utils
 
 logger = logging.getLogger(__name__)
@@ -23,8 +18,6 @@ logger = logging.getLogger(__name__)
 class StockCompany(BaseDownload):
 
     def download(self):
-
-
         df_stock_company = self.pro.stock_company(exchange='', fields='ts_code,reg_capital,city,employees')
 
         logger.debug("下载公司信息 [%d]条", len(df_stock_company))
@@ -32,21 +25,8 @@ class StockCompany(BaseDownload):
         # 数据量不大，直接全部重新下载，replace数据库中的数据
         self.to_db(df_stock_company, "stock_company", if_exists='replace')
 
-        # df_stock_company_db = pd.read_sql('select * from stock_company', self.db_engine)
-        # ts_codes = df_stock_company['ts_code']
-        # ts_codes_db = df_stock_company_db['ts_code']
-        #
-        # # 找出新的股票
-        # ts_new = ts_codes[~ts_codes.isin(ts_codes_db)]
-        #
-        # logger.debug("tushare[%d]条,数据库[%d]条,新的[%d]条", len(ts_codes), len(ts_codes_db), len(ts_new))
-        #
-        # df_new = df_stock_company[df_stock_company['ts_code'].isin(ts_new)]
-        #
-        # self.to_db(df_new, "stock_company")
 
-
-# python -m utils.tushare_download.stock_company
+# python -m utils.tushare_download.downloaders.stock_company
 if __name__ == '__main__':
     utils.init_logger()
     downloader = StockCompany()

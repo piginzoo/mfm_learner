@@ -12,7 +12,7 @@ class FinanceIndicator(BatchDownloader):
         super().__init__()
 
     def download(self):
-        return self.optimized_batch_download(func=self.pro.fina_indicator)
+        return self.optimized_batch_download(func=self.pro.fina_indicator,multistocks=True)
 
     def get_table_name(self):
         return "fina_indicator"

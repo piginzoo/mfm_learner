@@ -3,9 +3,10 @@ import math
 import os.path
 import time
 
+import pandas as pd
 import sqlalchemy
 import tushare
-import pandas as pd
+
 from utils import utils, CONF
 from utils.tushare_download.download_utils import is_table_exist
 
@@ -13,8 +14,10 @@ logger = logging.getLogger(__name__)
 
 RETRY = 5  # 尝试几次
 WAIT = 1  # 每次delay时常(秒)
-CALL_INTERVAL = 0.15 # 150毫秒,1分钟400次
-EALIEST_DATE = '20080101' # 最早的数据日期
+MAX_PER_SECOND = 200  # 每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整
+CALL_INTERVAL = 60 / MAX_PER_SECOND  # 150毫秒,1分钟400次
+EALIEST_DATE = '20080101'  # 最早的数据日期
+
 
 class BaseDownload():
 
@@ -38,7 +41,7 @@ class BaseDownload():
     def get_start_date(self):
 
         if not is_table_exist(self.db_engine, self.get_table_name()):
-            logger.debug("表[%s]在数据库中不存在，返回默认最早开始日期[%s]", self.get_table_name(),EALIEST_DATE)
+            logger.debug("表[%s]在数据库中不存在，返回默认最早开始日期[%s]", self.get_table_name(), EALIEST_DATE)
             return EALIEST_DATE
 
         table_name = self.get_table_name()
@@ -55,15 +58,16 @@ class BaseDownload():
         logger.debug("数据库中表[%s]的最后日期[%s]为：%s", table_name, date_column_name, latest_date)
         return latest_date
 
-    def to_db(self, df, table_name, if_exists='append'):
+    def to_db(self, df, if_exists='append'):
         start_time = time.time()
         dtype_dic = {
             'ts_code': sqlalchemy.types.VARCHAR(length=9),
             'trade_date': sqlalchemy.types.VARCHAR(length=8),
             'ann_date': sqlalchemy.types.VARCHAR(length=8)
         }
-        df.to_sql(table_name, self.db_engine, index=False, if_exists=if_exists, dtype=dtype_dic, chunksize=1000)
-        logger.debug("导入 [%.2f] 秒, df[%d条]=>db[表%s] ", time.time() - start_time, len(df), table_name)
+        df.to_sql(self.get_table_name(), self.db_engine, index=False, if_exists=if_exists, dtype=dtype_dic,
+                  chunksize=1000)
+        logger.debug("导入 [%.2f] 秒, df[%d条]=>db[表%s] ", time.time() - start_time, len(df), self.get_table_name())
 
     def retry_call(self, func, **kwargs):
         """
@@ -85,6 +89,6 @@ class BaseDownload():
         raise RuntimeError("尝试调用Tushare API多次失败......")
 
     def save(self, name, df):
-        file_path = os.path.join(self.save_dir,name)
+        file_path = os.path.join(self.save_dir, name)
         df.to_csv(file_path)
         return file_path

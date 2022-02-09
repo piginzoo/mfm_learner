@@ -1,15 +1,6 @@
-import datetime
 import logging
-import math
-import time
 
-import pandas as pd
-import numpy as np
-import utils.utils
 from utils import utils
-from utils.tushare_download.downloaders.base_downloader import BaseDownload
-from tqdm import tqdm
-
 from utils.tushare_download.downloaders.batch_downloader import BatchDownloader
 
 logger = logging.getLogger(__name__)
@@ -24,6 +15,11 @@ class DailyBasic(BatchDownloader):
                                              multistocks=True,
                                              fields=fields)
 
+    def get_table_name(self):
+        return "daily_basic"
+
+    def get_date_column_name(self):
+        return "trade_date"
 
 
 # python -m utils.tushare_download.daily_basic

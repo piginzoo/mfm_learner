@@ -92,11 +92,4 @@ class BatchDownloader(BaseDownload):
                      len(df_all),
                      csv_file_name,
                      time.time() - start_time)
-        # self.to_db(df_new, "stock_basic")
-
-
-# python -m utils.tushare_download.daily_basic
-if __name__ == '__main__':
-    utils.init_logger()
-    downloader = DailyBasic()
-    downloader.download()
+        self.to_db(df_all)

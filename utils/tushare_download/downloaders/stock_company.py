@@ -23,7 +23,10 @@ class StockCompany(BaseDownload):
         logger.debug("下载公司信息 [%d]条", len(df_stock_company))
 
         # 数据量不大，直接全部重新下载，replace数据库中的数据
-        self.to_db(df_stock_company, "stock_company", if_exists='replace')
+        self.to_db(df_stock_company, if_exists='replace')
+
+    def get_table_name(self):
+        return "stock_company"
 
 
 # python -m utils.tushare_download.downloaders.stock_company

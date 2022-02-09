@@ -53,7 +53,7 @@ class IndexWeight(BaseDownload):
                      self.end_date,
                      len(df_all))
 
-        self.to_db(df_all, "index_weight")
+        self.to_db(df_all)
 
 
 # python -m utils.tushare_download.downloaders.index_weight

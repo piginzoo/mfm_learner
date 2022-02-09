@@ -43,7 +43,7 @@ class StockBasic(BaseDownload):
         logger.debug("下载股票基本信息 [%d]条", len(df_stock_basic))
 
         # 数据量不大，直接全部重新下载，replace数据库中的数据
-        self.to_db(df_stock_basic, "stock_basic", if_exists='replace')
+        self.to_db(df_stock_basic, if_exists='replace')
 
 
 # python -m utils.tushare_download.stock_basic

@@ -20,3 +20,4 @@ akshare
 python-Levenshtein
 quantstats
 backtrader_plotting
+sqlalchemy==1.4.0

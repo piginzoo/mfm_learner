@@ -53,14 +53,14 @@ class BaseDownload():
         logger.debug("数据库中表[%s]的最后日期[%s]为：%s", table_name, date_column_name, latest_date)
         return latest_date
 
-    def to_db(self, df, table_name):
+    def to_db(self, df, table_name, if_exists='append'):
         start_time = time.time()
         dtype_dic = {
             'ts_code': sqlalchemy.types.VARCHAR(length=9),
             'trade_date': sqlalchemy.types.VARCHAR(length=8),
             'ann_date': sqlalchemy.types.VARCHAR(length=8)
         }
-        df.to_sql(table_name, self.db_engine, index=False, if_exists='append', dtype=dtype_dic, chunksize=1000)
+        df.to_sql(table_name, self.db_engine, index=False, if_exists=if_exists, dtype=dtype_dic, chunksize=1000)
         logger.debug("导入 [%.2f] 秒, df[%d条]=>db[表%s] ", time.time() - start_time, len(df), table_name)
 
     def retry_call(self, func, **kwargs):

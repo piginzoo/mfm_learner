@@ -10,7 +10,6 @@ DOWNLOADS=[
     StockBasic,
 ]
 
-
 if __name__ == '__main__':
     utils.init_logger()
     downloader = StockCompany()

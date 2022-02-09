@@ -38,23 +38,21 @@ logger = logging.getLogger(__name__)
 class StockBasic(BaseDownload):
 
     def download(self):
-        df_stock_basic_db = pd.read_sql('select * from stock_basic', self.db_engine)
 
         df_stock_basic = pro.stock_basic(exchange='',
                                          list_status='L',
                                          fields='ts_code,name,area,industry,market, list_status, list_date, delist_date')
 
-        ts_codes = df_stock_basic['ts_code']
-        ts_codes_db = df_stock_basic_db['ts_code']
-
+        # df_stock_basic_db = pd.read_sql('select * from stock_basic', self.db_engine)
+        # ts_codes = df_stock_basic['ts_code']
+        # ts_codes_db = df_stock_basic_db['ts_code']
         # 找出新的股票
-        ts_new = ts_codes[~ts_codes.isin(ts_codes_db)]
+        # ts_new = ts_codes[~ts_codes.isin(ts_codes_db)]
+        # df_new = df_stock_basic[df_stock_basic['ts_code'].isin(ts_new)]
 
-        logger.debug("tushare[%d]条,数据库[%d]条,新的[%d]条", len(ts_codes), len(ts_codes_db), len(ts_new))
+        logger.debug("下载股票基本信息 [%d]条", len(df_stock_basic))
 
-        df_new = df_stock_basic[df_stock_basic['ts_code'].isin(ts_new)]
-
-        self.to_db(df_new, "stock_basic")
+        self.to_db(df_stock_basic, "stock_basic", if_exists='replace')
 
 
 # python -m utils.tushare_download.stock_basic

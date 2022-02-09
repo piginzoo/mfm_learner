@@ -28,8 +28,6 @@ def get_stocks(stock_pool, start_date, end_date):
     stock_codes = datasource.index_weight(stock_pool, start_date)
     assert stock_codes is not None and len(stock_codes) > 0, stock_codes
     stock_codes = stock_codes[:stock_num]
-    print(stock_codes)
-    stock_codes = stock_codes.tolist()
     logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
     return stock_codes
 

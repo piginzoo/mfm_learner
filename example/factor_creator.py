@@ -27,7 +27,6 @@ def main(factor_name, start_date, end_date, index_code, stock_num):
 
 def calculate_and_save(factor_name, factor, start_date, end_date, index_code, stock_num):
     stock_codes = datasource.index_weight(index_code, start_date)[:stock_num]  # TODO 临时先写10个
-    stock_codes = stock_codes.tolist()
     df_factor = factor.calculate(stock_codes, start_date, end_date)
 
     if type(df_factor)==list or type(df_factor)==tuple:
@@ -47,7 +46,7 @@ def calculate_and_save(factor_name, factor, start_date, end_date, index_code, st
 python -m example.factor_creator \
     --factor clv \
     --start 20080101 \
-    --end 20211230 \
+    --end 20220209 \
     --num 100000 \
     --index 000905.SH 
 

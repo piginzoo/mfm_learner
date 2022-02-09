@@ -133,7 +133,7 @@ class TushareDataSource(DataSource):
         assert df is not None or len(df) == 0, "取得index_weight失败：" + start_date
         logger.debug("获得日期%s的指数%s的成分股：%d 个", start_date, index_code, len(df))
         _check_lenght(df)
-        return df['con_code']
+        return df['con_code'].uniq().tolist()
 
     # https://tushare.pro/document/2?doc_id=181
     @post_query

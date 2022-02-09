@@ -37,7 +37,7 @@ def test_neutralize():
     end_date = '20201201'
     stocks = datasource_factory.get().index_weight('000300.SH', start_date)
     # np.random.shuffle(stocks)
-    stocks = stocks[:5].tolist()
+    stocks = stocks[:5]
 
     # 行业数据
     df_factor = __generate_mock_factor(stocks, start_date, end_date)

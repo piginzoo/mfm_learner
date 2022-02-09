@@ -75,7 +75,6 @@ def calculate_factors(index_code="000905.SH", stock_num=50, start_date='20190101
     # 获得股票池
     df_stocks = datasource.index_weight(index_code=index_code, start_date=start_date)
     logger.debug("获得股票池%d个股票", len(df_stocks))
-    stocks = df_stocks.unique().tolist()
     stocks = stocks[:10]
     logger.debug("保留股票池%d个股票分析使用", len(stocks))
 

@@ -94,7 +94,6 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     cerebro = bt.Cerebro()  # 初始化cerebro
 
     stock_codes = datasource.index_weight(index_code, start_date)
-    stock_codes = stock_codes.tolist()
     stock_codes = stock_codes[:stock_num]
 
     d_start_date = utils.str2date(start_date)  # 开始日期

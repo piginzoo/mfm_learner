@@ -1,7 +1,9 @@
 import logging
+import time
 
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
+from tqdm import tqdm
 
 from datasource import datasource_factory as ds_factory
 from utils import CONF
@@ -37,15 +39,23 @@ def to_datetime(series, date_format=None):
 def load_daily_data(datasource, stock_codes, start_date, end_date):
     df_merge = pd.DataFrame()
     # 每支股票
-    for stock_code in stock_codes:
+    start_time = time.time()
+    pbar = tqdm(total=len(stock_codes))
+    for i, stock_code in enumerate(stock_codes):
         # 得到日交易数据
         data = datasource.daily(stock_code=stock_code, start_date=start_date, end_date=end_date)
         if df_merge is None:
             df_merge = data
         else:
             df_merge = df_merge.append(data)
-        # logger.debug("加载%s~%s的股票[%s]的 %d 条daliy数据", start_date, end_date, stock_code, len(data))
-    logger.debug("一共加载%s~%s %d条 CLV 数据", start_date, end_date, len(df_merge))
+        tqdm.update(i)
+    pbar.close()
+
+    logger.debug("一共加载 %s~%s %d 只股票，共计 %d 条日交易数据，耗时 %.2f 秒",
+                 start_date,
+                 end_date,
+                 len(df_merge),
+                 time.time() - start_time)
     return df_merge
 
 

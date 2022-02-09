@@ -4,6 +4,7 @@
 import logging
 
 import pandas as pd
+from tqdm import tqdm
 
 from datasource.datasource import DataSource, post_query
 from datasource.impl.tushare_datasource import TushareDataSource
@@ -27,9 +28,10 @@ class DatabaseDataSource(DataSource):
     @post_query
     def daily(self, stock_code, start_date, end_date):
         if type(stock_code) == list:
+
             logger.debug("获取多只股票的交易数据：%r", ",".join(stock_code))
             df_all = None
-            for stock in stock_code:
+            for i,stock in enumerate(stock_code):
                 df_daily = self.__daliy_one(stock, start_date, end_date)
                 if df_all is None:
                     df_all = df_daily

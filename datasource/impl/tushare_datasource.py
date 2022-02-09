@@ -110,7 +110,7 @@ class TushareDataSource(DataSource):
     # https://tushare.pro/document/2?doc_id=96
     @post_query
     @cache(BASE_DIR)
-    def index_weight(self, index_code, start_date):
+    def index_weight(self, index_code, start_date, end_date=None):
         """
         这个返回数据量太大，每天300条，10天就300条，常常触发5000条限制，
         所以我的办法就是用start_date，去取，如果没有，就去取下个月的这个日子的，直到取得

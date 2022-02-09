@@ -138,7 +138,7 @@ class DataSource():
 
     # 返回指数包含的股票
     @abstractmethod
-    def index_weight(self, index_code, start_date):
+    def index_weight(self, index_code, start_date, end_date=None):
         pass
 
     # 获得财务数据

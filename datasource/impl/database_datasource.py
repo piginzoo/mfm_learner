@@ -45,7 +45,7 @@ class DatabaseDataSource(DataSource):
     # 返回每日的其他信息，主要是市值啥的
     @post_query
     def daily_basic(self, stock_code, start_date, end_date):
-        assert type(stock_code)==list or type(stock_code)==str, type(stock_code)
+        assert type(stock_code) == list or type(stock_code) == str, type(stock_code)
         if type(stock_code) == list:
             logger.debug("获取多只股票的交易数据：%r", ",".join(stock_code))
             df_basics = [self.__daily_basic_one(stock, start_date, end_date) for stock in stock_code]
@@ -67,8 +67,13 @@ class DatabaseDataSource(DataSource):
 
     # 返回指数包含的股票
     @post_query
-    def index_weight(self, index_code, start_date):
-        return self.tushare.index_weight(index_code, start_date)
+    def index_weight(self, index_code, start_date, end_date):
+        # return self.tushare.index_weight(index_code, start_date)
+        df = pd.read_sql(
+            f'select * from index_weight \
+                        where index_code="{index_code}" and trade_date>="{start_date}" and trade_date<="{end_date}"',
+            self.db_engine)
+        return df['con_code'].unique().tolist()
 
     # 获得财务数据
     @post_query

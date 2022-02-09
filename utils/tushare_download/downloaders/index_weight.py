@@ -59,5 +59,5 @@ class IndexWeight(BaseDownload):
 # python -m utils.tushare_download.downloaders.index_weight
 if __name__ == '__main__':
     utils.init_logger()
-    downloader = IndexWeight("000905.SH", "20150101", "20220101")
+    downloader = IndexWeight("000905.SH", "20070101", "20220101")
     downloader.download()

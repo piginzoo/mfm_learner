@@ -26,7 +26,6 @@ city        str     Y 所在城市
 employees   int     Y 员工人数
 """
 import logging
-import pandas as pd
 from utils import utils
 
 logger = logging.getLogger(__name__)
@@ -39,7 +38,7 @@ class StockBasic(BaseDownload):
 
     def download(self):
 
-        df_stock_basic = pro.stock_basic(exchange='',
+        df_stock_basic = self.pro.stock_basic(exchange='',
                                          list_status='L',
                                          fields='ts_code,name,area,industry,market, list_status, list_date, delist_date')
 

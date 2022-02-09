@@ -33,8 +33,8 @@ class IndexDaily(BaseDownload):
                                  end_date=end_date)
             df_all.append(df)
         df_all = pd.concat(df_all)
-        logger.debug("下载了指数 [%s] %s~%s 的日交易数据index_daily %d 条",
-                     self.index_code,
+        logger.debug("下载了指数 [%r] %s~%s 的日交易数据index_daily %d 条",
+                     self.index_codes,
                      start_date,
                      end_date,
                      len(df_all))

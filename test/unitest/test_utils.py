@@ -8,6 +8,9 @@ import pandas as pd
 from pandas import DataFrame
 
 from datasource import datasource_factory, datasource_utils
+from utils import utils
+
+# pytest test/unitest/test_utils.py -s
 
 
 def generate_mock_trade_data():
@@ -53,6 +56,12 @@ def __generate_mock_column(stocks, dates, column_name):
     df = df.set_index(['date', 'asset'])
     return df
 
-# python -m test.unitest.test_utils
-if __name__ == '__main__':
-    generate_factor_data()
+def test_get_monthly_duration():
+    scopes = utils.get_monthly_duration("20180312", "20220515")
+    assert scopes[0][0] == '20180312'
+    assert scopes[0][1] == '20180331'
+    assert scopes[1][0] == '20180401'
+    assert scopes[1][1] == '20180430'
+    assert scopes[-1][0] == '20220501'
+    assert scopes[-1][1] == '20220515'
+    assert len(scopes)==(10+12+12+12+5) # 2018,2019,2020,2021,2022

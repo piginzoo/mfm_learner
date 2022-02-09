@@ -32,7 +32,9 @@ class IndexWeight(BaseDownload):
         start_date = self.get_start_date()
         end_date = utils.date2str(datetime.datetime.now())
 
-        durations = utils.get_yearly_duration(start_date, end_date)
+        # 不行，年还是范围太大，我观察，1那年有5000+，所以还是超级录了，改为每月
+        # durations = utils.get_yearly_duration(start_date, end_date)
+        durations = utils.get_monthly_duration(start_date, end_date)
 
         # 按照start_date ~ end_date，每年下载一次
         df_all = []

@@ -1,3 +1,4 @@
+import calendar
 import datetime
 import logging
 import os
@@ -7,13 +8,12 @@ import matplotlib.pyplot as plt
 import yaml
 from backtrader.plot import Plot_OldSync
 from pandas import Series
+from sqlalchemy import create_engine
 
 import conf
 import utils
 
 logger = logging.getLogger(__name__)
-
-from sqlalchemy import create_engine
 
 DB_FILE = "../data/tushare.db"
 
@@ -45,7 +45,48 @@ def str2date(s_date, format="%Y%m%d"):
 
 
 def get_monthly_duration(start_date, end_date):
-    pass
+    """
+    把开始日期到结束日期，分割成每月的信息
+    比如20210301~20220515 =>
+    [   [20210301,20210331],
+        [20210401,20210430],
+        ...,
+        [20220401,20220430],
+        [20220501,20220515]
+    ]
+    """
+
+    start_date = str2date(start_date)
+    end_date = str2date(end_date)
+    years = list(range(start_date.year, end_date.year + 1))
+    scopes = []
+    for year in years:
+        if start_date.year == year:
+            start_month = start_date.month
+        else:
+            start_month = 1
+
+        if end_date.year == year:
+            end_month = end_date.month + 1
+        else:
+            end_month = 12 + 1
+
+        for month in range(start_month, end_month):
+
+            if start_date.year == year and start_date.month == month:
+                s_start_date = date2str(datetime.date(year=year, month=month, day=start_date.day))
+            else:
+                s_start_date = date2str(datetime.date(year=year, month=month, day=1))
+
+            if end_date.year == year and end_date.month == month:
+                s_end_date = date2str(datetime.date(year=year, month=month, day=end_date.day))
+            else:
+                _, last_day = calendar.monthrange(year, month)
+                s_end_date = date2str(datetime.date(year=year, month=month, day=last_day))
+
+            scopes.append([s_start_date, s_end_date])
+
+    return scopes
 
 
 def get_yearly_duration(start_date, end_date):
@@ -53,15 +94,15 @@ def get_yearly_duration(start_date, end_date):
     把开始日期到结束日期，分割成每年的信息
     比如20210301~20220501 => [[20210301,20211231],[20220101,20220501]]
     """
-    start_date = utils.str2date(start_date)
-    end_date = utils.str2date(end_date)
+    start_date = str2date(start_date)
+    end_date = str2date(end_date)
     years = list(range(start_date.year, end_date.year + 1))
     scopes = [[f'{year}0101', f'{year}1231'] for year in years]
 
     if start_date.year == years[0]:
-        scopes[0][0] = utils.date2str(start_date)
+        scopes[0][0] = date2str(start_date)
     if end_date.year == years[-1]:
-        scopes[-1][1] = utils.date2str(end_date)
+        scopes[-1][1] = date2str(end_date)
 
     return scopes
 

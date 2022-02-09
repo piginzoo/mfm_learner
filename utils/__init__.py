@@ -1,3 +1,3 @@
-from utils import utils
+from . import utils
 
 CONF = utils.load_config()

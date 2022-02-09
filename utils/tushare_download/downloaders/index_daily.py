@@ -42,8 +42,8 @@ class IndexDaily(BaseDownload):
         self.to_db(df_all)
 
 
-# python -m utils.tushare_download.downloaders.index_weight
+# python -m utils.tushare_download.downloaders.index_daily
 if __name__ == '__main__':
     utils.init_logger()
-    downloader = IndexWeight("000905.SH", "20070101", "20220101")
+    downloader = IndexDaily(["000905.SH", "000300.SH", "000016.SH"])
     downloader.download()

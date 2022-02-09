@@ -21,7 +21,8 @@ class BaseDownload():
     def __init__(self):
         self.db_engine = utils.connect_db()
         token = CONF['datasources']['tushare']['token']
-        self.pro = tushare.pro_api(token)
+        tushare.set_token(token)
+        self.pro = tushare.pro_api()
         logger.debug("注册到Tushare上，token:%s***", token[:10])
         self.retry_count = 0
         self.save_dir = "data/tushare_download"

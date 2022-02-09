@@ -2,8 +2,6 @@ import tushare as ts
 
 from utils.tushare_download.downloaders.base_downloader import BaseDownload
 
-pro = ts.pro_api()
-
 """
 stock_basic
 ----------------------------

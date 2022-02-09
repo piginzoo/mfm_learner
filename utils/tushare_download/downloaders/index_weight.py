@@ -9,7 +9,6 @@ from utils.tushare_download.downloaders.base_downloader import BaseDownload
 
 logger = logging.getLogger(__name__)
 
-pro = ts.pro_api()
 
 
 class IndexWeight(BaseDownload):
@@ -39,7 +38,7 @@ class IndexWeight(BaseDownload):
         # 按照start_date ~ end_date，每年下载一次
         df_all = []
         for start_date, end_date in durations:
-            df = self.retry_call(func=pro.index_weight,
+            df = self.retry_call(func=self.pro.index_weight,
                                  index_code=self.index_code,
                                  start_date=start_date,
                                  end_date=end_date

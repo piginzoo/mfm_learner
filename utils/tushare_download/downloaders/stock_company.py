@@ -2,8 +2,6 @@ import tushare as ts
 
 from utils.tushare_download.downloaders.base_downloader import BaseDownload
 
-pro = ts.pro_api()
-
 """
 stock_company
 ----------------------------
@@ -25,7 +23,7 @@ class StockCompany(BaseDownload):
     def download(self):
         df_stock_company_db = pd.read_sql('select * from stock_company', self.db_engine)
 
-        df_stock_company = pro.stock_company(exchange='', fields='ts_code,reg_capital,city,employees')
+        df_stock_company = self.pro.stock_company(exchange='', fields='ts_code,reg_capital,city,employees')
 
         ts_codes = df_stock_company['ts_code']
         ts_codes_db = df_stock_company_db['ts_code']

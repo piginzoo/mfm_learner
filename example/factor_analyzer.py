@@ -1,3 +1,4 @@
+import argparse
 import logging
 
 from example.analysis.score import score
@@ -300,3 +301,22 @@ if __name__ == '__main__':
     # 测试单一因子
     test_by_alphalens("clv", stock_pool, start, end, periods)
     logger.debug("换仓周期%r的 [%s]因子得分", periods, "clv")
+
+
+if __name__ == '__main__':
+    utils.init_logger()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--factor', type=str, help="因子名|all是所有")
+    parser.add_argument('-s', '--start', type=str, help="开始日期")
+    parser.add_argument('-e', '--end', type=str, help="结束日期")
+    parser.add_argument('-i', '--index', type=str, help="股票池code")
+    parser.add_argument('-p', '--period', type=str, help="调仓周期，多个的话，用逗号分隔")
+    parser.add_argument('-n', '--num', type=int, help="股票数量")
+    args = parser.parse_args()
+
+    main(args.factor,
+         args.start,
+         args.end,
+         args.index,
+         args.num)

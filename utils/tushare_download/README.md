@@ -22,6 +22,7 @@
 - [fina_indicator](downloaders/fina_indicator.py)
 - [index_daily](downloaders/index_daily.py)
 - [index_weight](downloaders/index_weight.py)
+- [index_classify](downloaders/index_classify.py)
 - [stock_basic](downloaders/stock_basic.py)
 - [stock_company](downloaders/stock_company.py)
 
@@ -37,6 +38,19 @@
 
 使用优化完的参数，来下载股票，一次可以支持1只或多只，由参数multistocks决定。
 支持多只的时候，需要使用函数calculate_best_fetch_stock_num，计算到底一次下载几只最优。
+
+# 运行
+
+```
+python -m utils.tushare_download.downloaders.stock_company
+python -m utils.tushare_download.downloaders.stock_basic
+python -m utils.tushare_download.downloaders.daily
+python -m utils.tushare_download.downloaders.daily_basic
+python -m utils.tushare_download.downloaders.index_daily
+python -m utils.tushare_download.downloaders.index_classify
+python -m utils.tushare_download.downloaders.index_weight
+python -m utils.tushare_download.downloaders.fina_indicator
+```
 
 # 其他
 

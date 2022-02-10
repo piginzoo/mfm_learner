@@ -2,6 +2,7 @@ import logging
 
 from utils import utils
 from utils.tushare_download.downloaders.base_downloader import BaseDownload
+from utils.tushare_download.downloaders.periodly_downloader import PeriodlyDownloader
 
 logger = logging.getLogger(__name__)
 

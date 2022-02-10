@@ -4,12 +4,12 @@ import logging
 import pandas as pd
 
 from utils import utils
-from utils.tushare_download.downloaders.base_downloader import BaseDownload
+from utils.tushare_download.downloaders.periodly_downloader import PeriodlyDownloader
 
 logger = logging.getLogger(__name__)
 
 
-class IndexDaily(BaseDownload):
+class IndexDaily(PeriodlyDownloader):
 
     def __init__(self, index_codes):
         super().__init__()
@@ -27,10 +27,11 @@ class IndexDaily(BaseDownload):
 
         df_all = []
         for index_code in self.index_codes:
-            df = self.retry_call(func=self.pro.index_weight,
-                                 index_code=index_code,
-                                 start_date=start_date,
-                                 end_date=end_date)
+            df = self.periodly_download(func=self.pro.index_weight,
+                                        start_date=start_date,
+                                        end_date=end_date,
+                                        period="month",
+                                        index_code=index_code)
             df_all.append(df)
         df_all = pd.concat(df_all)
         logger.debug("下载了指数 [%r] %s~%s 的日交易数据index_daily %d 条",

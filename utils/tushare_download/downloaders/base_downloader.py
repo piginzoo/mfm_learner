@@ -120,8 +120,8 @@ class BaseDownload():
             except:
                 logger.exception("调用Tushare函数[%s]失败:%r", str(func), kwargs)
                 sleep = int(math.pow(2, self.retry_count))
-                logger.debug("sleep %d 秒再试", sleep)
-                time.sleep(sleep)
+                logger.debug("sleep %d 秒再试", sleep*30)
+                time.sleep(sleep*30)
                 self.retry_count += 1
         raise RuntimeError("尝试调用Tushare API多次失败......")
 

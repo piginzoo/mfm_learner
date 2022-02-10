@@ -44,3 +44,4 @@ class PeriodlyDownloader(BaseDownload):
         df_all = pd.concat(df_all)
 
         logger.debug("合计下载了 %s~%s %d 条数据",  start_date, end_date,len(df_all))
+        return df_all

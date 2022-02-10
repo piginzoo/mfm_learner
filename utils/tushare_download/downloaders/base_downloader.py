@@ -116,6 +116,7 @@ class BaseDownload():
             try:
                 # print(kwargs)
                 df = func(**kwargs)
+                self.retry_count = 0
                 return df
             except:
                 logger.exception("调用Tushare函数[%s]失败:%r", str(func), kwargs)

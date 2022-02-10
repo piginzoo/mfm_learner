@@ -1,18 +1,18 @@
-import logging
-
-import sqlalchemy
-import time
-import pandas as pd
-import os
 import argparse
+import logging
+import os
+import time
+
+import pandas as pd
+import sqlalchemy
 
 from utils import utils
+from utils.tushare_download import download_utils
 from utils.tushare_download.download_utils import is_table_index_exist, is_table_exist
 
 ROWS = None
 
 logger = logging.getLogger(__name__)
-
 
 
 def filter_duplicated(df, table_name, db_engine):
@@ -29,7 +29,7 @@ def filter_duplicated(df, table_name, db_engine):
     logger.debug("SQL: %s", sql)
 
     if not is_table_exist(db_engine, table_name):
-        logger.debug("表[%s]在数据库中不存在",table_name)
+        logger.debug("表[%s]在数据库中不存在", table_name)
         return df
 
     df_db = pd.read_sql(sql, db_engine)
@@ -91,7 +91,6 @@ def import_file(file, table_name):
         logger.warning("[警告] 数据条数为0，不予导入")
         return
 
-
     # 入库，指定字段的类型（没有就忽略），指定成VARHCAR原因是要建索引，不能为Text类型
     dtype_dic = {
         'ts_code': sqlalchemy.types.VARCHAR(length=9),
@@ -100,21 +99,12 @@ def import_file(file, table_name):
     }
     df.to_sql(table_name, db_engine, index=False, if_exists='append', dtype=dtype_dic, chunksize=1000)
     logger.debug("导入 [%.2f] 秒, df[%d条]=>db[表%s] ", time.time() - start_time, len(df), table_name)
-    start_time = time.time()
 
-    if is_table_index_exist(db_engine,table_name):
+    if is_table_index_exist(db_engine, table_name):
         logger.debug("表[%s]已经具有了索引，无需再创建", table_name)
         return
 
-    # 创建索引，需要单的sql处理
-    index_sql = None
-    if "ts_code" in df.columns and "trade_date" in df.columns:
-        index_sql = "create index {}_code_date on {} (ts_code,trade_date);".format(table_name, table_name)
-    if "ts_code" in df.columns and "ann_date" in df.columns:
-        index_sql = "create index {}_code_date on {} (ts_code,ann_date);".format(table_name, table_name)
-    if index_sql:
-        db_engine.execute(index_sql)
-        logger.debug("索引 [%.2f] 秒: %s", time.time() - start_time, index_sql)
+    download_utils.create_db_index(db_engine, table_name, df)
 
 
 def main(dir, file, table_name):

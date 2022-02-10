@@ -13,11 +13,7 @@ class IndexClassify(BaseDownload):
 
     def download(self):
         df = self.retry_call(func=self.pro.index_classify)
-        logger.debug("下载了行业分类 [%s] %s~%s 的index_weight %d 条",
-                     self.index_code,
-                     self.start_date,
-                     self.end_date,
-                     len(df))
+        logger.debug("下载了行业分类index_classify %d 条",len(df))
         self.to_db(df)
 
 

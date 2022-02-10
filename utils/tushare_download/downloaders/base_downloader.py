@@ -20,6 +20,9 @@ EALIEST_DATE = '20080101'  # 最早的数据日期
 
 
 class BaseDownload():
+    """
+    主要实现一个下载基类，用于完成，控制下载速度，和反复尝试，以及保存到数据库中的基础功能
+    """
 
     def __init__(self):
         self.db_engine = utils.connect_db()
@@ -33,12 +36,27 @@ class BaseDownload():
         self.call_interval = CALL_INTERVAL
 
     def get_table_name(self):
+        """
+        用于返回需要存到数据库中的表名
+        :return:
+        """
         raise NotImplemented()
 
     def get_date_column_name(self):
+        """
+        用于返回需要存到数据库中的表中的关键日期的字段名
+        :return:
+        """
         raise NotImplemented()
 
     def get_start_date(self):
+        """
+        如果表存在，就返回关键日期字段中，最后的日期，
+        这个函数主要用于帮助下载后续日期的数据。
+        如果表不存在，返回20080101
+        :return:
+        """
+
 
         if not is_table_exist(self.db_engine, self.get_table_name()):
             logger.debug("表[%s]在数据库中不存在，返回默认最早开始日期[%s]", self.get_table_name(), EALIEST_DATE)
@@ -59,6 +77,13 @@ class BaseDownload():
         return latest_date
 
     def to_db(self, df, if_exists='append'):
+        """
+        保存dataframe到数据库中，需要处理一下日期字段变为str，而不是text
+        :param df:
+        :param if_exists:
+        :return:
+        """
+
         start_time = time.time()
         dtype_dic = {
             'ts_code': sqlalchemy.types.VARCHAR(length=9),
@@ -71,8 +96,14 @@ class BaseDownload():
 
     def retry_call(self, func, **kwargs):
         """
-        Tushare Exception: 抱歉，您每分钟最多访问该接口400次，权限的具体详情访问：https://tushare.pro/document/1?doc_id=108
-        每200毫秒调用一次，比较安全，大概是一分钟最多是5*60=300次
+        下载时候，频繁调用会出发tushare的限制：
+        `
+            Tushare Exception: 抱歉，您每分钟最多访问该接口400次，
+            权限的具体详情访问：https://tushare.pro/document/1?doc_id=108
+        `
+        所以，每200毫秒调用一次，比较安全，大概是一分钟最多是5*60=300次。
+        这个函数，就用于来控制下载的速度。
+        还支持5次的不断拉长间隔的重试。
         """
 
         while self.retry_count < RETRY:
@@ -89,6 +120,13 @@ class BaseDownload():
         raise RuntimeError("尝试调用Tushare API多次失败......")
 
     def save(self, name, df):
+        """
+        保存dataframe到默认的文件夹内
+        :param name:
+        :param df:
+        :return:
+        """
+
         file_path = os.path.join(self.save_dir, name)
         df.to_csv(file_path)
         return file_path

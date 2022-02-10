@@ -20,7 +20,10 @@ MAX_RECORDS = 4800  # 最多一次的下载行数，tushare是5000，稍微降�
 
 class BatchDownloader(BaseDownload):
     """
-    用于下载所有的股票，一只一只股票的，批量下载
+    用于下载所有的股票，一只一只股票的，
+    可以支持1只，
+    也可以支持多只一起批量下载（为了优化），多只时，要算一下到每次下载多少只股票最合适，
+    是按照每年252个交易日来计算的记录数。
     """
 
     def get_stock_codes(self):
@@ -42,6 +45,10 @@ class BatchDownloader(BaseDownload):
 
     def optimized_batch_download(self, func, multistocks, **kwargs):
         """
+        使用优化完的参数，来下载股票，一次可以支持1只或多只，由参数multistocks决定。
+
+        支持多只的时候，需要使用函数calculate_best_fetch_stock_num，计算到底一次下载几只最优
+
         :param func: 调用的tushare的api的函数
         :param multistocks: 是否支持同时取多只股票,原因是pro_bar不支持：https://tushare.pro/document/2?doc_id=109
         :param kwargs:

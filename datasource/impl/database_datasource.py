@@ -4,7 +4,6 @@
 import logging
 
 import pandas as pd
-from tqdm import tqdm
 
 from datasource.datasource import DataSource, post_query
 from datasource.impl.tushare_datasource import TushareDataSource
@@ -31,7 +30,7 @@ class DatabaseDataSource(DataSource):
 
             logger.debug("获取多只股票的交易数据：%r", ",".join(stock_code))
             df_all = None
-            for i,stock in enumerate(stock_code):
+            for i, stock in enumerate(stock_code):
                 df_daily = self.__daliy_one(stock, start_date, end_date)
                 if df_all is None:
                     df_all = df_daily
@@ -97,13 +96,12 @@ class DatabaseDataSource(DataSource):
     def index_classify(self, level='', src='SW2014'):
         return self.tushare.index_classify(level, src)
 
-
-# python -m utils.tushare_dbutils
-if __name__ == '__main__':
-    ts_code = '000001.SZ'
-    start_date = '20180101'
-    end_date = '20181011'
-    print(daily(ts_code, start_date, end_date))
-    print(daily_basic(ts_code, start_date, end_date))
-    print(index_daily(ts_code, start_date, end_date))
-    print(fina_indicator(ts_code, start_date, end_date))
+    @post_query
+    def get_factor(self, stock_codes, start_date, end_date):
+        if stock_codes != list: stock_codes = [stock_codes]
+        stock_codes = ["\'" + stock_code + "\'" for stock_code in stock_codes]
+        stock_codes = ','.join(stock_codes)
+        df = pd.read_sql(
+            f'select * from daily_hfq where ts_code in ({stock_codes}) and trade_date>="{start_date}" and trade_date<="{end_date}"',
+            self.db_engine)
+        return df

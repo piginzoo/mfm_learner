@@ -54,6 +54,7 @@ def load_daily_data(datasource, stock_codes, start_date, end_date):
     logger.debug("一共加载 %s~%s %d 只股票，共计 %d 条日交易数据，耗时 %.2f 秒",
                  start_date,
                  end_date,
+                 len(stock_codes),
                  len(df_merge),
                  time.time() - start_time)
     return df_merge

@@ -1,39 +1,27 @@
 import argparse
 import logging
 
-from example.analysis.score import score
-from utils import utils
-
-utils.init_logger()
-
+import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from alphalens import tears
-from pandas import DataFrame
 import statsmodels.api as sm
-from datasource import datasource_factory, datasource_utils
-from example import factor_utils
-
-import matplotlib
+from alphalens import tears
 from alphalens.tears import create_information_tear_sheet, create_returns_tear_sheet
 from alphalens.utils import get_clean_factor_and_forward_returns, get_forward_returns_columns
+from pandas import DataFrame
+
+from datasource import datasource_factory, datasource_utils
+from example import factor_utils
+from example.analysis.score import score
+from utils import utils
 
 logger = logging.getLogger(__name__)
-
 datasource = datasource_factory.create()
 
 
-def get_stocks(stock_pool, start_date, end_date):
-    stock_codes = datasource.index_weight(stock_pool, start_date)
-    assert stock_codes is not None and len(stock_codes) > 0, stock_codes
-    stock_codes = stock_codes[:stock_num]
-    logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
-    return stock_codes
-
-
-def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods):
+def test_by_alphalens(factor_name, factors, df_stocks, index_prices, df_stock_basic, df_mv, periods):
     """
     用AlphaLens有个细节，就是你要防止未来函数，
 
@@ -41,37 +29,11 @@ def test_by_alphalens(factor_name, stock_pool, start_date, end_date, periods):
     第一是输入的价格数据必须是正确的， 必须是按照信号发出进行回测的，否则会产生前视偏差(lookahead bias)或者使用 到“未来函数”，
     可以加一个缓冲窗口递延交易来解决。例如，通常按照收盘价的回测其实就包含了这样的前视偏差，所以递延到第二天开盘价回测。
     """
-    stock_codes = get_stocks(stock_pool, start_date, end_date)
 
-    # 此接口获取的数据为未复权数据，回测建议使用复权数据，这里为批量获取股票数据做了简化
-    logger.debug("股票池：%r", stock_codes)
-
-    # 加载股票的行情数据
-    df_stocks = datasource.daily(stock_codes, start_date=start_date, end_date=end_date)
-    df_stocks = datasource_utils.reset_index(df_stocks)
-
-    # 获得指数（股票池）信息
-    index_prices = datasource.index_daily(stock_pool, start_date=start_date, end_date=end_date)
-
-    # 获得因子信息
-    factors = factor_utils.get_factor(factor_name, stock_codes, start_date, end_date)
-
-    if type(factors) == list or type(factors) == tuple:
-        return [test_1factor_by_alphalens("{}/{}".format(factor_name, factor.name),
-                                          factor,
-                                          df_stocks,
-                                          index_prices,
-                                          periods) \
-                for factor in factors]
-    else:
-        return test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, periods)
-
-
-def test_1factor_by_alphalens(factor_name, factors, df_stocks, index_prices, periods):
     factors = factor_utils.preprocess(factors)
 
     # 中性化后的
-    factors = factor_utils.neutralize(factors)
+    factors = factor_utils.neutralize(factors, df_stock_basic, df_mv)
 
     # column为股票代码，index为日期，值为收盘价
     df_stock_close = df_stocks.pivot_table(index='datetime', columns='code', values='close')
@@ -269,40 +231,52 @@ def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, p
     tears.plot_image(factor_name=factor_name)
 
 
-# python -m example.factor_analyzer
-if __name__ == '__main__':
+def main(factor_names, start_date, end_date, index_code, periods, num):
+    """
+    :param index_code: 股票池/指数代码
+    :param periods: 调仓周期，如 20,30
+    :param num: 股票池中使用多少只作为测试子集，仅用于测试
+    """
     pd.set_option('display.max_rows', 1000)
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
     matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号
     matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号'-'显示为方块的问题
 
-    # 参数设置
-    start = "20190101"
-    end = "20201201"
-    periods = [1, 5, 10, 20, 40, 60]
-    stock_pool = '000905.SH'  # 中证500
-    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_codes = datasource.index_weight(index_code, start_date, end_date)
 
-    # 调试用
-    start = "20200101"
-    end = "20220101"
-    periods = [20,30]
-    stock_pool = '000905.SH'  # 中证500
-    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    stock_codes = stock_codes[:num]
 
-    # 逐一测试因子们
-    # scores = []
-    # for factor_name, _ in factor_utils.FACTORS.items():
-    #     __score = test_by_alphalens(factor_name, stock_pool, start, end, periods, stock_num)
-    #     scores.append([factor_name, __score])
-    # for factor_name, __score in scores:
-    #     logger.debug("换仓周期%r的 [%s]因子得分 分别为：%r", periods, factor_name, __score.tolist())
+    # 加载股票的行情数据
+    df_stocks = datasource.daily(stock_codes, start_date=start_date, end_date=end_date)
+    df_stocks = datasource_utils.reset_index(df_stocks)
 
-    # 测试单一因子
-    test_by_alphalens("clv", stock_pool, start, end, periods)
-    logger.debug("换仓周期%r的 [%s]因子得分", periods, "clv")
+    # 市值数据，用于市值中性化
+    df_mv = datasource.daily_basic(stock_codes, start_date, end_date)
+    df_mv = datasource_utils.reset_index(df_mv)
+    df_mv = df_mv['total_mv']
+
+    # 股票的基本信息，主要为为了获得行业信息
+    df_stock_basic = datasource.stock_basic(stock_codes)
+
+    # 获得指数（股票池）的每日价格信息
+    index_prices = datasource.index_daily(index_code, start_date=start_date, end_date=end_date)
+
+    for factor_name in factor_names:
+        df_factor = factor_utils.get_factor(factor_name, stock_codes, start_date, end_date)
+        test_by_alphalens(factor_name, df_factor, df_stocks, index_prices, df_stock_basic, df_mv, periods)
+        logger.debug("换仓周期%r的 [%s]因子得分", periods, factor_name)
 
 
+"""
+# 测试用
+python -m example.factor_analyzer \
+    --factor clv \
+    --start 20160101 \
+    --end 201801231 \
+    --num 20 \
+    --period 5,20 \
+    --index 000905.SH
+"""
 if __name__ == '__main__':
     utils.init_logger()
 
@@ -315,8 +289,21 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--num', type=int, help="股票数量")
     args = parser.parse_args()
 
-    main(args.factor,
+    if "," in args.period:
+        periods = [int(p) for p in args.period.split(",")]
+    else:
+        periods = [int(args.period)]
+
+    if "," in args.factor:
+        factors = [f for f in args.factor.split(",")]
+    elif args.factor == "all":
+        factors = factor_utils.get_factor_names()
+    else:
+        factors = [args.factor]
+
+    main(factors,
          args.start,
          args.end,
          args.index,
+         periods,
          args.num)

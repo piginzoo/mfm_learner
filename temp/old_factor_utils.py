@@ -1,15 +1,23 @@
 import logging
+import os
 
 import numpy as np
 import pandas as pd
 from pandas import DataFrame, Series
 from sklearn import preprocessing
 
-from datasource import datasource_utils, datasource_factory
-from example.factors.factor import Factor
-from utils import utils, dynamic_loader, logging_time
+from datasource import datasource_factory, datasource_utils
+from example.factors.clv import CLVFactor
+from example.factors.ivff import IVFFFactor
+from example.factors.market_value import MarketValueFactor
+from example.factors.momentum import MomentumFactor
+from example.factors.peg import PEGFactor
+from example.factors.turnover_rate import TurnOverFactor
+from utils import utils
 
 logger = logging.getLogger(__name__)
+
+datasource = datasource_factory.get()
 
 
 def winsorize(se):
@@ -45,16 +53,11 @@ def standardize(se):
 
 
 def fill_nan(se):
-    assert type(se) == Series, type(se)
+    assert type(se) == Series
     return se.fillna(se.dropna().mean())
 
 
-@logging_time
 def preprocess(factors):
-    # 如果就1列，就转成Series，方便处理
-    if type(factors) == DataFrame and len(factors.columns) == 1:
-        factors = factors.iloc[:, 0]
-
     factors = factors.groupby(level='datetime').apply(fill_nan)  # 填充NAN
     factors = factors.groupby(level='datetime').apply(winsorize)  # 去极值
     factors = factors.groupby(level='datetime').apply(standardize)  # 标准化
@@ -214,14 +217,7 @@ def pct_chg(prices, days=1):
 
 
 # 行业、市值中性化 - 对Dataframe数据，参考自jaqs_fxdayu代码
-def neutralize(factor_df, df_stock_basic, df_mv):
-    """
-    :param factor_df:
-    :param df_stock_basic:    股票的基本信息，包含了行业
-
-    :return:
-    """
-
+def neutralize(factor_df):
     """
     对因子做行业、市值中性化，实际上是用市值来来做回归。
     因为有很多天数据，所以，这个F和X是一个[Days]的一个向量，回归出的e，是一个[days]的残差向量
@@ -306,13 +302,20 @@ def neutralize(factor_df, df_stock_basic, df_mv):
 
     stock_codes, start_date, end_date = _get_stock_info(factor_df)
 
+    #   行业数据
+    stocks_info = datasource.stock_basic(",".join(stock_codes))
     df_factor_temp = DataFrame(factor_df)  # 防止他是Series
     assert check_factor_format(factor_df, index_type='date_code')
     df_factor_temp = df_factor_temp.reset_index()
-    df_factor_temp = df_factor_temp.merge(df_stock_basic[['code', 'industry']],
+    df_factor_temp = df_factor_temp.merge(stocks_info[['code', 'industry']],
                                           on="code")  # stocks_info行太少，需要和factors做merge
     df_factor_temp = df_factor_temp.set_index(['datetime', 'code'])
     df_industry = datasource_utils.compile_industry(df_factor_temp['industry'])
+
+    #   市值数据
+    df_mv = datasource.daily_basic(stock_codes, start_date, end_date)
+    df_mv = datasource_utils.reset_index(df_mv)
+    df_mv = df_mv['total_mv']
 
     data = []
 
@@ -342,22 +345,67 @@ def neutralize(factor_df, df_stock_basic, df_mv):
     return residuals
 
 
-def get_factor_names():
-    class_dict = dynamic_loader.dynamic_instantiation("example.factors", Factor)
-    names = []
-    for _, cls in class_dict:
-        factor_name = cls().name()
-        if type(factor_name) == list:
-            names += factor_name
-        else:
-            names.append(factor_name)
-    return names
+# 因子库的列表，TODO：将来肯定要入库的
+FACTORS = {
+    'market_value': MarketValueFactor(),
+    "momentum": MomentumFactor(),
+    "peg": PEGFactor(),
+    "clv": CLVFactor(),
+    # "turnover": TurnOverFactor(),
+    # "ivff": IVFFFactor()
+}
+FACTORS_LONG_SHORT = [-1, 1, 1, 1]  # 因子的多空性质
 
 
 def get_factor(name, stock_codes, start_date, end_date):
-    # 因子只可能在数据库中，这里写死数据源类型
-    df = datasource_factory.create('database').get_factor(name, stock_codes, start_date, end_date)
-    df = datasource_utils.reset_index(df)
+    """
+    获得单因子，目前是4个，在FACTORS中定义
+    :param name:
+    :param stock_codes:
+    :param start_date:
+    :param end_date:
+    :return:
+    """
+    if name in FACTORS:
+        # 因子值格式为：index:[datetime,code] columns:[factor_value]
+        factors = FACTORS[name].calculate(stock_codes, start_date, end_date)
+    else:
+        raise ValueError("无法识别的因子名称：" + name)
+    if not os.path.exists("data/factors"): os.makedirs("data/factors")
+
+    #  有可能一个因子类，返回多个因子，比如换手率因子，就有1月，3月，6月的换手率
+    if type(factors) == list or type(factors) == tuple:
+        for factor in factors:
+            factor_path = os.path.join("data/factors", "{}_{}.csv".format(name, factor.name))
+            factor.to_csv(factor_path)
+    else:
+        factor_path = os.path.join("data/factors", name + ".csv")
+        factors.to_csv(factor_path)
+
+    return factors
+
+
+def get_factors(stock_codes, factor_names, start_date, end_date):
+    """
+    加载所有的系统定义的因子们
+    :param stock_codes:
+    :param start_date:
+    :param end_date:
+    :return: 返回是一个字典，key是名字， value是因子的dataframe
+    """
+    factor_dict = {}
+    for i, factor_key in enumerate(FACTORS.keys()):
+        if factor_names and not factor_key in factor_names: continue  # 刨除不在factor_names的因子
+        factors = get_factor(factor_key, stock_codes, start_date, end_date)
+        factors *= FACTORS_LONG_SHORT[i]  # 空方因子*(-1)
+        factor_dict[factor_key] = to_panel_of_stock_columns(factors)
+    return factor_dict
+
+
+def get_factor_from_db(name, stocks, start_date, end_date):
+    df = pd.read_sql_query('select * from factor_{} where datetime>=\'{}\' and datetime<=\'{}\''.
+                           format(name, start_date, end_date),
+                           con=utils.connect_db())
     return df
 
 
@@ -365,7 +413,7 @@ def __factor2db_one(name, df):
     """直接替换旧数据"""
     engine = utils.connect_db()
     df.to_sql(f'factor_{name}', engine, index=False, if_exists='replace')
-    logger.debug("保存因子到数据库：表[%s]", f'factor_{name}')
+    logger.debug("保存因子到数据库：表[%s]",f'factor_{name}')
 
 
 def factor2db(name, factor):
@@ -374,9 +422,8 @@ def factor2db(name, factor):
     else:
         return __factor2db_one(name, factor)
 
-
 # python -m example.factor_utils
 if __name__ == '__main__':
-    df = get_factor("clv", "20210101", "20210801")
+    df = get_factor_from_db("clv","20210101","20210801")
     print(df.head(3))
     print(len(df))

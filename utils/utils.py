@@ -124,9 +124,6 @@ def dataframe2series(df):
 
 
 def init_logger():
-    logging.basicConfig(format='%(asctime)s:%(filename)s:%(lineno)d:P%(process)d:%(levelname)s : %(message)s',
-                        level=logging.DEBUG,
-                        handlers=[logging.StreamHandler()])
 
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -135,8 +132,16 @@ def init_logger():
     logging.getLogger('fontTools.ttLib.ttFont').disabled = True
     warnings.filterwarnings("ignore")
     warnings.filterwarnings("ignore", module="matplotlib")
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d P%(process)d: %(message)s')
+
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
+    handlers = logger.handlers
+    for handler in handlers:
+        handler.setLevel(level=logging.DEBUG)
+        handler.setFormatter(formatter)
+
 
 
 class MyPlot(Plot_OldSync):

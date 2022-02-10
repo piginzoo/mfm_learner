@@ -42,8 +42,6 @@ def post_query(func):
 
 
 def _get_cache_file_name(dir, func, args, kwargs):
-    print(dir, func, args, kwargs)
-
     args = list(args) + list(kwargs.values())  # 获得所有的参数值
     args = [arg for arg in args if arg is not None] # 去掉None的参数
     file_name = "_".join(args)

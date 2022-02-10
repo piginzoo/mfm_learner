@@ -67,6 +67,7 @@ class DatabaseDataSource(DataSource):
     # 指数日线行情
     @post_query
     def index_daily(self, index_code, start_date, end_date):
+        print(index_code, start_date, end_date)
         df = pd.read_sql(
             f'select * from index_daily \
                 where index_code="{index_code}" and trade_date>="{start_date}" and trade_date<="{end_date}"',
@@ -76,10 +77,9 @@ class DatabaseDataSource(DataSource):
     # 返回指数包含的股票
     @post_query
     def index_weight(self, index_code, start_date, end_date):
-        # return self.tushare.index_weight(index_code, start_date)
         df = pd.read_sql(
             f'select * from index_weight \
-                        where index_code="{index_code}" and trade_date>="{start_date}" and trade_date<="{end_date}"',
+                where index_code="{index_code}" and trade_date>="{start_date}" and trade_date<="{end_date}"',
             self.db_engine)
         return df['con_code'].unique().tolist()
 
@@ -93,7 +93,10 @@ class DatabaseDataSource(DataSource):
 
     @post_query
     def trade_cal(self, start_date, end_date, exchange='SSE'):
-        return self.tushare.trade_cal(start_date, end_date, exchange)
+        df = pd.read_sql(
+            f'select * from trade_cal \
+                where exchange="{exchange}" and cal_date>="{start_date}" and cal_date<="{end_date}"', self.db_engine)
+        return df['cal_date']
 
     @post_query
     def stock_basic(self, ts_code):

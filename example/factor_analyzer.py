@@ -202,6 +202,7 @@ def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, p
         # 计算指数对应天数的收益率;只取对应相隔天数的收益率
         index_prices['datetime'] = datasource_utils.to_datetime(index_prices['datetime'])
         index_prices = index_prices.sort_values('datetime')
+        print(index_prices)
         index_prices['returns'] = factor_utils.pct_chg(index_prices['close'], periods[i])
         index_returns = index_prices[['datetime', 'returns']]
         # import pdb;pdb.set_trace()
@@ -260,6 +261,7 @@ def main(factor_names, start_date, end_date, index_code, periods, num):
 
     # 获得指数（股票池）的每日价格信息
     index_prices = datasource.index_daily(index_code, start_date=start_date, end_date=end_date)
+    assert len(index_prices)>0, index_prices
 
     for factor_name in factor_names:
         df_factor = factor_utils.get_factor(factor_name, stock_codes, start_date, end_date)
@@ -272,7 +274,7 @@ def main(factor_names, start_date, end_date, index_code, periods, num):
 python -m example.factor_analyzer \
     --factor clv \
     --start 20160101 \
-    --end 201801231 \
+    --end 20181231 \
     --num 20 \
     --period 5,20 \
     --index 000905.SH

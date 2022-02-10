@@ -5,8 +5,9 @@ import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from tqdm import tqdm
 
+from conf import DATE_COLUMNS
 from datasource import datasource_factory as ds_factory
-from utils import CONF
+from utils import CONF, utils
 
 logger = logging.getLogger(__name__)
 
@@ -113,3 +114,50 @@ def compile_industry(series_industry):
 
     # 用中文名列，生成，申万的行业代码列, df_industry['industry']是中文名，转成申万的代码：industry_code
     return series_industry.apply(find_industry_code)
+
+
+def validate_trade_date(df, date_column=None, start_date=None, end_date=None):
+    """
+    用于检查DataFrame中，有哪些交易日期是缺失的
+    :param start_date:
+    :param end_date:
+    :param df: 被检查的dataframe
+    :param date_columns: dataframe中的日期列
+    :return:
+    """
+
+    assert len(df) > 0, len(df)
+
+    def __find_date_column(columns):
+        for col in columns:
+            if col in DATE_COLUMNS:
+                return col
+        return None
+
+    if not date_column:
+        date_column = __find_date_column(df.columns)
+        if not date_column:
+            raise ValueError("Dataframe中不包含日期字段：" + str(df.columns))
+
+    if not start_date:
+        series_sort = df[date_column].sort_values()
+        start_date = series_sort.iloc[0]
+        end_date = series_sort.iloc[-1]
+
+    df_all_trade_dates = ds_factory.get().trade_cal(start_date, end_date)
+    df_miss_trade_dates = df_all_trade_dates[~df_all_trade_dates.isin(df[date_column])]
+    logger.debug("%s~%s 数据%d行，应为%d个交易日，缺失%d个交易日，缺失率%.1f%%",
+                 start_date,
+                 end_date,
+                 len(df),
+                 len(df_all_trade_dates),
+                 len(df_miss_trade_dates),
+                 len(df_miss_trade_dates) * 100 / len(df_all_trade_dates))
+    return df_miss_trade_dates, len(df_miss_trade_dates) / len(df_all_trade_dates)
+
+
+# python -m datasource.datasource_utils
+if __name__ == '__main__':
+    utils.init_logger()
+    df = ds_factory.get().daily('300152.SZ', '20180101', '20190101')
+    validate_trade_date(df)

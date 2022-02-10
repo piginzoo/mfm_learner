@@ -48,7 +48,7 @@ def load_daily_data(datasource, stock_codes, start_date, end_date):
             df_merge = data
         else:
             df_merge = df_merge.append(data)
-        tqdm.update(i)
+        pbar.update(i)
     pbar.close()
 
     logger.debug("一共加载 %s~%s %d 只股票，共计 %d 条日交易数据，耗时 %.2f 秒",

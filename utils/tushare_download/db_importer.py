@@ -127,7 +127,7 @@ def main(dir, file, table_name):
 """
 # 导入单个文件
 python -m utils.tushare_download.db_importer \
-    -f data/tushare_download/daily_hfq_20210630_20220204.csv \
+    -f data/tushare_download/daily_hfq_20080101_20220209.csv \
     -t  daily_hfq
 
 # 导入所有的

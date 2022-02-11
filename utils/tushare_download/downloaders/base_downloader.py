@@ -7,9 +7,7 @@ import pandas as pd
 import sqlalchemy
 import tushare
 
-from utils import utils, CONF
-from utils.tushare_download import download_utils
-from utils.tushare_download.download_utils import is_table_exist
+from utils import utils, CONF, db_utils
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +56,7 @@ class BaseDownload():
         :return:
         """
 
-        if not is_table_exist(self.db_engine, self.get_table_name()):
+        if not db_utils.is_table_exist(self.db_engine, self.get_table_name()):
             logger.debug("表[%s]在数据库中不存在，返回默认最早开始日期[%s]", self.get_table_name(), EALIEST_DATE)
             return EALIEST_DATE
 
@@ -98,7 +96,8 @@ class BaseDownload():
                   chunksize=1000)
         logger.debug("导入 [%.2f] 秒, df[%d条]=>db[表%s] ", time.time() - start_time, len(df), self.get_table_name())
 
-        download_utils.create_db_index(self.db_engine, self.get_table_name(), df)
+        # 保存到数据库中的时候，看看有无索引，如果没有，创建之
+        db_utils.create_db_index(self.db_engine, self.get_table_name(), df)
 
     def retry_call(self, func, **kwargs):
         """

@@ -18,6 +18,13 @@ def is_table_index_exist(engine, name):
     return indices and len(indices) > 0
 
 
+def run_sql(engine, sql):
+    c = engine.connect()
+    sql = (sql)
+    result = c.execute(sql)
+    return result
+
+
 def create_db_index(engine, table_name, df):
     if is_table_index_exist(engine, table_name): return
 

@@ -8,7 +8,7 @@ import pandas as pd
 
 from datasource.datasource import DataSource, post_query
 from datasource.impl.tushare_datasource import TushareDataSource
-from utils import utils, logging_time
+from utils import utils, logging_time, db_utils
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class DatabaseDataSource(DataSource):
     def index_daily(self, index_code, start_date, end_date):
         df = pd.read_sql(
             f'select * from index_daily \
-                where index_code="{index_code}" and trade_date>="{start_date}" and trade_date<="{end_date}"',
+                where ts_code="{index_code}" and trade_date>="{start_date}" and trade_date<="{end_date}"',
             self.db_engine)
         return df
 
@@ -110,6 +110,9 @@ class DatabaseDataSource(DataSource):
 
     @post_query
     def get_factor(self, name, stock_codes, start_date, end_date):
+        if not db_utils.is_table_exist(self.db_engine,f"factor_{name}"):
+            return None
+
         stock_codes = self.__list_to_sql_format(stock_codes)
         df = pd.read_sql(f"""
             select * 

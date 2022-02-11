@@ -357,6 +357,8 @@ def get_factor_names():
 def get_factor(name, stock_codes, start_date, end_date):
     # 因子只可能在数据库中，这里写死数据源类型
     df = datasource_factory.create('database').get_factor(name, stock_codes, start_date, end_date)
+    if df is None: return None
+
     df = datasource_utils.reset_index(df)
     return df
 

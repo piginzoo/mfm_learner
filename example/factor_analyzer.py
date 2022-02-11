@@ -15,7 +15,7 @@ from pandas import DataFrame
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
 from example.analysis.score import score
-from utils import utils
+from utils import utils, db_utils
 
 logger = logging.getLogger(__name__)
 datasource = datasource_factory.create()
@@ -98,6 +98,8 @@ def test_by_alphalens(factor_name, factors, df_stocks, index_prices, df_stock_ba
 
     # create_turnover_tear_sheet(factor_data, set_context=False,factor_name=factor_name)
     # return __score
+
+    return df_result
 
 
 def factor_returns_regression(factor_data):
@@ -202,7 +204,6 @@ def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, p
         # 计算指数对应天数的收益率;只取对应相隔天数的收益率
         index_prices['datetime'] = datasource_utils.to_datetime(index_prices['datetime'])
         index_prices = index_prices.sort_values('datetime')
-        print(index_prices)
         index_prices['returns'] = factor_utils.pct_chg(index_prices['close'], periods[i])
         index_returns = index_prices[['datetime', 'returns']]
         # import pdb;pdb.set_trace()
@@ -261,12 +262,24 @@ def main(factor_names, start_date, end_date, index_code, periods, num):
 
     # 获得指数（股票池）的每日价格信息
     index_prices = datasource.index_daily(index_code, start_date=start_date, end_date=end_date)
-    assert len(index_prices)>0, index_prices
+    assert len(index_prices) > 0, index_prices
 
     for factor_name in factor_names:
         df_factor = factor_utils.get_factor(factor_name, stock_codes, start_date, end_date)
-        test_by_alphalens(factor_name, df_factor, df_stocks, index_prices, df_stock_basic, df_mv, periods)
+        if df_factor is None or len(df_factor) == 0:
+            logger.warning("无法加载因子[%s]，请运行因子创建程序去创建因子：factor_create.py", factor_name)
+            continue
+        df_result = test_by_alphalens(factor_name, df_factor, df_stocks, index_prices, df_stock_basic, df_mv, periods)
+        save_analysis_result(factor_name, df_result)
         logger.debug("换仓周期%r的 [%s]因子得分", periods, factor_name)
+
+
+def save_analysis_result(factor_name, df_result):
+    engine = utils.connect_db()
+    db_utils.run_sql(engine, f"delete from where factor={factor_name}")
+    df_result = df_result.unstack()
+    df_result['factor'] = factor_name
+    df_result.to_sql('factor_analysis', engine, index=False, if_exists="append")
 
 
 """

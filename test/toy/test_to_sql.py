@@ -21,7 +21,8 @@ table.delete().where((table.c.code == "000001.SZ") |
                      (table.c.datetime == '2016-06-29')).execute()
 df.to_sql('test123', engine, index=False, if_exists='append')
 
-# python -m test.toy.test_to_sql
+c = engine.connect()
+sql = ("DELETE FROM test123 WHERE code='000001.SZ' and datetime = '2016-06-29'")
+result = c.execute(sql)
 
-"""
-"""
+# python -m test.toy.test_to_sql

@@ -166,16 +166,22 @@ def score_regression(df_result, t_values, factor_returns):
     tvalue_mean = t_values.apply(lambda s: s.mean(), axis=0)
     tvalue_significant_rate = t_values.apply(lambda s: len(s[np.abs(s) > 2]) / len(s), axis=0)
 
-    df_result = __result(df_result, "因子平均收益", return_mean)
-    df_result = __result(df_result, "因子正收益比", return_positive_rate)
-    df_result = __result(df_result, "因子收益T显著", tvalue_significant_rate)
-    df_result = __result(df_result, "因子收益T均值", tvalue_mean)
+    df_result = __result(df_result, "因子平均收益", "return_mean", return_mean)
+    df_result = __result(df_result, "因子正收益比", "return_positive_rate", return_positive_rate)
+    df_result = __result(df_result, "因子收益T显著", "tvalue_significant_rate", tvalue_significant_rate)
+    df_result = __result(df_result, "因子收益T均值", "tvalue_mean", tvalue_mean)
 
     return df_result
 
 
-def __result(df_result, title, values):
-    return df_result.append(DataFrame([[title] + values.tolist()], columns=df_result.columns))
+def __result(df_result, title_cn, title_en, values):
+    """
+    :param df_result:
+    :param title: 指标的名字
+    :param values: 包含了多列（多调仓期）的metrics值
+    :return:
+    """
+    return df_result.append(DataFrame([[title_cn, title_en] + values.tolist()], columns=df_result.columns))
 
 
 def score_quantile(df_result, mean_quantile_ret_bydate, periods):
@@ -210,7 +216,7 @@ def score_quantile(df_result, mean_quantile_ret_bydate, periods):
     monotony_percents_values *= 3
     logger.debug("monotony_percents:\n%r", monotony_percents)
 
-    df_result = __result(df_result, "分层一致比例", monotony_percents)
+    df_result = __result(df_result, "分层一致比例", "quantile_monotony_percents", monotony_percents)
 
     return df_result, retuns_filterd_by_period_quantile
 
@@ -254,11 +260,10 @@ def score_ic(df_result, ic_data, t_values, skew, kurtosis):
     IC值的分布，其实不用太在意是不是正态分布，这里考察偏度和峰度，我自己觉得没有太多意义，
     因为，如果好的话，所有的IC(每天一个IC值)都应该是均匀分布，好的话，都是1，都是正相关（极端地想）。
     """
-    df_result = __result(df_result, "IC平均收益", ic_data.apply(np.mean))
-    df_result = __result(df_result, "IC标准差  ", ic_data.apply(np.std))
-    df_result = __result(df_result, "IC均值    ", ic_data.apply(np.mean))
-    df_result = __result(df_result, "IC分布偏度", skew)
-    df_result = __result(df_result, "IC分布峰度", kurtosis)
+    df_result = __result(df_result, "IC均值    ", "ic_mean", ic_data.apply(np.mean))
+    df_result = __result(df_result, "IC标准差  ", "ic_std", ic_data.apply(np.std))
+    df_result = __result(df_result, "IC分布偏度", "ic_skew", skew)
+    df_result = __result(df_result, "IC分布峰度", "ic_kurtosis", kurtosis)
 
     """
     上面的t_value和p_value，是检验的啥？
@@ -274,13 +279,13 @@ def score_ic(df_result, ic_data, t_values, skew, kurtosis):
                  1D          5D          10D         20D
     t_stat: [ 0.15414273  0.44857945 -1.91258305 -5.01587993]
     """
-    df_result = __result(df_result, "IC显著≠0T值", t_values)
+    df_result = __result(df_result, "IC显著≠0T值", "ic_0_tvalue", t_values)
 
     """
     2.看IR是不是大于0.02
     """
     ir_data = ic_data.apply(lambda df: np.abs(df.mean() / df.std()))
-    df_result = __result(df_result, "IR值     ", ir_data)
+    df_result = __result(df_result, "IR值     ", "IR", ir_data)
 
     # ir_flags = ir_data > 0.02
     # ir_values = ir_flags + [0] * len(ir_flags)  # 把True,False数组=>1,0值的数组
@@ -322,7 +327,7 @@ def score(factor_return_0_t_vlues,
     :param periods: 调仓周期
     :return:
     """
-    df_result = DataFrame(columns=['指标'] + factor_returns.columns.tolist())
+    df_result = DataFrame(columns=['name_cn', 'name_en'] + factor_returns.columns.tolist())
 
     df_result = score_regression(df_result, factor_return_0_t_vlues, factor_returns)
 

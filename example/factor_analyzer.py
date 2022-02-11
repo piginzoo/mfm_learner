@@ -276,20 +276,29 @@ def main(factor_names, start_date, end_date, index_code, periods, num):
 
 def save_analysis_result(factor_name, df_result):
     engine = utils.connect_db()
-    db_utils.run_sql(engine, f"delete from where factor={factor_name}")
-    df_result = df_result.unstack()
-    df_result['factor'] = factor_name
-    df_result.to_sql('factor_analysis', engine, index=False, if_exists="append")
+    if db_utils.is_table_exist(engine,"factor_analysis"):
+        db_utils.run_sql(engine, f"delete from factor_analysis where factor='{factor_name}'")
+
+    all_columns = df_result.columns
+    period_columns = get_forward_returns_columns(all_columns)
+    without_period_columns = [c for c in all_columns if c not in period_columns]
+
+    for period_column in period_columns:
+        df_one_period = df_result[without_period_columns+[period_column]]
+        df_one_period.columns = ['name_cn','name_en','metrics']
+        df_one_period['factor'] = factor_name
+        df_one_period['period'] = period_column
+        df_one_period.to_sql('factor_analysis', engine, index=False, if_exists="append")
 
 
 """
 # 测试用
 python -m example.factor_analyzer \
     --factor clv \
-    --start 20160101 \
-    --end 20181231 \
+    --start 20170101 \
+    --end 20180101 \
     --num 20 \
-    --period 5,20 \
+    --period 20 \
     --index 000905.SH
 """
 if __name__ == '__main__':

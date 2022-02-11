@@ -27,7 +27,7 @@ class IndexDaily(PeriodlyDownloader):
 
         df_all = []
         for index_code in self.index_codes:
-            df = self.periodly_download(func=self.pro.index_weight,
+            df = self.periodly_download(func=self.pro.index_daily,
                                         start_date=start_date,
                                         end_date=end_date,
                                         period="month",

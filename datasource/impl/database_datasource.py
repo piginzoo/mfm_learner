@@ -67,7 +67,6 @@ class DatabaseDataSource(DataSource):
     # 指数日线行情
     @post_query
     def index_daily(self, index_code, start_date, end_date):
-        print(index_code, start_date, end_date)
         df = pd.read_sql(
             f'select * from index_daily \
                 where index_code="{index_code}" and trade_date>="{start_date}" and trade_date<="{end_date}"',

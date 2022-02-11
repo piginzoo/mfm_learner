@@ -17,14 +17,15 @@
 然后从数据库中最旧的日期一直下载到当前日期。
 当然，不同表的日期字段名和细节都有差异，都在各个类中实现了，不是很麻烦。
 
-- [daily_basic](downloaders/daily_basic.py)
-- [daily](downloaders/daily.py)
-- [fina_indicator](downloaders/fina_indicator.py)
-- [index_daily](downloaders/index_daily.py)
-- [index_weight](downloaders/index_weight.py)
-- [index_classify](downloaders/index_classify.py)
-- [stock_basic](downloaders/stock_basic.py)
-- [stock_company](downloaders/stock_company.py)
+- [daily_basic](downloaders/daily_basic.py)：股票每日基本信息
+- [daily](downloaders/daily.py)：股票每日交易信息
+- [fina_indicator](downloaders/fina_indicator.py)：股票财务信息
+- [index_daily](downloaders/index_daily.py)：指数日交易数据
+- [index_weight](downloaders/index_weight.py)：指数权重信息
+- [index_classify](downloaders/index_classify.py)：行业信息
+- [stock_basic](downloaders/stock_basic.py)：股票的基本信息
+- [stock_company](downloaders/stock_company.py)：股票的公司信息
+- [trade_cal](downloaders/trade_cal.py)：交易日
 
 # 核心父类
 
@@ -44,6 +45,7 @@
 ```
 python -m utils.tushare_download.downloaders.stock_company
 python -m utils.tushare_download.downloaders.stock_basic
+python -m utils.tushare_download.downloaders.trade_cal
 python -m utils.tushare_download.downloaders.daily
 python -m utils.tushare_download.downloaders.daily_basic
 python -m utils.tushare_download.downloaders.index_daily

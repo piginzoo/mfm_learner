@@ -31,7 +31,7 @@ class IndexDaily(PeriodlyDownloader):
                                         start_date=start_date,
                                         end_date=end_date,
                                         period="month",
-                                        index_code=index_code)
+                                        ts_code=index_code)
             df_all.append(df)
         df_all = pd.concat(df_all)
         logger.debug("下载了指数 [%r] %s~%s 的日交易数据index_daily %d 条",

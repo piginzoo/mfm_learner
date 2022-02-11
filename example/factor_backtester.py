@@ -72,8 +72,8 @@ def comply_backtrader_data_format(df):
 def __load_strategy_and_data(stock_codes, start_date, end_date, factor_names, factor_policy):
     # 加载因子数据到dict中
     factor_dict = {}
-    for factor_name in factor_names:
-        df_factor = factor_utils.get_factor(factor_names, stock_codes, start_date, end_date)
+    df_factors = factor_utils.get_factor(factor_names, stock_codes, start_date, end_date)
+    for factor_name,df_factor in zip(factor_names, df_factors):
         factor_dict[factor_name] = df_factor
 
     # 只有一个因子，也当做合成因子用
@@ -162,11 +162,16 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
                                                            factor_policy)
 
     # 将交易策略加载到回测系统中
-    cerebro.addstrategy(strategy_class, period, factor_data)
+    # cerebro.addstrategy(strategy_class, period, factor_data)
+    # 不用上面的，只能加一个，这里我们加多个调仓期支持（periods）
+    print("factor_data",type(factor_data),factor_data)
+    cerebro.optstrategy(
+        strategy_class,
+        factors=factor_data,
+        period=periods
+    )
 
     # 添加分析对象
-    # cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe")  # ,timeframe=bt.TimeFrame.Days)  # 夏普指数
-    # cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
     cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe", timeframe=bt.TimeFrame.Days)  # 夏普指数
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')

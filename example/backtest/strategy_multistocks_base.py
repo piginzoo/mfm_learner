@@ -16,13 +16,17 @@ class MultiStocksFactorStrategy(bt.Strategy):
     有个抽象方法，叫selected_stocks(current_date)用来选取当期股票
     """
 
-    def __init__(self, period, factors):
+    params = (
+        ('period', 0),  # 这个参数是个占位符，后续会动态传入；调仓期，支持不同的多个调仓期的回测
+    )
+
+    def __init__(self, factors):
+        self.factors = factors
         self.current_stocks = []  # 当前持仓
-        self.period = period  # 调仓周期
         self.current_day = 0  # 当前周期内的天数
         self.count = 0
-        self.factors = factors
-        logger.debug("调仓周期 : %d天", period)
+        print("factors in MultiStocksFactorStrategy:",type(factors),factors)
+        logger.debug("调仓周期 : %d天, 因子数量：%d", self.params.period, len(factors))
 
     def __print_broker(self):
         # logger.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -122,7 +126,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.current_day += 1
         self.count += 1
 
-        if self.current_day < self.period: return
+        if self.current_day < self.params.period: return
 
         # logger.debug("--------------------------------------------------")
         # logger.debug('当前可用资金:%r', self.broker.getcash())
@@ -137,8 +141,8 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.current_day = 0
         logger.debug("交易日：%r , %d", utils.date2str(current_date), self.count)
 
-        selected_stocks = self.select_stocks(self, current_date)
-        if type(selected_stocks)==np.array: selected_stocks = selected_stocks.tolist()
+        selected_stocks = self.select_stocks(self.factors, current_date)
+        if type(selected_stocks) == np.array: selected_stocks = selected_stocks.tolist()
 
         logger.debug("此次选中的股票为：%r", ",".join(selected_stocks))
 

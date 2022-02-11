@@ -275,14 +275,24 @@ def main(factor_names, start_date, end_date, index_code, periods, num):
 
 
 def save_analysis_result(factor_name, df_result):
+    """
+    将因子跑的结果，保存到数据库中
+    :param factor_name:
+    :param df_result:
+    :return:
+    """
+
     engine = utils.connect_db()
+
+    # 先删除旧的因子分析结果
     if db_utils.is_table_exist(engine,"factor_analysis"):
         db_utils.run_sql(engine, f"delete from factor_analysis where factor='{factor_name}'")
 
+    # 按照调仓周期不同，分别存成不同的记录，本来 1D,5D,10D是在列上
+    # 要把他们分别保存，这样做是为了将来可以做横向对比
     all_columns = df_result.columns
     period_columns = get_forward_returns_columns(all_columns)
     without_period_columns = [c for c in all_columns if c not in period_columns]
-
     for period_column in period_columns:
         df_one_period = df_result[without_period_columns+[period_column]]
         df_one_period.columns = ['name_cn','name_en','metrics']

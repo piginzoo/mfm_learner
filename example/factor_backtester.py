@@ -1,9 +1,11 @@
+import argparse
 import logging
 import time
 
+import backtrader.analyzers as bta  # 添加分析函数
 import pandas as pd
 import quantstats as qs
-import backtrader.analyzers as bta  # 添加分析函数
+
 from example.backtest.strategy_multifactors import MultiFactorStrategy
 from example.backtest.strategy_synthesis import SynthesizedFactorStrategy
 from utils import utils
@@ -68,14 +70,27 @@ def comply_backtrader_data_format(df):
 
 
 def __load_strategy_and_data(stock_codes, start_date, end_date, factor_names, factor_policy):
-    factor_dict = factor_utils.get_factors(stock_codes, factor_names, start_date, end_date)
+    # 加载因子数据到dict中
+    factor_dict = {}
+    for factor_name in factor_names:
+        df_factor = factor_utils.get_factor(factor_names, stock_codes, start_date, end_date)
+        factor_dict[factor_name] = df_factor
 
+    # 只有一个因子，也当做合成因子用
+    if len(factor_names) == 1:
+        df_factor = factor_dict[factor_names[0]]
+        logger.debug("单因子为：%d 行\n%r", len(df_factor), df_factor.head(3))
+        return SynthesizedFactorStrategy, df_factor
+
+    # 采用多因子合成
     if factor_policy == "synthesis":
         synthesized_factor = factor_synthesizer.synthesize_by_jaqs(stock_codes, factor_dict, start_date, end_date)
         synthesized_factor.index = pd.to_datetime(synthesized_factor.index, format="%Y%m%d")
         logger.debug("合成的多因子为：%d 行\n%r", len(synthesized_factor), synthesized_factor)
         return SynthesizedFactorStrategy, synthesized_factor
-    if factor_policy == "single":
+
+    if factor_policy == "separated":
+        logger.debug("多因子共同作用：%r", factor_names)
         return MultiFactorStrategy, factor_dict
 
     raise ValueError("无效的因子处理策略：" + factor_policy)
@@ -93,7 +108,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
 
     cerebro = bt.Cerebro()  # 初始化cerebro
 
-    stock_codes = datasource.index_weight(index_code, start_date)
+    stock_codes = datasource.index_weight(index_code, start_date, end_date)
     stock_codes = stock_codes[:stock_num]
 
     d_start_date = utils.str2date(start_date)  # 开始日期
@@ -140,7 +155,10 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 实际过程中，我们不可能如此简单的制定买卖的数目，而是要根据一定的规则，这就需要自己写一个sizers
     # cerebro.addsizer(Percent)
 
-    strategy_class, factor_data = __load_strategy_and_data(stock_codes, start_date, end_date, factor_names,
+    strategy_class, factor_data = __load_strategy_and_data(stock_codes,
+                                                           start_date,
+                                                           end_date,
+                                                           factor_names,
                                                            factor_policy)
 
     # 将交易策略加载到回测系统中
@@ -155,7 +173,6 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     cerebro.addanalyzer(bt.analyzers.PeriodStats, _name='period_stats')
     cerebro.addanalyzer(bt.analyzers.AnnualReturn, _name='annual')
     cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')  # 加入PyFolio分析者,这个是为了做quantstats分析用
-
 
     # 打印
     logger.debug('回测期间：%r ~ %r , 初始资金: %r', start_date, end_date, start_cash)
@@ -178,7 +195,6 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
     cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
 
-
     def format_print(title, results):
         print(title, ":")
         # print(results[0].analyzers)
@@ -190,7 +206,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     format_print("收益:", results[0].analyzers.returns.get_analysis())
     format_print("期间:", results[0].analyzers.period_stats.get_analysis())
     format_print("年化:", results[0].analyzers.annual.get_analysis())
-    quant_statistics(results[0], period, "000000","我的多因子组合")
+    quant_statistics(results[0], period, "000000", "我的多因子组合")
 
     # from backtrader_plotting import Bokeh
     # from backtrader_plotting.schemes import Tradimo
@@ -216,25 +232,48 @@ def quant_statistics(strat, period, code, name):
     qs.reports.basic(returns)
 
 
-# python -m example.factor_backtester
+"""
+# 测试用
+python -m example.factor_backtester \
+    --factor clv \
+    --start 20170101 \
+    --end 20180101 \
+    --num 20 \
+    --period 20 \
+    --index 000905.SH
+"""
 if __name__ == '__main__':
+
+    utils.init_logger()
+
     start_time = time.time()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--factor', type=str, help="单个因子名、多个（逗号分割）、所有（all）")
+    parser.add_argument('-t', '--type', type=str, help="合成还是分开使用：synthesis|separated")
+    parser.add_argument('-s', '--start', type=str, help="开始日期")
+    parser.add_argument('-e', '--end', type=str, help="结束日期")
+    parser.add_argument('-i', '--index', type=str, help="股票池code")
+    parser.add_argument('-p', '--period', type=str, help="调仓周期，多个的话，用逗号分隔")
+    parser.add_argument('-n', '--num', type=int, help="股票数量")
+    args = parser.parse_args()
 
-    # 正式
-    start_date = "20160101"  # 开始日期
-    end_date = "20210531"  # 结束日期
-    stock_pool_index = '000905.SH'  # 股票池为中证500
-    period = 22  # 调仓周期
-    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    if "," in args.period:
+        periods = [int(p) for p in args.period.split(",")]
+    else:
+        periods = [int(args.period)]
 
-    # 测试
-    start_date = "20180101"  # 开始日期
-    end_date = "20200901"  # 结束日期
-    stock_pool_index = '000905.SH'  # 股票池为中证500
-    period = 22  # 调仓周期
-    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    if "," in args.factor:
+        factors = [f for f in args.factor.split(",")]
+    elif args.factor == "all":
+        factors = factor_utils.get_factor_names()
+    else:
+        factors = [args.factor]
 
-    factor_names = list(factor_utils.FACTORS.keys())
-    factor_policy = "single"  # synthesis| single 是合成，还是单独使用
-    main(start_date, end_date, stock_pool_index, period, stock_num, factor_names, factor_policy)
+    main(args.start,
+         args.end,
+         args.index,
+         periods,
+         args.num,
+         factors,
+         args.type)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

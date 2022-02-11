@@ -27,10 +27,9 @@ class IndexDaily(PeriodlyDownloader):
 
         df_all = []
         for index_code in self.index_codes:
-            df = self.periodly_download(func=self.pro.index_daily,
+            df=self.retry_call(func=self.pro.index_daily,
                                         start_date=start_date,
                                         end_date=end_date,
-                                        period="month",
                                         ts_code=index_code)
             df_all.append(df)
         df_all = pd.concat(df_all)

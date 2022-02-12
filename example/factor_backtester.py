@@ -2,21 +2,17 @@ import argparse
 import logging
 import time
 
+import backtrader as bt  # 引入backtrader框架
 import backtrader.analyzers as bta  # 添加分析函数
-import pandas as pd
 import quantstats as qs
 
+from datasource import datasource_factory, datasource_utils
+from example import factor_utils
+from example.backtest import data_loader
 from example.backtest.strategy_multifactors import MultiFactorStrategy
 from example.backtest.strategy_synthesis import SynthesizedFactorStrategy
 from utils import utils
 from utils.utils import MyPlot
-
-utils.init_logger()
-from backtrader.feeds import PandasData
-
-from datasource import datasource_factory, datasource_utils
-from example import factor_synthesizer, factor_utils
-import backtrader as bt  # 引入backtrader框架
 
 """
 用factor_tester.py中合成的多因子，做选择股票的策略 ，去选择中证500的股票，跑收益率回测。使用backtrader来做回测框架。
@@ -54,12 +50,6 @@ class Percent(bt.Sizer):
         return size
 
 
-# # 自定义数据
-# class FactorData(PandasData):
-#     lines = ('market_value', 'momentum', 'peg', 'clv',)
-#     params = (('market_value', 7), ('momentum', 8), ('peg', 9), ('clv', 10),)
-
-
 # 按照backtrader要求的数据格式做数据整理,格式化成backtrader要求：索引日期；列名叫vol和datetime
 def comply_backtrader_data_format(df):
     df = df.rename(columns={'vol': 'volume'})  # 列名准从backtrader的命名规范
@@ -69,29 +59,21 @@ def comply_backtrader_data_format(df):
     return df
 
 
-def __load_strategy_and_data(stock_codes, start_date, end_date, factor_names, factor_policy):
-    # 加载因子数据到dict中
-    factor_dict = {}
-    df_factors = factor_utils.get_factor(factor_names, stock_codes, start_date, end_date)
-    for factor_name,df_factor in zip(factor_names, df_factors):
-        factor_dict[factor_name] = df_factor
-
-    # 只有一个因子，也当做合成因子用
+def __get_strategy(factor_names, factor_policy):
+    # 1.只有一个因子，也当做合成因子用
     if len(factor_names) == 1:
-        df_factor = factor_dict[factor_names[0]]
-        logger.debug("单因子为：%d 行\n%r", len(df_factor), df_factor.head(3))
-        return SynthesizedFactorStrategy, df_factor
+        # logger.debug("单因子为：%d 行\n%r", len(df_factor), df_factor.head(3))
+        return SynthesizedFactorStrategy
 
-    # 采用多因子合成
+    # 2.采用多因子合成
     if factor_policy == "synthesis":
-        synthesized_factor = factor_synthesizer.synthesize_by_jaqs(stock_codes, factor_dict, start_date, end_date)
-        synthesized_factor.index = pd.to_datetime(synthesized_factor.index, format="%Y%m%d")
-        logger.debug("合成的多因子为：%d 行\n%r", len(synthesized_factor), synthesized_factor)
-        return SynthesizedFactorStrategy, synthesized_factor
+        # logger.debug("合成的多因子为：%d 行\n%r", len(synthesized_factor), synthesized_factor)
+        return SynthesizedFactorStrategy
 
+    # 3.多因子投票
     if factor_policy == "separated":
         logger.debug("多因子共同作用：%r", factor_names)
-        return MultiFactorStrategy, factor_dict
+        return MultiFactorStrategy
 
     raise ValueError("无效的因子处理策略：" + factor_policy)
 
@@ -111,34 +93,8 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     stock_codes = datasource.index_weight(index_code, start_date, end_date)
     stock_codes = stock_codes[:stock_num]
 
-    d_start_date = utils.str2date(start_date)  # 开始日期
-    d_end_date = utils.str2date(end_date)  # 结束日期
-
-    # 加载上证指数，就是为了当日期占位符,在Cerebro中添加上证股指数据,格式: datetime,open,high,low,close,volume,openi..
-    # 把上证指数，作为股票的第一个，排头兵，主要是为了用它来做时间对齐
-    df_index = datasource.index_daily(index_code, start_date, end_date)
-    df_index = comply_backtrader_data_format(df_index)
-    data = PandasData(dataname=df_index, fromdate=d_start_date, todate=d_end_date, plot=True)
-    cerebro.adddata(data, name=index_code)
-    logger.debug("初始化上证数据到脑波：%d 条", len(df_index))
-
-    # 想脑波cerebro逐个追加每只股票的数据
-    for stock_code in stock_codes:
-        df_stock = datasource.daily(stock_code, start_date, end_date)
-
-        trade_days = datasource.trade_cal(start_date, end_date)
-        if len(df_stock) / len(trade_days) < 0.9:
-            logger.warning("股票[%s] 缺失交易日[%d/总%d]天，超过10%%，忽略此股票",
-                           stock_code, len(df_stock), len(trade_days))
-            continue
-
-        df_stock = comply_backtrader_data_format(df_stock)
-
-        # plot=False 不在plot图中显示个股价格
-        data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=False)
-        cerebro.adddata(data, name=stock_code)
-        logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
-    logger.debug("合计追加 %d 只股票数据到脑波cerebro", len(stock_codes) + 1)
+    # 加载股票数据到脑波
+    data_loader.load_data(cerebro, start_date, end_date, stock_codes, factor_names)
 
     ################## cerebro 整体设置 #####################
 
@@ -155,21 +111,12 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 实际过程中，我们不可能如此简单的制定买卖的数目，而是要根据一定的规则，这就需要自己写一个sizers
     # cerebro.addsizer(Percent)
 
-    strategy_class, factor_data = __load_strategy_and_data(stock_codes,
-                                                           start_date,
-                                                           end_date,
-                                                           factor_names,
-                                                           factor_policy)
+    strategy_class, _ = __get_strategy(factor_names, factor_policy)
 
     # 将交易策略加载到回测系统中
     # cerebro.addstrategy(strategy_class, period, factor_data)
     # 不用上面的，只能加一个，这里我们加多个调仓期支持（periods）
-    print("factor_data",type(factor_data),factor_data)
-    cerebro.optstrategy(
-        strategy_class,
-        factors=factor_data,
-        period=periods
-    )
+    cerebro.optstrategy(strategy_class, period=periods)
 
     # 添加分析对象
     cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe", timeframe=bt.TimeFrame.Days)  # 夏普指数

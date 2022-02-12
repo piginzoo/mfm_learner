@@ -361,22 +361,11 @@ def __get_one_factor(datasource, name, stock_codes, start_date, end_date):
     return df
 
 
-def align_multifactors(df_factors: list):
-    """
-    按照code,datetime合并，每列是一个factor
-        datetime  code    clv               mv                  ...
-    20200102  300433.SZ   -5.551115e-17     -5.551115e-17
-              300498.SZ    0.000000e+00     -5.551115e-17
-    """
-    df_all_factors = pd.concat(df_factors)
-    return df_all_factors
-
-
 def get_factor(name, stock_codes, start_date, end_date):
     datasource = datasource_factory.create('database')  # 因子只可能在数据库中，这里写死数据源类型
 
     if type(name) == list:
-        return align_multifactors(
+        return pd.concat(
             [__get_one_factor(datasource, __name, stock_codes, start_date, end_date) for __name in name])
     else:
         return __get_one_factor(datasource, name, stock_codes, start_date, end_date)
@@ -389,7 +378,7 @@ def get_factor_columns(df):
 def __factor2db_one(name, df):
     """直接替换旧数据"""
     engine = utils.connect_db()
-    df.to_sql(f'factor_{name}', engine, index=False, if_exists='replace')
+    df.to_sql(f'factor_{name}', engine, index=False, if_exists='replace') # replace 替换掉旧的
     logger.debug("保存因子到数据库：表[%s]", f'factor_{name}')
 
 

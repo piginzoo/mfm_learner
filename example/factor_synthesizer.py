@@ -1,35 +1,35 @@
+import argparse
 import logging
+import time
 
-import numpy as np
-import pandas as pd
-
-from utils import utils
-
-utils.init_logger()
-from datasource import datasource_factory, datasource_utils
-from example import factor_utils
-
-from temp import multifactor_synthesize
 import matplotlib
 from jaqs_fxdayu.research.signaldigger import multi_factor
+
+from datasource import datasource_factory, datasource_utils
+from example import factor_utils
+from temp import multifactor_synthesize
+from utils import utils
 
 logger = logging.getLogger(__name__)
 
 datasource = datasource_factory.create()
 
+"""
+合成多因子，保存到数据库
 
-def get_stocks(stock_pool, start_date, end_date):
-    stock_codes = datasource.index_weight(stock_pool, start_date)
-    assert stock_codes is not None and len(stock_codes) > 0, stock_codes
-    stock_codes = stock_codes[:stock_num]
-    if type(stock_codes) == np.ndarray: stock_codes = stock_codes.tolist()
-    logger.debug("从股票池[%s]获得%s~%s %d 只股票用于计算", stock_pool, start_date, end_date, len(stock_codes))
-    return stock_codes
+合成因子的表结构：
+- datetime
+- code
+- value
+- factors
+- weight
+表明：
+factor_synth_clv_mv_ic_weight
+"""
 
 
-def synthesize(stock_pool, start_date, end_date):
+def synthesize(stock_codes, start_date, end_date):
     """测试因子合成"""
-    stock_codes = get_stocks(stock_pool, start_date, end_date)
     factors = {}
     for factor_key in factor_utils.FACTORS.keys():
         factors[factor_key] = factor_utils.get_factor(factor_key, stock_codes, start_date, end_date)
@@ -39,7 +39,7 @@ def synthesize(stock_pool, start_date, end_date):
     return combined_factor
 
 
-def synthesize_by_jaqs(stock_codes, factor_dict, start_date, end_date):
+def synthesize_by_jaqs(stock_codes, factor_dict, start_date, end_date, weight="ic_weight"):
     """
     测试因子合成，要求数据得是panel格式的，[trade_date,stock1,stock2,....]
     """
@@ -81,37 +81,74 @@ def synthesize_by_jaqs(stock_codes, factor_dict, start_date, end_date):
     comb_factor = multi_factor.combine_factors(factor_dict,
                                                standardize_type="z_score",
                                                winsorization=False,
-                                               weighted_method="ic_weight",
+                                               weighted_method=weight,
                                                props=props)
 
     return comb_factor
 
 
-# python -m example.factor_synthesizer
+def main(start_date, end_date, index_code, stock_num, factor_names, weight):
+    start_time = time.time()
+    stock_codes = datasource.index_weight(index_code, start_date, end_date)
+    stock_codes = stock_codes[:stock_num]
+
+    factor_dict = {}
+    for factor_name in factor_names:
+        df_factor = factor_utils.get_factor(stock_codes, None, start, end)
+        factor_dict[factor_name] = df_factor
+    df_combined_factor = synthesize_by_jaqs(stock_codes, factor_dict, start, end, weight)
+
+    print(df_combined_factor.head(3))
+
+    df_combined_factor = df_combined_factor.reset_index()
+    synth_facor_name = "synth_" + "_".join(factor_names) + "_" + weight
+    factor_utils.factor2db(name=synth_facor_name, factor=df_combined_factor)
+
+    logger.info("合成因子[%s] %d行， 耗时 %.2f 秒", factor_names, len(df_combined_factor), time.time() - start_time)
+
+
+"""
+python -m example.factor_synthesizer \
+    --factor clv,peg,mv \
+    --start 20170101 \
+    --end 20180101 \
+    --num 20 \
+    --index 000905.SH
+"""
+
 if __name__ == '__main__':
-    pd.set_option('display.max_rows', 1000)
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
     matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号
     matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号'-'显示为方块的问题
 
-    # 参数设置
-    start = "20190101"
-    end = "20201201"
-    periods = [1, 5, 10, 20, 40, 60]
-    stock_pool = '000905.SH'  # 中证500
-    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    utils.init_logger()
 
-    # 调试用
-    start = "20180101"
-    end = "20200901"
-    periods = [10,20]
-    stock_pool = '000905.SH'  # 中证500
-    stock_num = 50  # 用股票池中的几只，初期调试设置小10，后期可以调成全部
+    start_time = time.time()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--factor', type=str, help="单个因子名、多个（逗号分割）、所有（all）")
+    parser.add_argument('-t', '--weight', type=str, help="合成还是分开使用：synthesis|separated")
+    parser.add_argument('-s', '--start', type=str, help="开始日期")
+    parser.add_argument('-e', '--end', type=str, help="结束日期")
+    parser.add_argument('-i', '--index', type=str, help="股票池code")
+    parser.add_argument('-p', '--period', type=str, help="调仓周期，多个的话，用逗号分隔")
+    parser.add_argument('-n', '--num', type=int, help="股票数量")
+    args = parser.parse_args()
 
-    # 测试JAQS多因子合成
-    stock_codes = get_stocks(stock_pool, start, end)
-    factor_dict = factor_utils.get_factors(stock_codes, None, start, end)
-    combinefactor = synthesize_by_jaqs(stock_codes, factor_dict, start, end)
-    logger.debug("合成因子：")
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(combinefactor)  # .dropna(how="all").head())
+    if "," in args.period:
+        periods = [int(p) for p in args.period.split(",")]
+    else:
+        periods = [int(args.period)]
+
+    if "," in args.factor:
+        factors = [int(p) for p in args.factor.split(",")]
+    else:
+        factors = [int(args.factor)]
+
+    main(args.start,
+         args.end,
+         args.index,
+         periods,
+         args.num,
+         factors,
+         args.weight)
+    logger.debug("共耗时: %.0f 秒", time.time() - start_time)

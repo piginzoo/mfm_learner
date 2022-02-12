@@ -36,25 +36,14 @@ def create_data_feed_class(factor_names):
     return type('PandasDataFeed', (PandasData,), {'lines': lines, 'params': params})
 
 
-def load_data(cerebro, start_date, end_date, stock_codes, factor_names):
-    """
-    @deperate 废弃
-    :param cerebro:
-    :param start_date:
-    :param end_date:
-    :param stock_codes:
-    :param factor_names:
-    :return:
-    """
-    PandasDataClass = create_data_feed_class(factor_names)
-
+def load_data(cerebro, start_date, end_date, stock_codes):
     # 想脑波cerebro逐个追加每只股票的数据
     for stock_code in stock_codes:
         df_stock = datasource.daily(stock_code, start_date, end_date)
 
         trade_days = datasource.trade_cal(start_date, end_date)
-        if len(df_stock) / len(trade_days) < 0.9:
-            logger.warning("股票[%s] 缺失交易日[%d/总%d]天，超过10%%，忽略此股票",
+        if len(df_stock) / len(trade_days) < 0.6:
+            logger.warning("股票[%s] 缺失交易日[%d/总%d]天，超40%%，忽略此股票",
                            stock_code, len(df_stock), len(trade_days))
             continue
         df_stock = comply_backtrader_data_format(df_stock)
@@ -63,7 +52,7 @@ def load_data(cerebro, start_date, end_date, stock_codes, factor_names):
         d_end_date = utils.str2date(end_date)  # 结束日期
 
         # plot=False 不在plot图中显示个股价格
-        data = PandasDataClass(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=False)
+        data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=False)
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
 

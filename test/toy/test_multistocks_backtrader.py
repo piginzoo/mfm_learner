@@ -14,6 +14,7 @@ class TestStrategy(bt.Strategy):
 
     def __init__(self):
         self.dataclose = self.datas[0].close
+        print("stock names:",[data._name for data in self.datas])
 
     # 订单状态通知，买入卖出都是下单
     def notify_order(self, order):

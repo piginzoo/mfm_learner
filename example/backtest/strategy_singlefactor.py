@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from example.backtest.strategy_multistocks_base import MultiStocksFactorStrategy
+from example.backtest.strategy_base import MultiStocksFactorStrategy
 from utils import utils
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class SynthesizedFactorStrategy(MultiStocksFactorStrategy):
     是通过看3.2号的因子情况。
     """
 
-    def select_stocks(self, data):#factors, current_date):
+    def select_stocks(self, factors, current_date):
         """
         每天都会回调，我们的逻辑是：
         - 是否到达调仓周期，如果未到忽略
@@ -43,7 +43,6 @@ class SynthesizedFactorStrategy(MultiStocksFactorStrategy):
         - 每次都是满仓，即用卖出的股票头寸，全部购入新的股票，头寸仅在新购入股票中平均分配
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
-        print(self.factors)
         factor = data
 
         logger.debug("交易日：%r , %d", utils.date2str(current_date), self.count)

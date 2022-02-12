@@ -7,10 +7,9 @@ import backtrader.analyzers as bta  # 添加分析函数
 import quantstats as qs
 
 from datasource import datasource_factory, datasource_utils
-from example import factor_utils
 from example.backtest import data_loader
 from example.backtest.strategy_multifactors import MultiFactorStrategy
-from example.backtest.strategy_synthesis import SynthesizedFactorStrategy
+from example.backtest.strategy_singlefactor import SynthesizedFactorStrategy
 from utils import utils
 from utils.utils import MyPlot
 
@@ -60,22 +59,23 @@ def comply_backtrader_data_format(df):
 
 
 def __get_strategy(factor_names, factor_policy):
+    factor_names = factor_names.split(",")
     # 1.只有一个因子，也当做合成因子用
     if len(factor_names) == 1:
-        # logger.debug("单因子为：%d 行\n%r", len(df_factor), df_factor.head(3))
+        logger.debug("单因子选股策略: %r", factor_names)
         return SynthesizedFactorStrategy
 
     # 2.采用多因子合成
     if factor_policy == "synthesis":
-        # logger.debug("合成的多因子为：%d 行\n%r", len(synthesized_factor), synthesized_factor)
+        logger.debug("合成的多因子选股策略：%r", factor_names)
         return SynthesizedFactorStrategy
 
     # 3.多因子投票
     if factor_policy == "separated":
-        logger.debug("多因子共同作用：%r", factor_names)
+        logger.debug("多因子共同作用选股策略：%r", factor_names)
         return MultiFactorStrategy
 
-    raise ValueError("无效的因子处理策略：" + factor_policy)
+    raise ValueError("无效的因子选股策略：" + factor_policy)
 
 
 def main(start_date, end_date, index_code, period, stock_num, factor_names, factor_policy):
@@ -87,6 +87,8 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     2016-06-29	0.06	0.019	0.058	0.049	0.042	0.053
     2016-06-30	0.03	0.012	0.037	0.027	0.010	0.077
     """
+    d_start_date = utils.str2date(start_date)
+    d_end_date = utils.str2date(end_date)
 
     cerebro = bt.Cerebro()  # 初始化cerebro
 
@@ -94,7 +96,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     stock_codes = stock_codes[:stock_num]
 
     # 加载股票数据到脑波
-    data_loader.load_data(cerebro, start_date, end_date, stock_codes, factor_names)
+    data_loader.load_data(cerebro, start_date, end_date, stock_codes)
 
     ################## cerebro 整体设置 #####################
 
@@ -111,12 +113,16 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 实际过程中，我们不可能如此简单的制定买卖的数目，而是要根据一定的规则，这就需要自己写一个sizers
     # cerebro.addsizer(Percent)
 
-    strategy_class, _ = __get_strategy(factor_names, factor_policy)
+    strategy_class = __get_strategy(factor_names, factor_policy)
 
     # 将交易策略加载到回测系统中
     # cerebro.addstrategy(strategy_class, period, factor_data)
     # 不用上面的，只能加一个，这里我们加多个调仓期支持（periods）
-    cerebro.optstrategy(strategy_class, period=periods)
+    cerebro.optstrategy(strategy_class,
+                        period=periods,
+                        factors=factor_names,
+                        start_date=start_date,
+                        end_date=end_date)
 
     # 添加分析对象
     cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe", timeframe=bt.TimeFrame.Days)  # 夏普指数
@@ -133,32 +139,27 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 打印最后结果
     portvalue = cerebro.broker.getvalue()
     pnl = portvalue - start_cash
-    # 打印结果
-    logger.debug("=" * 80)
-    logger.debug("股票个数: %d 只", len(stock_codes))
-    logger.debug("投资期间: %s~%s, %d 天", start_date, end_date, (d_end_date - d_start_date).days)
-    logger.debug("因子策略: %s", factor_policy)
-    logger.debug('期初投资: %.2f', start_cash)
-    logger.debug('期末总额: %.2f', portvalue)
-    logger.debug('剩余头寸: %.2f', cerebro.broker.getcash())
-    logger.debug('净收益额: %.2f', pnl)
-    logger.debug('收益率: %.2f%%', pnl / portvalue * 100)
-    logger.debug("夏普比: %r", results[0].analyzers.sharpe.get_analysis())
-    logger.debug("回撤:   %.2f%%", results[0].analyzers.DW.get_analysis().drawdown)
-    cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
 
-    def format_print(title, results):
-        print(title, ":")
-        # print(results[0].analyzers)
-        for year, value in results.items():
-            print("\t %s : %r" % (year, value))
+    for i, result in enumerate(results):
 
-    print("%d天调仓期结果：" % period)
-    format_print("回撤:", results[0].analyzers.DW.get_analysis())
-    format_print("收益:", results[0].analyzers.returns.get_analysis())
-    format_print("期间:", results[0].analyzers.period_stats.get_analysis())
-    format_print("年化:", results[0].analyzers.annual.get_analysis())
-    quant_statistics(results[0], period, "000000", "我的多因子组合")
+        # 打印结果
+        logger.debug("-" * 80)
+        logger.debug("调仓周期：%d 天" % periods[i])
+        logger.debug("股票个数: %d 只", len(stock_codes))
+        logger.debug("投资期间: %s~%s, %d 天", start_date, end_date, (d_end_date - d_start_date).days)
+        logger.debug("因子策略: %s", factor_policy)
+        logger.debug('期初投资: %.2f', start_cash)
+        logger.debug('期末总额: %.2f', portvalue)
+        logger.debug('剩余头寸: %.2f', cerebro.broker.getcash())
+        logger.debug('净收益额: %.2f', pnl)
+        logger.debug('收益率  : %.2f%%', pnl / portvalue * 100)
+        logger.debug("夏普比  : %r", result.analyzers.sharpe.get_analysis())
+        logger.debug("回撤    : %.2f%%", result.analyzers.DW.get_analysis().drawdown * 100)
+        logger.debug("收益    : %r", result.analyzers.returns.get_analysis())
+        logger.debug("期间    : %r", result.analyzers.period_stats.get_analysis())
+        logger.debug("年化    : %r", result.analyzers.annual.get_analysis())
+        cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
+        quant_statistics(result, period, "000000", "我的多因子组合")
 
     # from backtrader_plotting import Bokeh
     # from backtrader_plotting.schemes import Tradimo
@@ -214,18 +215,11 @@ if __name__ == '__main__':
     else:
         periods = [int(args.period)]
 
-    if "," in args.factor:
-        factors = [f for f in args.factor.split(",")]
-    elif args.factor == "all":
-        factors = factor_utils.get_factor_names()
-    else:
-        factors = [args.factor]
-
     main(args.start,
          args.end,
          args.index,
          periods,
          args.num,
-         factors,
+         args.factor,
          args.type)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

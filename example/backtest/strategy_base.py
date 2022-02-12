@@ -5,6 +5,7 @@ from abc import abstractmethod
 import backtrader as bt  # 引入backtrader框架
 import numpy as np
 
+from example import factor_utils
 from utils import utils
 
 logger = logging.getLogger(__name__)
@@ -18,14 +19,33 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
     params = (
         ('period', 0),  # 这个参数是个占位符，后续会动态传入；调仓期，支持不同的多个调仓期的回测
+        ('factors', ''),  # 把因子名用逗号传入
+        ('start_date', ''),
+        ('end_date', '')
     )
 
-    def __init__(self):#, factors):
-        # self.factors = factors
+    def __load_factors(self):
+
+        assert self.p.factors != "", self.p.factors
+        assert self.p.start_date != "", self.p.start_date
+        assert self.p.end_date != "", self.p.end_date
+
+        factor_names = self.params.factors
+        factor_names = factor_names.split(",")
+
+        df_factors = factor_utils.get_factor(factor_names, self.stock_codes, self.p.start_date, self.p.end_date)
+        factor_dict = {}
+        for df_factor, factor_name in zip(df_factors, factor_names):
+            factor_dict[factor_name] = df_factor
+            logger.debug("加载了因子[%s] %d条", factor_name, len(df_factor))
+        return factor_dict
+
+    def __init__(self):
+        self.stock_codes = [data._name for data in self.datas]
+        self.factors = self.__load_factors()  # 加载所有的因子
         self.current_stocks = []  # 当前持仓
         self.current_day = 0  # 当前周期内的天数
         self.count = 0
-        # print("factors in MultiStocksFactorStrategy:",type(factors),factors)
         logger.debug("调仓周期 : %d 天", self.params.period)
 
     def __print_broker(self):

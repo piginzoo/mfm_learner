@@ -111,17 +111,17 @@ class DatabaseDataSource(DataSource):
     @post_query
     def get_factor(self, name, stock_codes, start_date, end_date):
         if not db_utils.is_table_exist(self.db_engine,f"factor_{name}"):
-            return None
+            raise ValueError(f"因子表factor_{name}在数据库中不存在")
 
         stock_codes = self.__list_to_sql_format(stock_codes)
-        df = pd.read_sql(f"""
+        sql = f"""
             select * 
             from factor_{name} 
             where datetime>=\'{start_date}\' and 
                   datetime<=\'{end_date}\' and
                   code in ({stock_codes})
-        """,
-                         self.db_engine)
+        """
+        df = pd.read_sql(sql,self.db_engine)
         return df
 
     def __list_to_sql_format(self, _list):

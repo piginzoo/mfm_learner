@@ -1,12 +1,10 @@
 import logging
 import math
 
-import backtrader as bt  # 引入backtrader框架
 import pandas as pd
 from pandas import DataFrame
 
-from example.backtest.strategy_multistocks_base import MultiStocksFactorStrategy
-from utils import utils
+from example.backtest.strategy_base import MultiStocksFactorStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +60,7 @@ class MultiFactorStrategy(MultiStocksFactorStrategy):
             factor = factor.loc[current_date]
             # 按照value排序，reset_index()会自动生成从0开始索引，用这点来生成排序序号，酷
             factor = DataFrame(factor)
-            assert len(factor.columns)==1
+            assert len(factor.columns) == 1
             df_sorted_by_factor_values = factor.sort_values(by=factor.columns[0]).reset_index()
             # 再利用reset_index，生成排序列
             df_stock_rank_by_factor = df_sorted_by_factor_values.reset_index()

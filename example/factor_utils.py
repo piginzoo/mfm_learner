@@ -65,6 +65,7 @@ def preprocess(factors):
 def to_panel_of_stock_columns(df):
     """
     从[日期|股票]+值的Series，转换成，[日期|股票1|股票2|...|股票n]的panel数据
+    这个格式是jaqs_fxdayu合成因子的api要求的格式
     从
         --------------------------------
         <       index       >   value

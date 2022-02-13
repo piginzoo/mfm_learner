@@ -165,6 +165,9 @@ class MultiStocksFactorStrategy(bt.Strategy):
         logger.debug("交易日：%r , %d", utils.date2str(current_date), self.count)
 
         selected_stocks = self.select_stocks(self.factors, current_date)
+
+        if selected_stocks is None: return
+
         if type(selected_stocks) == np.array: selected_stocks = selected_stocks.tolist()
 
         logger.debug("此次选中的股票为：%r", ",".join(selected_stocks))

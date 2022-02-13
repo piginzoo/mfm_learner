@@ -118,8 +118,8 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 将交易策略加载到回测系统中
     # cerebro.addstrategy(strategy_class, period, factor_data)
     # 不用上面的，只能加一个，这里我们加多个调仓期支持（periods）
-    cerebro.optstrategy(strategy_class,
-                        period=periods,
+    cerebro.addstrategy(strategy_class,
+                        period=20,
                         factors=factor_names,
                         start_date=start_date,
                         end_date=end_date)
@@ -135,7 +135,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 打印
     logger.debug('回测期间：%r ~ %r , 初始资金: %r', start_date, end_date, start_cash)
     # 运行回测
-    results = cerebro.run()
+    results = cerebro.run(optreturn=True)
     # 打印最后结果
     portvalue = cerebro.broker.getvalue()
     pnl = portvalue - start_cash
@@ -144,7 +144,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
 
         # 打印结果
         logger.debug("-" * 80)
-        logger.debug("调仓周期：%d 天" % periods[i])
+        logger.debug("调仓周期：%d 天" % period)
         logger.debug("股票个数: %d 只", len(stock_codes))
         logger.debug("投资期间: %s~%s, %d 天", start_date, end_date, (d_end_date - d_start_date).days)
         logger.debug("因子策略: %s", factor_policy)
@@ -153,11 +153,15 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
         logger.debug('剩余头寸: %.2f', cerebro.broker.getcash())
         logger.debug('净收益额: %.2f', pnl)
         logger.debug('收益率  : %.2f%%', pnl / portvalue * 100)
-        logger.debug("夏普比  : %r", result.analyzers.sharpe.get_analysis())
-        logger.debug("回撤    : %.2f%%", result.analyzers.DW.get_analysis().drawdown * 100)
-        logger.debug("收益    : %r", result.analyzers.returns.get_analysis())
-        logger.debug("期间    : %r", result.analyzers.period_stats.get_analysis())
-        logger.debug("年化    : %r", result.analyzers.annual.get_analysis())
+        logger.debug("夏普比  : %.2f%%", result.analyzers.sharpe.get_analysis()['sharperatio'] * 100)
+        logger.debug("回撤    : %.2f%%", result.analyzers.DW.get_analysis().drawdown)
+        logger.debug("总收益  : %.2f%%", result.analyzers.returns.get_analysis()['rtot'] * 100)
+        logger.debug("年化收益: %.2f%%", result.analyzers.returns.get_analysis()['ravg'] * 100)
+        logger.debug("平均收益: %.2f%%", result.analyzers.returns.get_analysis()['rnorm100'])
+        logger.debug("期间统计    : %r", result.analyzers.period_stats.get_analysis())
+        logger.debug("年化:")
+        for year, year_return in result.analyzers.annual.get_analysis().items():
+            logger.debug("\t %s : %.2f%%", year, year_return * 100)
         cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
         quant_statistics(result, period, "000000", "我的多因子组合")
 
@@ -196,7 +200,6 @@ python -m example.factor_backtester \
     --index 000905.SH
 """
 if __name__ == '__main__':
-
     utils.init_logger()
 
     start_time = time.time()
@@ -206,19 +209,19 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--start', type=str, help="开始日期")
     parser.add_argument('-e', '--end', type=str, help="结束日期")
     parser.add_argument('-i', '--index', type=str, help="股票池code")
-    parser.add_argument('-p', '--period', type=str, help="调仓周期，多个的话，用逗号分隔")
+    parser.add_argument('-p', '--period', type=int, help="调仓周期，多个的话，用逗号分隔")
     parser.add_argument('-n', '--num', type=int, help="股票数量")
     args = parser.parse_args()
 
-    if "," in args.period:
-        periods = [int(p) for p in args.period.split(",")]
-    else:
-        periods = [int(args.period)]
+    # if "," in args.period:
+    #     periods = [int(p) for p in args.period.split(",")]
+    # else:
+    #     periods = [int(args.period)]
 
     main(args.start,
          args.end,
          args.index,
-         periods,
+         args.period,
          args.num,
          args.factor,
          args.type)

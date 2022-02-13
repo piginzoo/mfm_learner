@@ -29,6 +29,10 @@ class SynthesizedFactorStrategy(MultiStocksFactorStrategy):
 
     def select_stocks(self, factors, current_date):
         """
+        factors,对于singlefactor子类，他应该是只有1个factor的dict，
+        factor是一个DataFrame，
+        index[datetime,code],value是因子值，
+
         每天都会回调，我们的逻辑是：
         - 是否到达调仓周期，如果未到忽略
         - 找出此期间中证500只包含的股票池中的股票
@@ -44,21 +48,27 @@ class SynthesizedFactorStrategy(MultiStocksFactorStrategy):
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
 
-        assert len(factors.keys()) == 1, str(len(factors.keys()))
+        assert type(factors)==dict and len(factors.keys()) == 1, str(len(factors.keys()))
 
-        factor = list(factors.values())[0]
+        # factors是一个dict,factors的values长度为1，内容为DataFrame，index[datetime,code]
+        df_factor = list(factors.values())[0]
 
-        logger.debug("交易日：%r , 第#%d个交易日，因子(3行)：\n%r", utils.date2str(current_date), self.count, factor.head(3))
+        # print(df_factor.head(3))
+        # xs函数，是截面函数，只取current_date日的截面数据
+        df_cross_sectional = df_factor.xs(utils.date2str(current_date))
+        df_cross_sectional = df_cross_sectional.dropna()
+        # 按照降序排列,只有1列，即因子值
+        df_cross_sectional = df_cross_sectional.sort_values(by=df_cross_sectional.columns[0],
+                                                            ascending=False)
+        # logger.debug("交易日：%r , 第#%d个交易日，因子(3行)：\n%r", utils.date2str(current_date), self.count, df_cross_sectional.head(3))
 
-        if factor.empty:
+        if df_cross_sectional.empty:
             logger.waning("%r 日的因子为空，忽略当日", utils.date2str(current_date))
-            return
+            return None
 
-        factor = factor.dropna()
 
         # 选择因子值前20%
-        select_stocks = factor.index[:math.ceil(0.2 * len(factor))]
-        print(select_stocks)
+        select_stocks = df_cross_sectional.index[:math.ceil(0.2 * len(df_cross_sectional))]
         logger.debug("此次选中的股票为：%r", ",".join(select_stocks.tolist()))
 
         return select_stocks

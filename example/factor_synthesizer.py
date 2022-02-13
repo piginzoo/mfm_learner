@@ -3,10 +3,12 @@ import logging
 import time
 
 import matplotlib
+import pandas as pd
 from jaqs_fxdayu.research.signaldigger import multi_factor
 
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
+from example.factor_utils import to_panel_of_stock_columns
 from utils import utils
 
 logger = logging.getLogger(__name__)
@@ -70,15 +72,17 @@ def synthesize_by_jaqs(stock_codes, factor_dict, df_index_daily, start_date, end
     return comb_factor
 
 
-def main(start_date, end_date, index_code, stock_num, factor_names, weight):
+def main(name, desc, start_date, end_date, index_code, stock_num, factor_names, weight):
     start_time = time.time()
     stock_codes = datasource.index_weight(index_code, start_date, end_date)
     stock_codes = stock_codes[:stock_num]
 
     factor_dict = {}
     for factor_name in factor_names:
-        df_factor = factor_utils.get_factor(factor_names, stock_codes, start_date, end_date)
-        factor_dict[factor_name] = df_factor
+        df_factor = factor_utils.get_factor(factor_name, stock_codes, start_date, end_date)
+        # jaqs_fxdayu要求的因子格式必须是，每行是一个日期，
+        # 所以要从[日期|股票]+值的Series，转换成，[日期|股票1|股票2|...|股票n]的panel数据
+        factor_dict[factor_name] = to_panel_of_stock_columns(df_factor)
 
     df_index_daily = datasource.index_daily(index_code, start_date, end_date)
     df_index_daily = datasource_utils.reset_index(df_index_daily)
@@ -88,20 +92,24 @@ def main(start_date, end_date, index_code, stock_num, factor_names, weight):
 
     df_combined_factor = synthesize_by_jaqs(stock_codes, factor_dict, df_index_daily, start_date, end_date, weight)
 
-    print(df_combined_factor.head(3))
+    logger.debug("合成后的因子（3行）：\n%r", df_combined_factor.head(3))
 
-    df_combined_factor = df_combined_factor.reset_index()
-    synth_facor_name = "synth_" + "_".join(factor_names) + "_" + weight
-    factor_utils.factor2db(name=synth_facor_name, factor=df_combined_factor)
+    df_combined_factor = df_combined_factor.stack()  # 把合成因子，包含多只股票的列，通过stack()，把股票列，变成行
+    df_combined_factor = pd.DataFrame(df_combined_factor)  # 要转成Dataframe，才可以改列名
+    df_combined_factor.columns = ['value']
+    df_combined_factor = df_combined_factor.reset_index()  # 保存到数据库中，索引变成普通列
+    factor_utils.synthesis_factor2db(name=name, desc=desc, df_factor=df_combined_factor)
 
     logger.info("合成因子[%s] %d行， 耗时 %.2f 秒", factor_names, len(df_combined_factor), time.time() - start_time)
 
 
 """
 python -m example.factor_synthesizer \
+    --name 'clv_peg_mv' \
+    --desc 'clv,peg,mv' \
     --factor clv,peg,mv \
-    --start 20170101 \
-    --end 20180101 \
+    --start 20180101 \
+    --end 20190101 \
     --num 20 \
     --weight ic_weight \
     --index 000905.SH
@@ -116,6 +124,8 @@ if __name__ == '__main__':
 
     start_time = time.time()
     parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--name', type=str, help="名字，需要唯一")
+    parser.add_argument('-d', '--desc', type=str, default="", help="描述")
     parser.add_argument('-f', '--factor', type=str, help="单个因子名、多个（逗号分割）、所有（all）")
     parser.add_argument('-t', '--weight', type=str, help="合成还是分开使用：synthesis|separated")
     parser.add_argument('-s', '--start', type=str, help="开始日期")
@@ -128,10 +138,13 @@ if __name__ == '__main__':
 
     factors = [p for p in args.factor.split(",")]
 
-    main(args.start,
-         args.end,
-         args.index,
-         args.num,
-         factors,
-         args.weight)
+    main(
+        args.name,
+        args.desc,
+        args.start,
+        args.end,
+        args.index,
+        args.num,
+        factors,
+        args.weight)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

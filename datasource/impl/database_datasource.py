@@ -99,7 +99,7 @@ class DatabaseDataSource(DataSource):
 
     @post_query
     def stock_basic(self, ts_code):
-        stock_codes = self.__list_to_sql_format(ts_code)
+        stock_codes = db_utils.list_to_sql_format(ts_code)
         df = pd.read_sql(f'select * from stock_basic where ts_code in ({stock_codes})', self.db_engine)
         return df
 
@@ -113,7 +113,7 @@ class DatabaseDataSource(DataSource):
         if not db_utils.is_table_exist(self.db_engine,f"factor_{name}"):
             raise ValueError(f"因子表factor_{name}在数据库中不存在")
 
-        stock_codes = self.__list_to_sql_format(stock_codes)
+        stock_codes = db_utils.list_to_sql_format(stock_codes)
         sql = f"""
             select * 
             from factor_{name} 
@@ -124,11 +124,3 @@ class DatabaseDataSource(DataSource):
         df = pd.read_sql(sql,self.db_engine)
         return df
 
-    def __list_to_sql_format(self, _list):
-        """
-        把list转成sql中in要求的格式
-        ['a','b','c'] => " 'a','b','c' "
-        """
-        if _list != list: stock_codes = [_list]
-        data = ["\'" + one + "\'" for one in _list]
-        return ','.join(data)

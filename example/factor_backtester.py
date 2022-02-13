@@ -189,8 +189,8 @@ def quant_statistics(strat, period, code, name):
 # 测试用
 python -m example.factor_backtester \
     --factor clv \
-    --start 20170101 \
-    --end 20180101 \
+    --start 20180101 \
+    --end 20190101 \
     --num 20 \
     --period 20 \
     --index 000905.SH

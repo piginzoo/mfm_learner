@@ -43,17 +43,22 @@ class SynthesizedFactorStrategy(MultiStocksFactorStrategy):
         - 每次都是满仓，即用卖出的股票头寸，全部购入新的股票，头寸仅在新购入股票中平均分配
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
-        factor = data
 
-        logger.debug("交易日：%r , %d", utils.date2str(current_date), self.count)
-        if np.isnan(factor).all():
-            logger.debug("%r 日的因子全部为NAN，忽略当日", utils.date2str(current_date))
+        assert len(factors.keys()) == 1, str(len(factors.keys()))
+
+        factor = list(factors.values())[0]
+
+        logger.debug("交易日：%r , 第#%d个交易日，因子(3行)：\n%r", utils.date2str(current_date), self.count, factor.head(3))
+
+        if factor.empty:
+            logger.waning("%r 日的因子为空，忽略当日", utils.date2str(current_date))
             return
 
         factor = factor.dropna()
-        # logger.debug("当天的因子为：%r", factor)
+
         # 选择因子值前20%
         select_stocks = factor.index[:math.ceil(0.2 * len(factor))]
+        print(select_stocks)
         logger.debug("此次选中的股票为：%r", ",".join(select_stocks.tolist()))
 
         return select_stocks

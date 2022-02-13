@@ -25,6 +25,16 @@ def run_sql(engine, sql):
     return result
 
 
+def list_to_sql_format(_list):
+    """
+    把list转成sql中in要求的格式
+    ['a','b','c'] => " 'a','b','c' "
+    """
+    if type(_list) != list: _list = [_list]
+    data = ["\'" + one + "\'" for one in _list]
+    return ','.join(data)
+
+
 def create_db_index(engine, table_name, df):
     if is_table_index_exist(engine, table_name): return
 

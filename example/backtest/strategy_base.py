@@ -1,12 +1,14 @@
 import logging
 import math
 from abc import abstractmethod
+from utils import utils
+
+utils.init_logger()
 
 import backtrader as bt  # 引入backtrader框架
 import numpy as np
 
 from example import factor_utils
-from utils import utils
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         df_factors = factor_utils.get_factor(factor_names, self.stock_codes, self.p.start_date, self.p.end_date)
         factor_dict = {}
+        logger.debug("开始加载因子：%r", factor_names)
         for df_factor, factor_name in zip(df_factors, factor_names):
             factor_dict[factor_name] = df_factor
             logger.debug("加载了因子[%s] %d条", factor_name, len(df_factor))
@@ -57,7 +60,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         pass
 
     @abstractmethod
-    def select_stocks(self, current_date):
+    def select_stocks(self, factors, current_date):
         pass
 
     # 记录交易执行情况（可省略，默认不输出结果）
@@ -161,7 +164,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.current_day = 0
         logger.debug("交易日：%r , %d", utils.date2str(current_date), self.count)
 
-        selected_stocks = self.select_stocks(self.data)
+        selected_stocks = self.select_stocks(self.factors, current_date)
         if type(selected_stocks) == np.array: selected_stocks = selected_stocks.tolist()
 
         logger.debug("此次选中的股票为：%r", ",".join(selected_stocks))

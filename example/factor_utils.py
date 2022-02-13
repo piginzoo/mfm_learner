@@ -7,7 +7,7 @@ from sklearn import preprocessing
 
 from datasource import datasource_utils, datasource_factory
 from example.factors.factor import Factor
-from utils import utils, dynamic_loader, logging_time
+from utils import utils, dynamic_loader, logging_time, db_utils
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ def to_panel_of_stock_columns(df):
     assert len(df) > 0, df
     if type(df) == DataFrame:
         df = df.iloc[:, 0]  # 把dataframe转成series，这样做的缘故是，unstack的时候，可以避免复合列名，如 ['clv','003859.SH']
-    assert type(df) == Series
+    assert type(df) == Series, type(df)
     assert len(df.index.names) == 2, df
     df = df.unstack()
     return df
@@ -362,23 +362,54 @@ def __get_one_factor(datasource, name, stock_codes, start_date, end_date):
 
 
 def get_factor(name, stock_codes, start_date, end_date):
+    """
+    返回因子数据： DataFrame（Index=[datetime,code], Value=[因子值]）
+    如果是多个，就返回List<DataFrame>
+    :param name:
+    :param stock_codes:
+    :param start_date:
+    :param end_date:
+    :return:
+    """
+
     datasource = datasource_factory.create('database')  # 因子只可能在数据库中，这里写死数据源类型
 
     if type(name) == list:
-        return pd.concat(
-            [__get_one_factor(datasource, __name, stock_codes, start_date, end_date) for __name in name])
+        df_factors = [__get_one_factor(datasource, __name, stock_codes, start_date, end_date) for __name in name]
+        logger.debug("加载了%d个因子数据：%r", len(name), name)
+        return df_factors
     else:
-        return __get_one_factor(datasource, name, stock_codes, start_date, end_date)
+        df_factor = __get_one_factor(datasource, name, stock_codes, start_date, end_date)
+        logger.debug("加载了因子[%s]数据，%d行", name, len(df_factor))
+        return df_factor
 
 
-def get_factor_columns(df):
-    return [c for c in df.columns if c.startswith("factor")]
+def get_synthesis_factor(name, stock_codes, start_date, end_date):
+    """直接替换旧数据"""
+    engine = utils.connect_db()
+
+    stock_codes = db_utils.list_to_sql_format(stock_codes)
+
+    sql = f"""
+        select * 
+        from synthesis_factor 
+        where datetime>=\'{start_date}\' and 
+              datetime<=\'{end_date}\' and
+              code in ({stock_codes}) and
+              name = \'{name}\'
+    """
+
+    df = pd.read_sql(sql, engine)
+
+    logger.debug("从表[%s]加载合成因子[%s] %d条", 'synthesis_factor', name, len(df))
+
+    return df
 
 
 def __factor2db_one(name, df):
     """直接替换旧数据"""
     engine = utils.connect_db()
-    df.to_sql(f'factor_{name}', engine, index=False, if_exists='replace') # replace 替换掉旧的
+    df.to_sql(f'factor_{name}', engine, index=False, if_exists='replace')  # replace 替换掉旧的
     logger.debug("保存因子到数据库：表[%s]", f'factor_{name}')
 
 
@@ -387,6 +418,20 @@ def factor2db(name, factor):
         return [__factor2db_one(__name, __factor) for __name, __factor in zip(name, factor)]
     else:
         return __factor2db_one(name, factor)
+
+
+def synthesis_factor2db(name, desc, df_factor):
+    engine = utils.connect_db()
+
+    df_factor['name'] = name
+    df_factor['desc'] = desc
+
+    # 先删除旧的因子分析结果
+    if db_utils.is_table_exist(engine, "factor_analysis"):
+        db_utils.run_sql(engine, f"delete from synthesis_factor where name='{name}'")
+
+    df_factor.to_sql(f'synthesis_factor', engine, index=False, if_exists='append')  # replace 替换掉旧的
+    logger.debug("保存合成因子到数据库：表[%s] ，名称:%s, %d行", 'synthesis_factor', name, len(df_factor))
 
 
 # python -m example.factor_utils

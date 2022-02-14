@@ -1,14 +1,13 @@
 import logging
 import math
 from abc import abstractmethod
+
 from utils import utils
 
 utils.init_logger()
 
 import backtrader as bt  # 引入backtrader框架
 import numpy as np
-
-from example import factor_utils
 
 logger = logging.getLogger(__name__)
 
@@ -19,37 +18,13 @@ class MultiStocksFactorStrategy(bt.Strategy):
     有个抽象方法，叫selected_stocks(current_date)用来选取当期股票
     """
 
-    params = (
-        ('period', 0),  # 这个参数是个占位符，后续会动态传入；调仓期，支持不同的多个调仓期的回测
-        ('factors', ''),  # 把因子名用逗号传入
-        ('start_date', ''),
-        ('end_date', '')
-    )
-
-    def __load_factors(self):
-
-        assert self.p.factors != "", self.p.factors
-        assert self.p.start_date != "", self.p.start_date
-        assert self.p.end_date != "", self.p.end_date
-
-        factor_names = self.params.factors
-        factor_names = factor_names.split(",")
-
-        df_factors = factor_utils.get_factor(factor_names, self.stock_codes, self.p.start_date, self.p.end_date)
-        factor_dict = {}
-        logger.debug("开始加载因子：%r", factor_names)
-        for df_factor, factor_name in zip(df_factors, factor_names):
-            factor_dict[factor_name] = df_factor
-            logger.debug("加载了因子[%s] %d条", factor_name, len(df_factor))
-        return factor_dict
-
-    def __init__(self):
-        self.stock_codes = [data._name for data in self.datas]
-        self.factors = self.__load_factors()  # 加载所有的因子
-        self.current_stocks = []  # 当前持仓
+    def __init__(self, period, factor_dict):
+        self.period = period
+        self.factor_dict = factor_dict
         self.current_day = 0  # 当前周期内的天数
+        self.current_stocks = []
         self.count = 0
-        logger.debug("调仓周期 : %d 天", self.params.period)
+        logger.debug("因子选股：因子[%r], 调仓周期[%d]天", ",".join(list(factor_dict.keys())), period)
 
     def __print_broker(self):
         # logger.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -149,7 +124,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.current_day += 1
         self.count += 1
 
-        if self.current_day < self.params.period: return
+        if self.current_day < self.period: return
 
         # logger.debug("--------------------------------------------------")
         # logger.debug('当前可用资金:%r', self.broker.getcash())
@@ -164,7 +139,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.current_day = 0
         logger.debug("交易日：%r , %d", utils.date2str(current_date), self.count)
 
-        selected_stocks = self.select_stocks(self.factors, current_date)
+        selected_stocks = self.select_stocks(self.factor_dict, current_date)
 
         if selected_stocks is None: return
 

@@ -36,7 +36,7 @@ def create_data_feed_class(factor_names):
     return type('PandasDataFeed', (PandasData,), {'lines': lines, 'params': params})
 
 
-def load_data(cerebro, start_date, end_date, stock_codes):
+def load_stock_data(cerebro, start_date, end_date, stock_codes):
     # 想脑波cerebro逐个追加每只股票的数据
     for stock_code in stock_codes:
         df_stock = datasource.daily(stock_code, start_date, end_date)
@@ -55,6 +55,7 @@ def load_data(cerebro, start_date, end_date, stock_codes):
         data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=False)
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
+
 
 
 def load_data_deperate(cerebro, start_date, end_date, stock_codes, factor_names):

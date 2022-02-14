@@ -385,15 +385,25 @@ def get_factor(name, stock_codes, start_date, end_date):
         return df_factor
 
 
-def get_synthesis_factor(name, stock_codes, start_date, end_date):
+def get_factor_dict(factor_names, stock_codes, start_date, end_date):
+    df_factors = get_factor(factor_names, stock_codes, start_date, end_date)
+    factor_dict = {}
+    logger.debug("开始加载因子：%r", factor_names)
+    for df_factor, factor_name in zip(df_factors, factor_names):
+        factor_dict[factor_name] = df_factor
+        logger.debug("加载了因子[%s] %d条", factor_name, len(df_factor))
+    return factor_dict
+
+
+def get_factor_synthesis(name, stock_codes, start_date, end_date):
     """直接替换旧数据"""
     engine = utils.connect_db()
 
     stock_codes = db_utils.list_to_sql_format(stock_codes)
 
     sql = f"""
-        select * 
-        from synthesis_factor 
+        select datetime,code,value
+        from factor_synthesis 
         where datetime>=\'{start_date}\' and 
               datetime<=\'{end_date}\' and
               code in ({stock_codes}) and
@@ -401,8 +411,8 @@ def get_synthesis_factor(name, stock_codes, start_date, end_date):
     """
 
     df = pd.read_sql(sql, engine)
-
-    logger.debug("从表[%s]加载合成因子[%s] %d条", 'synthesis_factor', name, len(df))
+    df = datasource_utils.reset_index(df) # 为了和单因子统一，也做这个处理，即用datetime和code做联合index
+    logger.debug("从表[%s]加载合成因子[%s] %d条", 'factor_synthesis', name, len(df))
 
     return df
 
@@ -421,18 +431,19 @@ def factor2db(name, factor):
         return __factor2db_one(name, factor)
 
 
-def synthesis_factor2db(name, desc, df_factor):
+def factor_synthesis2db(name, desc, df_factor):
     engine = utils.connect_db()
 
     df_factor['name'] = name
     df_factor['desc'] = desc
+    # df_factor = datasource_utils.date2str(df_factor,'datetime') # 把日期列变成字符串
 
     # 先删除旧的因子分析结果
-    if db_utils.is_table_exist(engine, "factor_analysis"):
-        db_utils.run_sql(engine, f"delete from synthesis_factor where name='{name}'")
+    if db_utils.is_table_exist(engine, "factor_synthesis"):
+        db_utils.run_sql(engine, f"delete from factor_synthesis where name='{name}'")
 
-    df_factor.to_sql(f'synthesis_factor', engine, index=False, if_exists='append')  # replace 替换掉旧的
-    logger.debug("保存合成因子到数据库：表[%s] ，名称:%s, %d行", 'synthesis_factor', name, len(df_factor))
+    df_factor.to_sql(f'factor_synthesis', engine, index=False, if_exists='append')  # replace 替换掉旧的
+    logger.debug("保存合成因子到数据库：表[%s] ，名称:%s, %d行", 'factor_synthesis', name, len(df_factor))
 
 
 # python -m example.factor_utils

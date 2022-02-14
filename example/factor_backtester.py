@@ -7,9 +7,10 @@ import backtrader.analyzers as bta  # 添加分析函数
 import quantstats as qs
 
 from datasource import datasource_factory, datasource_utils
+from example import factor_utils
 from example.backtest import data_loader
 from example.backtest.strategy_multifactors import MultiFactorStrategy
-from example.backtest.strategy_singlefactor import SynthesizedFactorStrategy
+from example.backtest.strategy_singlefactor import SingleFactorStrategy
 from utils import utils
 from utils.utils import MyPlot
 
@@ -58,22 +59,31 @@ def comply_backtrader_data_format(df):
     return df
 
 
-def __get_strategy(factor_names, factor_policy):
-    factor_names = factor_names.split(",")
-    # 1.只有一个因子，也当做合成因子用
+def __get_strategy_and_factor(factor_names, stock_codes, start_date, end_date):
+    # 采用多因子合成
+    if factor_names.startswith("synthesis"):
+        _, synth_factor_name = factor_names.split(":")
+        logger.debug("合成的多因子选股策略：%r", factor_names)
+        return SingleFactorStrategy, \
+               {synth_factor_name: factor_utils.get_factor_synthesis(synth_factor_name,
+                                                                     stock_codes,
+                                                                     start_date,
+                                                                     end_date)}, \
+               "因子合成"
+
+    # 只有一个因子
     if len(factor_names) == 1:
         logger.debug("单因子选股策略: %r", factor_names)
-        return SynthesizedFactorStrategy
+        return SingleFactorStrategy, factor_utils.get_factor_dict(factor_names,
+                                                                  stock_codes,
+                                                                  start_date,
+                                                                  end_date),
+        "单因子"
 
-    # 2.采用多因子合成
-    if factor_policy == "synthesis":
-        logger.debug("合成的多因子选股策略：%r", factor_names)
-        return SynthesizedFactorStrategy
-
-    # 3.多因子投票
-    if factor_policy == "separated":
-        logger.debug("多因子共同作用选股策略：%r", factor_names)
-        return MultiFactorStrategy
+    # 多因子投票
+    factor_names = factor_names.split(",")
+    logger.debug("多因子共同作用选股策略：%r", factor_names)
+    return MultiFactorStrategy, factor_utils.get_factor_dict(factor_names, stock_codes, start_date, end_date), "因子投票"
 
     raise ValueError("无效的因子选股策略：" + factor_policy)
 
@@ -96,7 +106,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     stock_codes = stock_codes[:stock_num]
 
     # 加载股票数据到脑波
-    data_loader.load_data(cerebro, start_date, end_date, stock_codes)
+    data_loader.load_stock_data(cerebro, start_date, end_date, stock_codes)
 
     ################## cerebro 整体设置 #####################
 
@@ -113,16 +123,15 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 实际过程中，我们不可能如此简单的制定买卖的数目，而是要根据一定的规则，这就需要自己写一个sizers
     # cerebro.addsizer(Percent)
 
-    strategy_class = __get_strategy(factor_names, factor_policy)
+    strategy_class, factor_dict, name = __get_strategy_and_factor(factor_names=factor_names,
+                                                                  stock_codes=stock_codes,
+                                                                  start_date=start_date,
+                                                                  end_date=end_date)
 
     # 将交易策略加载到回测系统中
     # cerebro.addstrategy(strategy_class, period, factor_data)
     # 不用上面的，只能加一个，这里我们加多个调仓期支持（periods）
-    cerebro.addstrategy(strategy_class,
-                        period=20,
-                        factors=factor_names,
-                        start_date=start_date,
-                        end_date=end_date)
+    cerebro.addstrategy(strategy_class, period=period, factor_dict=factor_dict)
 
     # 添加分析对象
     cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe", timeframe=bt.TimeFrame.Days)  # 夏普指数
@@ -163,7 +172,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
         for year, year_return in result.analyzers.annual.get_analysis().items():
             logger.debug("\t %s : %.2f%%", year, year_return * 100)
         cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
-        quant_statistics(result, period, "000000", "我的多因子组合")
+        quant_statistics(result, period, name, factor_names)
 
     # from backtrader_plotting import Bokeh
     # from backtrader_plotting.schemes import Tradimo
@@ -171,7 +180,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # cerebro.plot(b)
 
 
-def quant_statistics(strat, period, code, name):
+def quant_statistics(strat, period, name, factor_names):
     portfolio_stats = strat.analyzers.getbyname('PyFolio')  # 得到PyFolio分析者实例
     # 以下returns为以日期为索引的资产日收益率系列
     returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
@@ -180,8 +189,8 @@ def quant_statistics(strat, period, code, name):
 
     # 输出html策略报告,rf为无风险利率
     qs.reports.html(returns,
-                    output='debug/stats_{}{}_{}.html'.format(code, name, period),
-                    title='{}日调仓的定投[{}{}]基金的绩效报告'.format(period, code, name), rf=0.0)
+                    output='debug/回测报告_{}_{}天调仓_{}.html'.format(utils.today(), period, name),
+                    title='{}日调仓,{},因子:{}'.format(period, name, factor_names), rf=0.0)
 
     print(qs.reports.metrics(returns=returns, mode='full'))
     df = qs.reports.metrics(returns=returns, mode='full', display=False)
@@ -193,6 +202,22 @@ def quant_statistics(strat, period, code, name):
 # 测试用
 python -m example.factor_backtester \
     --factor clv \
+    --start 20180101 \
+    --end 20190101 \
+    --num 20 \
+    --period 20 \
+    --index 000905.SH
+
+python -m example.factor_backtester \
+    --factor synthesis:clv_peg_mv \
+    --start 20180101 \
+    --end 20190101 \
+    --num 20 \
+    --period 20 \
+    --index 000905.SH
+
+python -m example.factor_backtester \
+    --factor clv,peg,mv \
     --start 20180101 \
     --end 20190101 \
     --num 20 \
@@ -212,11 +237,6 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--period', type=int, help="调仓周期，多个的话，用逗号分隔")
     parser.add_argument('-n', '--num', type=int, help="股票数量")
     args = parser.parse_args()
-
-    # if "," in args.period:
-    #     periods = [int(p) for p in args.period.split(",")]
-    # else:
-    #     periods = [int(args.period)]
 
     main(args.start,
          args.end,

@@ -113,6 +113,11 @@ def tomorrow(s_date):
     return date2str(__tomorrow)
 
 
+def today():
+    now = datetime.datetime.now()
+    return datetime.datetime.strftime(now, "%Y%m%d%H%M%S")
+
+
 def date2str(date, format="%Y%m%d"):
     return datetime.datetime.strftime(date, format)
 
@@ -124,10 +129,10 @@ def dataframe2series(df):
 
 
 def init_logger():
-
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger('matplotlib.font_manager').disabled = True
+    logging.getLogger('matplotlib.colorbar').disabled = True
     logging.getLogger('matplotlib').disabled = True
     logging.getLogger('fontTools.ttLib.ttFont').disabled = True
     warnings.filterwarnings("ignore")
@@ -141,7 +146,6 @@ def init_logger():
     for handler in handlers:
         handler.setLevel(level=logging.DEBUG)
         handler.setFormatter(formatter)
-
 
 
 class MyPlot(Plot_OldSync):

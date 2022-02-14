@@ -9,7 +9,7 @@ from utils import utils
 logger = logging.getLogger(__name__)
 
 
-class SynthesizedFactorStrategy(MultiStocksFactorStrategy):
+class SingleFactorStrategy(MultiStocksFactorStrategy):
     """
     我自己的多因子策略，即，用我的多因子来进行选股，股票池是中证500，每一个选股周期，我都要根据当期数据，去计算因子暴露（因子值），
     然后根据因子值，对当前期中证500股票池中的股票进行排序，（这个期间中证500可能备选股票可能会变化）
@@ -53,9 +53,12 @@ class SynthesizedFactorStrategy(MultiStocksFactorStrategy):
         # factors是一个dict,factors的values长度为1，内容为DataFrame，index[datetime,code]
         df_factor = list(factors.values())[0]
 
+        assert len(df_factor)>0, len(df_factor)
+
         # print(df_factor.head(3))
         # xs函数，是截面函数，只取current_date日的截面数据
-        df_cross_sectional = df_factor.xs(utils.date2str(current_date))
+
+        df_cross_sectional = df_factor.xs(current_date)
         df_cross_sectional = df_cross_sectional.dropna()
         # 按照降序排列,只有1列，即因子值
         df_cross_sectional = df_cross_sectional.sort_values(by=df_cross_sectional.columns[0],

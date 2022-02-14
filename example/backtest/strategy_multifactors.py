@@ -20,7 +20,7 @@ class MultiFactorStrategy(MultiStocksFactorStrategy):
     TODO：然后每个换仓周期，再按照日期+股票去获对应因子取值排序的，那，为何不最开始的时候，直接将计算完的因子值合并到股票的数据中呢？
     """
 
-    def select_stocks(self, factors, current_date):
+    def select_stocks(self, factor_dict, current_date):
         """
         每天都会回调，我们的逻辑是：
         - 是否到达调仓周期，如果未到忽略
@@ -47,15 +47,15 @@ class MultiFactorStrategy(MultiStocksFactorStrategy):
         # logger.debug('当前持仓成本:%r', self.getposition(self.data).price)
         # logger.debug("--------------------------------------------------")
 
-        select_stocks = self.select_stocks_by_score(self.factors, current_date)
+        select_stocks = self.select_stocks_by_score(factor_dict, current_date)
 
         return select_stocks
 
-    def select_stocks_by_score(self, factors, current_date):
+    def select_stocks_by_score(self, factor_dict, current_date):
         df_stock_scores = []
 
         # 遍历每一个因子(因子是 index:[datetime,code], columns:factor_value)
-        for name, factor in factors.items():
+        for name, factor in factor_dict.items():
             # 得到当天的因子
             factor = factor.loc[current_date]
             # 按照value排序，reset_index()会自动生成从0开始索引，用这点来生成排序序号，酷
@@ -76,7 +76,7 @@ class MultiFactorStrategy(MultiStocksFactorStrategy):
 
         df_stock_scores = df_stock_scores.dropna()
 
-        logger.debug("因子排序成绩为：\n%r", df_stock_scores)
+        logger.debug("因子排序成绩为：\n%r", df_stock_scores.head(3))
         # 选择因子值前20%
         select_stocks = df_stock_scores.sort_values(by='score', ascending=False).index[
                         :math.ceil(0.2 * len(df_stock_scores))]

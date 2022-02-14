@@ -37,6 +37,11 @@ def to_datetime(series, date_format=None):
     return pd.to_datetime(series, format=date_format)  # 时间为日期格式，tushare是str
 
 
+def date2str(df, date_column):
+    df[date_column] = df[date_column].dt.strftime(CONF['dateformat'])
+    return df
+
+
 def load_daily_data(datasource, stock_codes, start_date, end_date):
     df_merge = pd.DataFrame()
     # 每支股票

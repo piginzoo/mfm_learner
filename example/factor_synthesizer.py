@@ -96,9 +96,9 @@ def main(name, desc, start_date, end_date, index_code, stock_num, factor_names, 
 
     df_combined_factor = df_combined_factor.stack()  # 把合成因子，包含多只股票的列，通过stack()，把股票列，变成行
     df_combined_factor = pd.DataFrame(df_combined_factor)  # 要转成Dataframe，才可以改列名
-    df_combined_factor.columns = ['value']
+    df_combined_factor.columns = ['value'] # 合成的值的列名
     df_combined_factor = df_combined_factor.reset_index()  # 保存到数据库中，索引变成普通列
-    factor_utils.synthesis_factor2db(name=name, desc=desc, df_factor=df_combined_factor)
+    factor_utils.factor_synthesis2db(name=name, desc=desc, df_factor=df_combined_factor)
 
     logger.info("合成因子[%s] %d行， 耗时 %.2f 秒", factor_names, len(df_combined_factor), time.time() - start_time)
 

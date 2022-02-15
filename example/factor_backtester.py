@@ -172,7 +172,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
         for year, year_return in result.analyzers.annual.get_analysis().items():
             logger.debug("\t %s : %.2f%%", year, year_return * 100)
         cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
-        quant_statistics(result, period, name, factor_names)
+        quant_statistics(result, period, name, factor_names,atr_period,atr_times)
 
     # from backtrader_plotting import Bokeh
     # from backtrader_plotting.schemes import Tradimo
@@ -180,7 +180,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # cerebro.plot(b)
 
 
-def quant_statistics(strat, period, name, factor_names):
+def quant_statistics(strat, period, name, factor_names,atr_p,atr_n):
     portfolio_stats = strat.analyzers.getbyname('PyFolio')  # 得到PyFolio分析者实例
 
     # 以下returns为以日期为索引的资产日收益率系列
@@ -191,7 +191,7 @@ def quant_statistics(strat, period, name, factor_names):
     # 输出html策略报告,rf为无风险利率
     qs.reports.html(returns,
                     output='debug/回测报告_{}_{}天调仓_{}.html'.format(utils.today(), period, name),
-                    title='{}日调仓,{},因子:{}'.format(period, name, factor_names), rf=0.0)
+                    title='{}日调仓,{},因子:{},ATR:{}天/{}倍'.format(period, name, factor_names,atr_p,atr_n), rf=0.0)
 
     print(qs.reports.metrics(returns=returns, mode='full'))
     df = qs.reports.metrics(returns=returns, mode='full', display=False)

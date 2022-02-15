@@ -1,5 +1,6 @@
 import logging
 
+import talib
 from backtrader.feeds import PandasData
 
 from datasource import datasource_factory, datasource_utils
@@ -20,6 +21,12 @@ def comply_backtrader_data_format(df):
     return df
 
 
+# 修改原数据加载模块，以便能够加载更多自定义的因子数据
+class StockData(PandasData):
+    lines = ('atr',)
+    params = (('atr', -1),)
+
+
 # 自定义数据
 # 参考：https://community.backtrader.com/topic/1676/dynamically-set-params-and-lines-attribute-of-class-pandasdata/8
 def create_data_feed_class(factor_names):
@@ -36,10 +43,12 @@ def create_data_feed_class(factor_names):
     return type('PandasDataFeed', (PandasData,), {'lines': lines, 'params': params})
 
 
-def load_stock_data(cerebro, start_date, end_date, stock_codes):
+def load_stock_data(cerebro, start_date, end_date, stock_codes,atr_period):
     # 想脑波cerebro逐个追加每只股票的数据
     for stock_code in stock_codes:
         df_stock = datasource.daily(stock_code, start_date, end_date)
+
+        df_stock['atr'] = talib.ATR(df_stock.high.values,df_stock.low.values,df_stock.close.values, timeperiod=atr_period)
 
         trade_days = datasource.trade_cal(start_date, end_date)
         if len(df_stock) / len(trade_days) < 0.6:
@@ -52,7 +61,7 @@ def load_stock_data(cerebro, start_date, end_date, stock_codes):
         d_end_date = utils.str2date(end_date)  # 结束日期
 
         # plot=False 不在plot图中显示个股价格
-        data = PandasData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=False)
+        data = StockData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=False)
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
 

@@ -88,7 +88,7 @@ def __get_strategy_and_factor(factor_names, stock_codes, start_date, end_date):
     raise ValueError("无效的因子选股策略：" + factor_policy)
 
 
-def main(start_date, end_date, index_code, period, stock_num, factor_names, factor_policy):
+def main(start_date, end_date, index_code, period, stock_num, factor_names, factor_policy, atr_period, atr_times):
     """
     datetime    open    high    low     close   volume  openi..
     2016-06-24	0.16	0.002	0.085	0.078	0.173	0.214
@@ -106,7 +106,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     stock_codes = stock_codes[:stock_num]
 
     # 加载股票数据到脑波
-    data_loader.load_stock_data(cerebro, start_date, end_date, stock_codes)
+    data_loader.load_stock_data(cerebro, start_date, end_date, stock_codes, atr_period)
 
     ################## cerebro 整体设置 #####################
 
@@ -131,7 +131,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 将交易策略加载到回测系统中
     # cerebro.addstrategy(strategy_class, period, factor_data)
     # 不用上面的，只能加一个，这里我们加多个调仓期支持（periods）
-    cerebro.addstrategy(strategy_class, period=period, factor_dict=factor_dict)
+    cerebro.addstrategy(strategy_class, period=period, factor_dict=factor_dict, atr_times=atr_times)
 
     # 添加分析对象
     cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe", timeframe=bt.TimeFrame.Days)  # 夏普指数
@@ -182,6 +182,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
 
 def quant_statistics(strat, period, name, factor_names):
     portfolio_stats = strat.analyzers.getbyname('PyFolio')  # 得到PyFolio分析者实例
+
     # 以下returns为以日期为索引的资产日收益率系列
     returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
 
@@ -235,6 +236,8 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--end', type=str, help="结束日期")
     parser.add_argument('-i', '--index', type=str, help="股票池code")
     parser.add_argument('-p', '--period', type=int, help="调仓周期，多个的话，用逗号分隔")
+    parser.add_argument('-an', '--atr_n', type=int, default=3, help="ATR风控倍数")
+    parser.add_argument('-ap', '--atr_p', type=int, default=15, help="ATR周期")
     parser.add_argument('-n', '--num', type=int, help="股票数量")
     args = parser.parse_args()
 
@@ -244,5 +247,7 @@ if __name__ == '__main__':
          args.period,
          args.num,
          args.factor,
-         args.type)
+         args.type,
+         args.atr_p,
+         args.atr_n)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

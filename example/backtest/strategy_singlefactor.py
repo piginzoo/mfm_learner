@@ -1,7 +1,4 @@
 import logging
-import math
-
-import numpy as np
 
 from example.backtest.strategy_base import MultiStocksFactorStrategy
 from utils import utils
@@ -27,7 +24,7 @@ class SingleFactorStrategy(MultiStocksFactorStrategy):
     是通过看3.2号的因子情况。
     """
 
-    def select_stocks(self, factors, current_date):
+    def sort_stocks(self, factors, current_date, stock_blacklist):
         """
         factors,对于singlefactor子类，他应该是只有1个factor的dict，
         factor是一个DataFrame，
@@ -48,12 +45,12 @@ class SingleFactorStrategy(MultiStocksFactorStrategy):
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
 
-        assert type(factors)==dict and len(factors.keys()) == 1, str(len(factors.keys()))
+        assert type(factors) == dict and len(factors.keys()) == 1, str(len(factors.keys()))
 
         # factors是一个dict,factors的values长度为1，内容为DataFrame，index[datetime,code]
         df_factor = list(factors.values())[0]
 
-        assert len(df_factor)>0, len(df_factor)
+        assert len(df_factor) > 0, len(df_factor)
 
         # print(df_factor.head(3))
         # xs函数，是截面函数，只取current_date日的截面数据
@@ -69,9 +66,4 @@ class SingleFactorStrategy(MultiStocksFactorStrategy):
             logger.waning("%r 日的因子为空，忽略当日", utils.date2str(current_date))
             return None
 
-
-        # 选择因子值前20%
-        select_stocks = df_cross_sectional.index[:math.ceil(0.2 * len(df_cross_sectional))]
-        logger.debug("此次选中的股票为：%r", ",".join(select_stocks.tolist()))
-
-        return select_stocks
+        return df_cross_sectional.index

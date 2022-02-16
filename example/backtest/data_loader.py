@@ -61,7 +61,7 @@ def load_stock_data(cerebro, start_date, end_date, stock_codes,atr_period):
         d_end_date = utils.str2date(end_date)  # 结束日期
 
         # plot=False 不在plot图中显示个股价格
-        data = StockData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=False)
+        data = StockData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=True)
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
 

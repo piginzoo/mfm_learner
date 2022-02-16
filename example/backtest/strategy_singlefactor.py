@@ -24,7 +24,7 @@ class SingleFactorStrategy(MultiStocksFactorStrategy):
     是通过看3.2号的因子情况。
     """
 
-    def sort_stocks(self, factors, current_date, stock_blacklist):
+    def sort_stocks(self, factors, current_date):
         """
         factors,对于singlefactor子类，他应该是只有1个factor的dict，
         factor是一个DataFrame，

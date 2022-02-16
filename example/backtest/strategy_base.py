@@ -24,7 +24,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.atr_times = atr_times  # ATR的倍数
         self.current_day = 0  # 当前周期内的天数
         self.current_stocks = []
-        self.high_stock_prices = {}
+        self.current_stocks_highest_price = {}
         self.count = 0
         logger.debug("因子选股：因子[%r], ATR倍数[%d], 调仓周期[%d]天", ",".join(list(factor_dict.keys())), atr_times, period)
 
@@ -114,20 +114,16 @@ class MultiStocksFactorStrategy(bt.Strategy):
         # 处理每一只股票，都要保存期历史最高价
         for d in self.datas:
             stock_code = d._name
-            open_price = d.open[0]
-            atr = d.atr[0]
-            highest_price = self.high_stock_prices.get(stock_code, None)
-
-            # 更新各只股票的曾经的最高价格
-            if highest_price is None:
-                self.high_stock_prices[stock_code] = open_price
-                continue
-            if open_price > highest_price:
-                self.high_stock_prices[stock_code] = open_price
-                continue
 
             # 如果股票不在列表内，不做任何动作
             if stock_code not in self.current_stocks: continue
+
+            open_price = d.open[0]
+            atr = d.atr[0]
+            highest_price = self.current_stocks_highest_price.get(stock_code)
+            if open_price > highest_price:
+                self.current_stocks_highest_price[stock_code] = open_price
+                continue
 
             # import pdb;pdb.set_trace()
             # 如果股票在持仓列表，且满足最大回撤达到N倍ATR，则触发风控
@@ -157,6 +153,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         size = self.getposition(stock_data, self.broker).size
         self.close(data=stock_data, exectype=bt.Order.Limit)
         self.current_stocks.remove(stock_code)
+        self.current_stocks_highest_price.pop(stock_code)
         logger.debug('平仓股票 %s : 卖出%r股', stock_data._name, size)
 
     def next(self):
@@ -205,7 +202,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         selected_stocks = self.sort_stocks(self.factor_dict, current_date)
 
         # 选择topN的
-        selected_stocks = self.select_top_n(selected_stocks, blacklist_stocks)
+        selected_stocks = self._select_top_n(selected_stocks, blacklist_stocks)
 
         if selected_stocks is None: return
 
@@ -217,6 +214,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         # "常规下单函数主要有 3 个：买入 buy() 、卖出 sell()、平仓 close() "
         to_sell_stocks = set(self.current_stocks) - set(selected_stocks)
 
+        # 1. 清仓未在选择列表的股票
         logger.debug("卖出股票：%r", to_sell_stocks)
         for sell_stock in to_sell_stocks:
             self.sell_out(sell_stock)
@@ -228,33 +226,38 @@ class MultiStocksFactorStrategy(bt.Strategy):
         # 每只股票买入资金百分比，预留2%的资金以应付佣金和计算误差
         buy_percentage = (1 - 0.02) / len(selected_stocks)
 
-        # 得到可以用来购买的金额,控制仓位在0.6
-        buy_amount = buy_percentage * self.broker.getcash()
+        # 得到可以用来购买的金额
+        buy_amount_per_stock = buy_percentage * self.broker.getcash()
 
+        # 2. 买入选择的股票
         for buy_stock in selected_stocks:
-
-            # 防止股票不在数据集中
-            if buy_stock not in self.getdatanames():
-                continue
-
-            # 如果选中的股票在当前的持仓中，就忽略
-            if buy_stock in self.current_stocks:
-                logger.debug("%s 在持仓中，不动", buy_stock)
-                continue
-
-            # 根据名字获得对应那只股票的数据
-            stock_data = self.getdatabyname(buy_stock)
-            open_price = stock_data.open[0]
-
-            # 按次日开盘价计算下单量，下单量是100（手）的整数倍
-            size = math.ceil(buy_amount / open_price)
-            logger.debug("购入股票[%s 股价%.2f] %d股，金额:%.2f", buy_stock, open_price, size, buy_amount)
-            self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
-            self.current_stocks.append(buy_stock)
+            self._buy_in(buy_stock, buy_amount_per_stock)
 
         self.__print_broker()
 
-    def select_top_n(self, stock_codes, blacklist_stocks):
+    def _buy_in(self, buy_stock, buy_amount):
+        # 防止股票不在数据集中
+        if buy_stock not in self.getdatanames():
+            return
+
+        # 如果选中的股票在当前的持仓中，就忽略
+        if buy_stock in self.current_stocks:
+            logger.debug("%s 在持仓中，不动", buy_stock)
+            return
+
+        # 根据名字获得对应那只股票的数据
+        stock_data = self.getdatabyname(buy_stock)
+        open_price = stock_data.open[0]
+
+        # 按次日开盘价计算下单量，下单量是100（手）的整数倍
+        size = math.ceil(buy_amount / open_price)
+        logger.debug("购入股票[%s 股价%.2f] %d股，金额:%.2f", buy_stock, open_price, size, buy_amount)
+        self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
+        self.current_stocks.append(buy_stock)
+        # 重新买入的时刻的买入价格，作为最高价格
+        self.current_stocks_highest_price[buy_stock] = open_price
+
+    def _select_top_n(self, stock_codes, blacklist_stocks):
         """
         剔除在黑名单上的股票后，选择前1/5的股票
         :param stock_codes:

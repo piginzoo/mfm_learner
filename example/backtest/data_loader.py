@@ -66,6 +66,23 @@ def load_stock_data(cerebro, start_date, end_date, stock_codes,atr_period):
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
 
 
+    # 过滤涨停的股票
+    def filter_limitup_stock(context, stock_list):
+        last_prices = history(1, unit='1m', field='close', security_list=stock_list)
+        current_data = get_current_data()
+        # 已存在于持仓的股票即使涨停也不过滤，避免此股票再次可买，但因被过滤而导致选择别的股票
+        return [stock for stock in stock_list if stock in context.portfolio.positions.keys()
+            or last_prices[stock][-1] < current_data[stock].high_limit]
+
+    # 过滤停牌、ST类股票及其他具有退市标签的股票
+    def filter_paused_and_st_stock(stock_list):
+        current_data = get_current_data()
+        return [stock for stock in stock_list
+            if not current_data[stock].paused
+            and not current_data[stock].is_st
+    #        and 'ST' not in current_data[stock].name
+    #        and '*' not in current_data[stock].name
+            and '退' not in current_data[stock].name]
 
 def load_data_deperate(cerebro, start_date, end_date, stock_codes, factor_names):
     """

@@ -2,6 +2,7 @@ import logging
 import math
 from abc import abstractmethod
 
+from example.backtest.risk_control import RiskControl
 from utils import utils
 
 utils.init_logger()
@@ -24,8 +25,9 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.atr_times = atr_times  # ATR的倍数
         self.current_day = 0  # 当前周期内的天数
         self.current_stocks = []
-        self.current_stocks_highest_price = {}
         self.count = 0
+        self.risk_control = RiskControl(self)
+
         logger.debug("因子选股：因子[%r], ATR倍数[%d], 调仓周期[%d]天", ",".join(list(factor_dict.keys())), atr_times, period)
 
     def __print_broker(self):
@@ -61,6 +63,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
                 self.buyprice = order.executed.price
                 self.buycomm = order.executed.comm
+
             else:
                 bt.OrderData
                 logger.debug('成功卖出: 股票[%s],价格[%.2f],成本[%.2f],手续费[%.2f]',
@@ -102,48 +105,6 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         # self.__print_broker()
 
-    def risk(self):
-        """
-        对持仓进行分线控制：
-        风控规则：每天更新每支股票的历史最高价，如果当日回撤大于N倍ATR，则触发风控（清仓）
-        返回：触发风控清仓的股票列表。
-        """
-
-        exclude_stock_codes = []
-
-        # 处理每一只股票，都要保存期历史最高价
-        for d in self.datas:
-            stock_code = d._name
-
-            # 如果股票不在列表内，不做任何动作
-            if stock_code not in self.current_stocks: continue
-
-            open_price = d.open[0]
-            atr = d.atr[0]
-            highest_price = self.current_stocks_highest_price.get(stock_code)
-            if open_price > highest_price:
-                self.current_stocks_highest_price[stock_code] = open_price
-                continue
-
-            # import pdb;pdb.set_trace()
-            # 如果股票在持仓列表，且满足最大回撤达到N倍ATR，则触发风控
-            logger.debug("股票[%s]历史最高价[%.2f]当前价[%.2f]回撤[%.2f]ATR[%.2f]",
-                         stock_code,
-                         open_price,
-                         highest_price,
-                         highest_price - open_price,
-                         self.atr_times * atr)
-            if (highest_price - open_price) > self.atr_times * atr:
-                logger.warning("股票[%s]的开盘价[%.2f]的回撤[%.2f]大于%d倍的ATR[%.2f]，触发风控清仓",
-                               stock_code,
-                               open_price,
-                               highest_price - open_price,
-                               self.atr_times,
-                               atr)
-                self.sell_out(stock_code)
-                exclude_stock_codes.append(stock_code)
-        return exclude_stock_codes
-
     def sell_out(self, stock_code):
         # 根据名字获得对应那只股票的数据
         stock_data = self.getdatabyname(stock_code)
@@ -153,7 +114,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         size = self.getposition(stock_data, self.broker).size
         self.close(data=stock_data, exectype=bt.Order.Limit)
         self.current_stocks.remove(stock_code)
-        self.current_stocks_highest_price.pop(stock_code)
+
         logger.debug('平仓股票 %s : 卖出%r股', stock_data._name, size)
 
     def next(self):
@@ -173,7 +134,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
 
-        blacklist_stocks = self.risk()
+        blacklist_stocks = self.risk_control.execute()
 
         # logger.debug("已经处理了%d个数据, 总共有%d个数据", len(self), self.data.buflen())
 
@@ -254,8 +215,6 @@ class MultiStocksFactorStrategy(bt.Strategy):
         logger.debug("购入股票[%s 股价%.2f] %d股，金额:%.2f", buy_stock, open_price, size, buy_amount)
         self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
         self.current_stocks.append(buy_stock)
-        # 重新买入的时刻的买入价格，作为最高价格
-        self.current_stocks_highest_price[buy_stock] = open_price
 
     def _select_top_n(self, stock_codes, blacklist_stocks):
         """

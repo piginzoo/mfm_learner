@@ -35,6 +35,7 @@ class TestStrategy(bt.Strategy):
         print("今日总资产:", self.broker.getvalue())
         print("总资产均值:", np.array(self.value_history).mean())
         print("总资标准差:", np.array(self.value_history).std())
+        print("len:", len(self.data), ",buflen:", self.data.buflen())
         print("-"*80)
 
 

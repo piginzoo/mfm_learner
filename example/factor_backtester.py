@@ -5,6 +5,8 @@ import time
 import backtrader as bt  # 引入backtrader框架
 import backtrader.analyzers as bta  # 添加分析函数
 import quantstats as qs
+from backtrader_plotting import Bokeh
+from backtrader_plotting.schemes import Tradimo
 
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
@@ -174,8 +176,6 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
         cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
         quant_statistics(result, period, name, factor_names, atr_period, atr_times)
 
-    from backtrader_plotting import Bokeh
-    from backtrader_plotting.schemes import Tradimo
     b = Bokeh(stype='bar', tabs="multi", scheme=Tradimo())
     cerebro.plot(b)
 

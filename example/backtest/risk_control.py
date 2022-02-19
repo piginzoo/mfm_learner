@@ -14,8 +14,9 @@ class RiskControl():
     2、整体价值（市值+现金）下跌了2*STD，后者是15%，就清仓
     """
 
-    def __init__(self, strategy):
+    def __init__(self, strategy, atr_times):
         self.strategy = strategy
+        self.atr_times = atr_times
         self.current_stocks_highest_price = {}
         self.portfolio_highest_value = self.strategy.broker.getvalue()  # 组合的最高价格
         self.portfolio_values = []  # 组合每天的市值
@@ -35,7 +36,7 @@ class RiskControl():
         drawback = self.portfolio_highest_value - today_value
 
         # 如果回撤小于2倍STD，不理睬
-        if np.isnan(std) or drawback < 2 * std:
+        if np.isnan(std) or drawback <= 3 * std or len(self.portfolio_values)<10:
             logger.debug("出现回撤[%.2f] < 2*波动率(标准差[%.2f])，无视总体风险", drawback, std)
             return False
 
@@ -49,7 +50,7 @@ class RiskControl():
                      len(self.strategy.current_stocks))
         # 彻底退出回测
         self.strategy.env.runstop()
-        logger.debug("全部清仓，退出整个回测交易！！！")
+        logger.debug("$$$$$$$$$$$$$$$$$$$$$$全部清仓，退出整个回测交易$$$$$$$$$$$$$$$$$$$$$$")
         return True
 
     def execute(self):
@@ -58,8 +59,9 @@ class RiskControl():
         风控规则：每天更新每支股票的历史最高价，如果当日回撤大于N倍ATR，则触发风控（清仓）
         返回：触发风控清仓的股票列表。
         """
-
+        self.portfolio_values.append(self.strategy.broker.getvalue())
         if self.portfolio_risk_control(): return
+
 
         exclude_stock_codes = []
 
@@ -84,28 +86,27 @@ class RiskControl():
                          open_price,
                          highest_price,
                          highest_price - open_price,
-                         self.strategy.atr_times * atr)
-            if (highest_price - open_price) > self.strategy.atr_times * atr:
+                         self.atr_times * atr)
+
+            drawback = highest_price - open_price
+            if drawback > self.atr_times * atr:
                 logger.warning("股票[%s]的开盘价[%.2f]的回撤[%.2f]大于%d倍的ATR[%.2f]，触发风控清仓",
                                stock_code,
                                open_price,
-                               highest_price - open_price,
-                               self.strategy.atr_times,
+                               drawback,
+                               self.atr_times,
                                atr)
                 self.strategy.sell_out(stock_code)
                 exclude_stock_codes.append(stock_code)
         return exclude_stock_codes
 
+    def post_buy(self, stock_code, price):
+        self.current_stocks_highest_price[stock_code] = price
+
+    def post_sell(self, stock_code):
+        self.current_stocks_highest_price.pop(stock_code)
+
 
 def update_atr(df, time_period=15):
     df['atr'] = talib.ATR(df.high.values, df.low.values, df.close.values, timeperiod=time_period)
     return df
-
-
-def risk_control(df):
-    """
-    :param df:
-    :return:
-    """
-    # 获得回撤
-    drawdown = get_drawdown()

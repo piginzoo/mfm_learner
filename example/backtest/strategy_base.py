@@ -22,12 +22,8 @@ class MultiStocksFactorStrategy(bt.Strategy):
     def __init__(self, period, factor_dict, atr_times):
         self.period = period
         self.factor_dict = factor_dict
-        self.atr_times = atr_times  # ATR的倍数
-        self.current_day = 0  # 当前周期内的天数
         self.current_stocks = []
-        self.count = 0
-        self.risk_control = RiskControl(self)
-
+        self.risk_control = RiskControl(self, atr_times)
         logger.debug("因子选股：因子[%r], ATR倍数[%d], 调仓周期[%d]天", ",".join(list(factor_dict.keys())), atr_times, period)
 
     def __print_broker(self):
@@ -116,6 +112,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.current_stocks.remove(stock_code)
 
         logger.debug('平仓股票 %s : 卖出%r股', stock_data._name, size)
+        self.risk_control.post_sell(stock_code)
 
     def next(self):
         """
@@ -141,10 +138,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         # 回测最后一天不进行买卖,datas[0]就是当天, bugfix:  之前self.datas[0].date(0)不行，因为df.index是datetime类型的
         current_date = self.datas[0].datetime.datetime(0)
 
-        self.current_day += 1
-        self.count += 1
-
-        if self.current_day < self.period: return
+        if len(self.data) % self.period == 0: return
 
         # logger.debug("--------------------------------------------------")
         # logger.debug('当前可用资金:%r', self.broker.getcash())
@@ -156,8 +150,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         # logger.debug("--------------------------------------------------")
 
         logger.debug("-" * 50)
-        self.current_day = 0
-        logger.debug("交易日：%r , %d", utils.date2str(current_date), self.count)
+        logger.debug("第%d个交易日：%r ", len(self.data), utils.date2str(current_date))
 
         # 因子对股票排序
         selected_stocks = self.sort_stocks(self.factor_dict, current_date)
@@ -196,25 +189,26 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         self.__print_broker()
 
-    def _buy_in(self, buy_stock, buy_amount):
+    def _buy_in(self, stock_code, buy_amount):
         # 防止股票不在数据集中
-        if buy_stock not in self.getdatanames():
+        if stock_code not in self.getdatanames():
             return
 
         # 如果选中的股票在当前的持仓中，就忽略
-        if buy_stock in self.current_stocks:
-            logger.debug("%s 在持仓中，不动", buy_stock)
+        if stock_code in self.current_stocks:
+            logger.debug("%s 在持仓中，不动", stock_code)
             return
 
         # 根据名字获得对应那只股票的数据
-        stock_data = self.getdatabyname(buy_stock)
+        stock_data = self.getdatabyname(stock_code)
         open_price = stock_data.open[0]
 
         # 按次日开盘价计算下单量，下单量是100（手）的整数倍
         size = math.ceil(buy_amount / open_price)
-        logger.debug("购入股票[%s 股价%.2f] %d股，金额:%.2f", buy_stock, open_price, size, buy_amount)
+        logger.debug("购入股票[%s 股价%.2f] %d股，金额:%.2f", stock_code, open_price, size, buy_amount)
         self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
-        self.current_stocks.append(buy_stock)
+        self.current_stocks.append(stock_code)
+        self.risk_control.post_buy(stock_code, open_price)
 
     def _select_top_n(self, stock_codes, blacklist_stocks):
         """

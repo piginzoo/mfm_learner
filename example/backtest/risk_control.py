@@ -14,8 +14,9 @@ class RiskControl():
     2、整体价值（市值+现金）下跌了2*STD，后者是15%，就清仓
     """
 
-    def __init__(self, strategy, atr_times):
+    def __init__(self, strategy, atr_times, period):
         self.strategy = strategy
+        self.period = period
         self.atr_times = atr_times
         self.current_stocks_highest_price = {}
         self.portfolio_highest_value = self.strategy.broker.getvalue()  # 组合的最高价格
@@ -36,7 +37,7 @@ class RiskControl():
         drawback = self.portfolio_highest_value - today_value
 
         # 如果回撤小于2倍STD，不理睬
-        if np.isnan(std) or drawback <= 3 * std or len(self.portfolio_values)<10:
+        if np.isnan(std) or drawback <= 3 * std or len(self.portfolio_values) < 3 * self.period:
             logger.debug("出现回撤[%.2f] < 2*波动率(标准差[%.2f])，无视总体风险", drawback, std)
             return False
 
@@ -61,7 +62,6 @@ class RiskControl():
         """
         self.portfolio_values.append(self.strategy.broker.getvalue())
         if self.portfolio_risk_control(): return
-
 
         exclude_stock_codes = []
 
@@ -105,8 +105,3 @@ class RiskControl():
 
     def post_sell(self, stock_code):
         self.current_stocks_highest_price.pop(stock_code)
-
-
-def update_atr(df, time_period=15):
-    df['atr'] = talib.ATR(df.high.values, df.low.values, df.close.values, timeperiod=time_period)
-    return df

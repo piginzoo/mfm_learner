@@ -19,11 +19,12 @@ class MultiStocksFactorStrategy(bt.Strategy):
     有个抽象方法，叫selected_stocks(current_date)用来选取当期股票
     """
 
-    def __init__(self, period, factor_dict, atr_times):
+    def __init__(self, period, factor_dict, atr_times,risk):
         self.period = period
+        self.risk = risk
         self.factor_dict = factor_dict
         self.current_stocks = []
-        self.risk_control = RiskControl(self, atr_times)
+        self.risk_control = RiskControl(self, atr_times, period)
         logger.debug("因子选股：因子[%r], ATR倍数[%d], 调仓周期[%d]天", ",".join(list(factor_dict.keys())), atr_times, period)
 
     def __print_broker(self):
@@ -131,14 +132,17 @@ class MultiStocksFactorStrategy(bt.Strategy):
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
 
-        blacklist_stocks = self.risk_control.execute()
+        # 风控
+        blacklist_stocks = []
+        if self.risk:
+            blacklist_stocks = self.risk_control.execute()
 
         # logger.debug("已经处理了%d个数据, 总共有%d个数据", len(self), self.data.buflen())
 
         # 回测最后一天不进行买卖,datas[0]就是当天, bugfix:  之前self.datas[0].date(0)不行，因为df.index是datetime类型的
         current_date = self.datas[0].datetime.datetime(0)
 
-        if len(self.data) % self.period == 0: return
+        if not len(self.data) % self.period == 0: return
 
         # logger.debug("--------------------------------------------------")
         # logger.debug('当前可用资金:%r', self.broker.getcash())

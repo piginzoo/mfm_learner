@@ -90,7 +90,7 @@ def __get_strategy_and_factor(factor_names, stock_codes, start_date, end_date):
     raise ValueError("无效的因子选股策略：" + factor_policy)
 
 
-def main(start_date, end_date, index_code, period, stock_num, factor_names, factor_policy, atr_period, atr_times):
+def main(start_date, end_date, index_code, period, stock_num, factor_names, factor_policy, risk, atr_period, atr_times):
     """
     datetime    open    high    low     close   volume  openi..
     2016-06-24	0.16	0.002	0.085	0.078	0.173	0.214
@@ -133,7 +133,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 将交易策略加载到回测系统中
     # cerebro.addstrategy(strategy_class, period, factor_data)
     # 不用上面的，只能加一个，这里我们加多个调仓期支持（periods）
-    cerebro.addstrategy(strategy_class, period=period, factor_dict=factor_dict, atr_times=atr_times)
+    cerebro.addstrategy(strategy_class, period=period, factor_dict=factor_dict, atr_times=atr_times, risk=risk)
 
     # 添加分析对象
     cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe", timeframe=bt.TimeFrame.Days)  # 夏普指数
@@ -207,7 +207,18 @@ python -m example.factor_backtester \
     --end 20190101 \
     --num 20 \
     --period 20 \
-    --index 000905.SH
+    --index 000905.SH \
+    --risk
+    
+python -m example.factor_backtester \
+    --factor clv \
+    --start 20180101 \
+    --end 20190101 \
+    --index 000905.SH \
+    --num 20 \
+    --period 20 \
+    --risk  \
+    --percent 10%   
 
 python -m example.factor_backtester \
     --factor synthesis:clv_peg_mv \
@@ -239,6 +250,7 @@ if __name__ == '__main__':
     parser.add_argument('-an', '--atr_n', type=int, default=3, help="ATR风控倍数")
     parser.add_argument('-ap', '--atr_p', type=int, default=15, help="ATR周期")
     parser.add_argument('-n', '--num', type=int, help="股票数量")
+    parser.add_argument('-r', '--risk', action='store_true', help="是否风控")
     args = parser.parse_args()
 
     main(args.start,
@@ -248,6 +260,7 @@ if __name__ == '__main__':
          args.num,
          args.factor,
          args.type,
+         args.risk,
          args.atr_p,
          args.atr_n)
     logger.debug("共耗时: %.0f 秒", time.time() - start_time)

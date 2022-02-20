@@ -107,6 +107,11 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     stock_codes = datasource.index_weight(index_code, start_date, end_date)
     stock_codes = stock_codes[:stock_num]
 
+    # 基准数据,(benchmark can be a pandas Series or ticker)
+    df_benchmark_index = datasource.index_daily(index_code=index_code, start_date=start_date, end_date=end_date)
+    df_benchmark_index = comply_backtrader_data_format(df_benchmark_index)
+    df_benchmark_index = df_benchmark_index['close']
+
     # 加载股票数据到脑波
     data_loader.load_stock_data(cerebro, start_date, end_date, stock_codes, atr_period)
 
@@ -173,14 +178,14 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
         logger.debug("年化:")
         for year, year_return in result.analyzers.annual.get_analysis().items():
             logger.debug("\t %s : %.2f%%", year, year_return * 100)
-        cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
-        quant_statistics(result, period, name, factor_names, atr_period, atr_times)
+        # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
+        quant_statistics(df_benchmark_index,result, period, name, factor_names, atr_period, atr_times)
 
     b = Bokeh(stype='bar', tabs="multi", scheme=Tradimo())
     cerebro.plot(b)
 
 
-def quant_statistics(strat, period, name, factor_names, atr_p, atr_n):
+def quant_statistics(df_benchmark_index, strat, period, name, factor_names, atr_p, atr_n):
     portfolio_stats = strat.analyzers.getbyname('PyFolio')  # 得到PyFolio分析者实例
 
     # 以下returns为以日期为索引的资产日收益率系列
@@ -189,7 +194,7 @@ def quant_statistics(strat, period, name, factor_names, atr_p, atr_n):
     returns.index = returns.index.tz_convert(None)  # 索引的时区要设置一下，否则出错
 
     # 输出html策略报告,rf为无风险利率
-    qs.reports.html(returns,
+    qs.reports.html(returns, benchmark=df_benchmark_index,
                     output='debug/回测报告_{}_{}天调仓_{}.html'.format(utils.today(), period, name),
                     title='{}日调仓,{},因子:{},ATR:{}天/{}倍'.format(period, name, factor_names, atr_p, atr_n), rf=0.0)
 

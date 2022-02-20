@@ -43,28 +43,30 @@ def create_data_feed_class(factor_names):
     return type('PandasDataFeed', (PandasData,), {'lines': lines, 'params': params})
 
 
-def load_stock_data(cerebro, start_date, end_date, stock_codes,atr_period):
+def load_stock_data(cerebro, start_date, end_date, stock_codes, atr_period):
     # 想脑波cerebro逐个追加每只股票的数据
     for stock_code in stock_codes:
+
         df_stock = datasource.daily(stock_code, start_date, end_date)
-
-        df_stock['atr'] = talib.ATR(df_stock.high.values,df_stock.low.values,df_stock.close.values, timeperiod=atr_period)
-
         trade_days = datasource.trade_cal(start_date, end_date)
+
         if len(df_stock) / len(trade_days) < 0.6:
             logger.warning("股票[%s] 缺失交易日[%d/总%d]天，超40%%，忽略此股票",
                            stock_code, len(df_stock), len(trade_days))
             continue
+
         df_stock = comply_backtrader_data_format(df_stock)
 
         d_start_date = utils.str2date(start_date)  # 开始日期
         d_end_date = utils.str2date(end_date)  # 结束日期
 
+        df_stock['atr'] = talib.ATR(df_stock.high.values, df_stock.low.values, df_stock.close.values,
+                                    timeperiod=atr_period)
+
         # plot=False 不在plot图中显示个股价格
         data = StockData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=True)
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
-
 
     # 过滤涨停的股票
     def filter_limitup_stock(context, stock_list):
@@ -72,17 +74,18 @@ def load_stock_data(cerebro, start_date, end_date, stock_codes,atr_period):
         current_data = get_current_data()
         # 已存在于持仓的股票即使涨停也不过滤，避免此股票再次可买，但因被过滤而导致选择别的股票
         return [stock for stock in stock_list if stock in context.portfolio.positions.keys()
-            or last_prices[stock][-1] < current_data[stock].high_limit]
+                or last_prices[stock][-1] < current_data[stock].high_limit]
 
     # 过滤停牌、ST类股票及其他具有退市标签的股票
     def filter_paused_and_st_stock(stock_list):
         current_data = get_current_data()
         return [stock for stock in stock_list
-            if not current_data[stock].paused
-            and not current_data[stock].is_st
-    #        and 'ST' not in current_data[stock].name
-    #        and '*' not in current_data[stock].name
-            and '退' not in current_data[stock].name]
+                if not current_data[stock].paused
+                and not current_data[stock].is_st
+                #        and 'ST' not in current_data[stock].name
+                #        and '*' not in current_data[stock].name
+                and '退' not in current_data[stock].name]
+
 
 def load_data_deperate(cerebro, start_date, end_date, stock_codes, factor_names):
     """

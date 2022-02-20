@@ -56,6 +56,8 @@ class MultiFactorStrategy(MultiStocksFactorStrategy):
 
         # 遍历每一个因子(因子是 index:[datetime,code], columns:factor_value)
         for name, factor in factor_dict.items():
+            assert current_date in factor.index, str(current_date) + "不在因子[" + name + "]的日期范围内"
+
             # 得到当天的因子
             factor = factor.loc[current_date]
             # 按照value排序，reset_index()会自动生成从0开始索引，用这点来生成排序序号，酷

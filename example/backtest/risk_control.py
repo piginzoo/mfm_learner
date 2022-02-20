@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 import talib
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -23,31 +24,43 @@ class RiskControl():
         self.portfolio_values = []  # 组合每天的市值
         logger.debug("创建风控对象：组合当前最高市值[%.2f]", self.portfolio_highest_value)
 
+    def _volatility(self):
+        return pd.Series(self.portfolio_values).pct_change().std() * 3
+
     def portfolio_risk_control(self):
-        # 计算整个历史的方差
-        std = np.array(self.portfolio_values).std()
+
         # 使用当天的开盘价，来计算风险，也就是，如果开市就出现异常，就需要卖出
         today_value = self.strategy.broker.getvalue()
+
         # 如果今天市值创新高，那么记录他即可
         if today_value > self.portfolio_highest_value:
             self.portfolio_highest_value = today_value
             return False
 
+
+        if np.isnan(self._volatility()):return False
+
+        if len(self.portfolio_values) < 2 * self.period: return False
+
         # 计算回撤
         drawback = self.portfolio_highest_value - today_value
 
-        # 如果回撤小于2倍STD，不理睬
-        if np.isnan(std) or drawback <= 3 * std or len(self.portfolio_values) < 3 * self.period:
-            logger.debug("出现回撤[%.2f] < 2*波动率(标准差[%.2f])，无视总体风险", drawback, std)
+        if drawback < self._volatility():
+            # 如果回撤小于2*波动率，不理睬
+            logger.debug("经过[%d]个交易周期(大于%d周期)后，总体出现回撤[%.2f] < 2*波动率(标准差[%.2f])，无视总体风险",
+                         len(self.portfolio_values),
+                         2 * self.period,
+                         drawback,
+                         self._volatility())
             return False
 
-        # 如果回撤大于2倍STD，就要整体清仓了
+        # 如果回撤大于3倍STD，就要整体清仓了
         for stock_code in self.strategy.current_stocks:
             self.strategy.sell_out(stock_code)
 
-        logger.debug("回撤[%.2f] > 2*波动率(标准差[%.2f])，全部清仓%d只股票",
+        logger.debug("回撤[%.2f] > 3*波动率(标准差[%.2f])，全部清仓%d只股票",
                      drawback,
-                     std,
+                     self._volatility(),
                      len(self.strategy.current_stocks))
         # 彻底退出回测
         self.strategy.env.runstop()

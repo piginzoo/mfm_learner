@@ -27,7 +27,8 @@ def main(factor_name, start_date, end_date, index_code, stock_num):
             calculate_and_save(factor_name, factor, start_date, end_date, index_code, stock_num)
     else:
         factor = dynamic_loader.create_factor_by_name(factor_name, class_dict)
-        calculate_and_save(factor_name, factor, start_date, end_date, index_code, stock_num)
+        if factor:
+            calculate_and_save(factor_name, factor, start_date, end_date, index_code, stock_num)
 
     logger.info("合计处理因子耗时 %.2f 秒", time.time() - start_time)
 

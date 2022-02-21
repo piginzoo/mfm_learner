@@ -7,6 +7,7 @@ import warnings
 import matplotlib.pyplot as plt
 import yaml
 from backtrader.plot import Plot_OldSync
+from dateutil.relativedelta import relativedelta
 from pandas import Series
 from sqlalchemy import create_engine
 
@@ -108,14 +109,44 @@ def get_yearly_duration(start_date, end_date):
 
 
 def tomorrow(s_date):
-    today = str2date(s_date)
-    __tomorrow = today + datetime.timedelta(days=1)
-    return date2str(__tomorrow)
+    return future('day', 1, s_date)
+
+
+def last_year(s_date,num=1):
+    return last('year', num, s_date)
 
 
 def today():
     now = datetime.datetime.now()
     return datetime.datetime.strftime(now, "%Y%m%d%H%M%S")
+
+
+def future(date_type, unit, s_date):
+    return __date_span(date_type, unit, 1, s_date)
+
+
+def last(date_type, unit, s_date):
+    return __date_span(date_type, unit, -1, s_date)
+
+
+def __date_span(date_type, unit, direction, s_date):
+    """
+    last('year',1,'2020.1.3')=> '2019.1.3'
+    :param unit:
+    :param date_type: year|month|day
+    :return:
+    """
+    the_date = str2date(s_date)
+    if date_type == 'year':
+        return date2str(the_date - relativedelta(years=unit) * direction)
+    elif date_type == 'month':
+        return date2str(the_date - relativedelta(months=unit) * direction)
+    elif date_type == 'week':
+        return date2str(the_date - relativedelta(weeks=unit) * direction)
+    elif date_type == 'day':
+        return date2str(the_date - relativedelta(days=unit) * direction)
+    else:
+        raise ValueError(f"无法识别的date_type:{date_type}")
 
 
 def date2str(date, format="%Y%m%d"):

@@ -5,7 +5,7 @@ import pandas as pd
 from pandas import DataFrame, Series
 from sklearn import preprocessing
 
-from datasource import datasource_utils, datasource_factory
+from datasource import datasource_utils, datasource_factory, datasource
 from example.factors.factor import Factor
 from utils import utils, dynamic_loader, logging_time, db_utils
 
@@ -411,7 +411,7 @@ def get_factor_synthesis(name, stock_codes, start_date, end_date):
     """
 
     df = pd.read_sql(sql, engine)
-    df = datasource_utils.reset_index(df) # 为了和单因子统一，也做这个处理，即用datetime和code做联合index
+    df = datasource_utils.reset_index(df)  # 为了和单因子统一，也做这个处理，即用datetime和code做联合index
     logger.debug("从表[%s]加载合成因子[%s] %d条", 'factor_synthesis', name, len(df))
 
     return df
@@ -444,6 +444,111 @@ def factor_synthesis2db(name, desc, df_factor):
 
     df_factor.to_sql(f'factor_synthesis', engine, index=False, if_exists='append')  # replace 替换掉旧的
     logger.debug("保存合成因子到数据库：表[%s] ，名称:%s, %d行", 'factor_synthesis', name, len(df_factor))
+
+
+PERIOD_DEF = {
+    '0331': 1,
+    '0630': 2,
+    '0930': 3,
+    '1231': 4
+}
+
+
+def handle_finance_period_diff(stock_codes, start_date, end_date, df_finance, value_column_name,
+                               finance_date_col_name='start_date'):
+    """
+    @:param finance_date  - 真正的财报定义的日期，如3.30、6.30、9.30、12.31
+
+    ts_code    ann_date  end_date      roe
+    600000.SH  20201031  20200930   7.9413
+    600000.SH  20200829  20200630   5.1763
+    600000.SH  20200425  20200331   3.0746
+    600000.SH  20200425  20191231  11.4901
+    600000.SH  20191030  20190930   9.5587 <----- 2019.8.1日可回溯到的日期
+    600000.SH  20190824  20190630   6.6587
+    600000.SH  20190430  20190331   3.4284
+    600000.SH  20190326  20181231  12.4674
+
+    处理方法：
+    比如我要填充每一天的ROE_TTM，就要根据当前的日期，回溯到一个可用的ann_date（发布日期），
+    然后以这个日期，作为可用数据，计算ROE_TTM。
+    比如当前日是2019.8.1日，回溯到2019.10.30(ann_date)日发布的3季报（end_date=20190930, 0930结尾为3季报），
+    然后，我们的计算方法就是，用3季报，加上去年的年报，减去去年的3季报。
+    -----
+    所以，我们抽象一下，所有的规则如下：
+    - 如果是回溯到年报，直接用年报作为TTM
+    - 如果回溯到1季报、半年报、3季报，就用其 + 去年的年报 - 去年起对应的xxx报的数据，这样粗暴的公式，是为了简单
+    """
+
+    df_finance = df_finance[value_column_name]
+
+    df_finance = df_finance.reset_index()
+
+    # 为TTM，把时间提前2年
+    start_date_2years = utils.last_year(start_date, num=2)
+
+    trade_dates = datasource.trade_cal(start_date, end_date)
+    df_fininace = datasource.fina_indicator(stock_codes, start_date_2years, end_date)
+
+    # 对时间，升序排列
+    df_finance.sort_index('datetime', inplace=True)
+
+    value_column_name = column_name + "_ttm"
+    df_factor = pd.DataFrame(columns=['datetime', 'code', value_column_name])
+
+    # 返回的数据，应该是交易日数据；一只一只股票的处理
+    for stock_code in stock_codes:
+
+        # 过滤一只股票
+        df_stock_fininace = df_fininace[df_fininace['code'] == stock_code]
+
+        # 处理每一天
+        for the_date in trade_dates:
+
+            # 找到最后发布的行：按照当前日作为最后一天，去反向搜索发布日在当前日之前的数据，取最后一条，就是最后发布的数据
+            series_last_one = df_stock_fininace[df_stock_fininace['datetime'] <= utils.str2date(the_date)][-1]
+
+            # 取出最后发布的财务日期
+            finance_date = series_last_one[finance_date_col_name]
+
+            # 取出最后发布的财务日期对应的指标值
+            current_period_value = series_last_one[value_column_name]
+
+            # 如果这条财务数据是年报数据
+            if finance_date.endswith("1231"):
+                value = current_period_value
+            else:
+                # 如果回溯到1季报、半年报、3季报，就用其 + 去年的年报 - 去年起对应的xxx报的数据，这样粗暴的公式，是为了简单
+                last_year_value = __last_year_value(df_stock_fininace, finance_date)
+                last_year_same_period_value = __last_year_period_value(df_stock_fininace, finance_date)
+                if last_year_value is None or last_year_same_period_value is None:
+                    value = __calculate_ttm_by_peirod(current_period_value, finance_date)
+                else:
+                    value = current_period_value + last_year_value - last_year_same_period_value
+
+            df_factor.append({'datetime': the_date, 'code': stock_code, value_column_name: value})
+    return df_factor
+
+
+def __last_year_value(df_stock_finance, finance_date_col_name, value_col_name, current_finance_date):
+    last_year_finance_date = current_finance_date[:4] + "1231"
+    return __last_year_period_value(df_stock_finance, finance_date_col_name, value_col_name,
+                                    current_finance_date=last_year_finance_date)
+
+
+def __last_year_period_value(df_stock_finance, finance_date_col_name, value_col_name, current_finance_date):
+    """获得去年同时期的财务指标"""
+
+    # 获得去年财务年报的时间，20211030=>20201030
+    last_year_finance_date = utils.last_year(current_finance_date)
+    df = df_stock_finance[df_stock_finance[finance_date_col_name] == last_year_finance_date]
+    assert len(df) == 0 or len(df) == 1, str(len(df))
+    if len(df) == 1: return df[value_col_name].item()
+    return None
+
+
+def __calculate_ttm_by_peirod(current_period_value, finance_date):
+    pass
 
 
 # python -m example.factor_utils

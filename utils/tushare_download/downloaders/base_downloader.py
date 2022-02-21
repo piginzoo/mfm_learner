@@ -86,7 +86,8 @@ class BaseDownload():
         dtype_dic = {
             'ts_code': sqlalchemy.types.VARCHAR(length=9),
             'trade_date': sqlalchemy.types.VARCHAR(length=8),
-            'ann_date': sqlalchemy.types.VARCHAR(length=8)
+            'ann_date': sqlalchemy.types.VARCHAR(length=8),
+            'end_date': sqlalchemy.types.VARCHAR(length=8)
         }
         df.to_sql(self.get_table_name(),
                   self.db_engine,

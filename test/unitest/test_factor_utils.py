@@ -1,8 +1,7 @@
-# pytest  test/test_factor_utils.py -s
+# pytest  test/unitest/test_factor_utils.py -s
 import math
 from random import random
 
-import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
@@ -45,7 +44,7 @@ def test_neutralize():
     # # 市值数据
     # df_mv = datasource_factory.get().daily_basic(stocks, start_date, end_date)
     # df_mv = datasource_utils.reset_index(df_mv)
-    neutralized_factor = factor_utils.neutralize(df_factor)# df_industry, df_mv['total_mv'])
+    neutralized_factor = factor_utils.neutralize(df_factor)  # df_industry, df_mv['total_mv'])
 
     print("中性化结果：")
     print(neutralized_factor)
@@ -74,3 +73,23 @@ def __generate_mock_factor(stocks, start_date, end_date):
     df = datasource_utils.reset_index(df)
 
     return df
+
+
+def test_handle_finance_ttm():
+    start_date = '20200101'
+    end_date = '20201201'
+    stock_codes = ['600000.SH']  # 浦发银行
+
+    # 为TTM，把时间提前2年
+    start_date_2years = utils.last_year(start_date, num=2)
+    datasource = datasource_factory.get()
+    trade_dates = datasource.trade_cal(start_date, end_date)
+    df_finance = datasource.fina_indicator(stock_codes, start_date_2years, end_date)
+
+    df = factor_utils.handle_finance_ttm(stock_codes,
+                                         df_finance,
+                                         trade_dates,
+                                         col_name_value='roe',
+                                         col_name_finance_date='start_date')
+    print("ROE_TTM:")
+    print(df)

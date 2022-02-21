@@ -5,7 +5,7 @@ import pandas as pd
 from pandas import DataFrame, Series
 from sklearn import preprocessing
 
-from datasource import datasource_utils, datasource_factory, datasource
+from datasource import datasource_utils, datasource_factory
 from example.factors.factor import Factor
 from utils import utils, dynamic_loader, logging_time, db_utils
 
@@ -454,8 +454,11 @@ PERIOD_DEF = {
 }
 
 
-def handle_finance_period_diff(stock_codes, start_date, end_date, df_finance, value_column_name,
-                               finance_date_col_name='start_date'):
+def handle_finance_ttm(stock_codes,
+                       df_finance,
+                       trade_dates,
+                       col_name_value,
+                       col_name_finance_date='start_date'):
     """
     @:param finance_date  - 真正的财报定义的日期，如3.30、6.30、9.30、12.31
 
@@ -480,21 +483,21 @@ def handle_finance_period_diff(stock_codes, start_date, end_date, df_finance, va
     - 如果回溯到1季报、半年报、3季报，就用其 + 去年的年报 - 去年起对应的xxx报的数据，这样粗暴的公式，是为了简单
     """
 
-    df_finance = df_finance[value_column_name]
+    df_finance = df_finance[col_name_value]
 
     df_finance = df_finance.reset_index()
 
-    # 为TTM，把时间提前2年
-    start_date_2years = utils.last_year(start_date, num=2)
-
-    trade_dates = datasource.trade_cal(start_date, end_date)
-    df_fininace = datasource.fina_indicator(stock_codes, start_date_2years, end_date)
+    # # 为TTM，把时间提前2年
+    # start_date_2years = utils.last_year(start_date, num=2)
+    #
+    # trade_dates = datasource.trade_cal(start_date, end_date)
+    # df_fininace = datasource.fina_indicator(stock_codes, start_date_2years, end_date)
 
     # 对时间，升序排列
     df_finance.sort_index('datetime', inplace=True)
 
-    value_column_name = column_name + "_ttm"
-    df_factor = pd.DataFrame(columns=['datetime', 'code', value_column_name])
+    col_name_value = col_name_value + "_ttm"
+    df_factor = pd.DataFrame(columns=['datetime', 'code', col_name_value])
 
     # 返回的数据，应该是交易日数据；一只一只股票的处理
     for stock_code in stock_codes:
@@ -509,10 +512,10 @@ def handle_finance_period_diff(stock_codes, start_date, end_date, df_finance, va
             series_last_one = df_stock_fininace[df_stock_fininace['datetime'] <= utils.str2date(the_date)][-1]
 
             # 取出最后发布的财务日期
-            finance_date = series_last_one[finance_date_col_name]
+            finance_date = series_last_one[col_name_finance_date]
 
             # 取出最后发布的财务日期对应的指标值
-            current_period_value = series_last_one[value_column_name]
+            current_period_value = series_last_one[col_name_value]
 
             # 如果这条财务数据是年报数据
             if finance_date.endswith("1231"):
@@ -526,7 +529,7 @@ def handle_finance_period_diff(stock_codes, start_date, end_date, df_finance, va
                 else:
                     value = current_period_value + last_year_value - last_year_same_period_value
 
-            df_factor.append({'datetime': the_date, 'code': stock_code, value_column_name: value})
+            df_factor.append({'datetime': the_date, 'code': stock_code, col_name_value: value})
     return df_factor
 
 

@@ -32,10 +32,11 @@ def test_neutralize():
                    float_mv=None,
                    index_member=None):
     """
-    start_date = '20200101'
-    end_date = '20201201'
-    stocks = datasource_factory.get().index_weight('000300.SH', start_date)
+    start_date = '20180101'
+    end_date = '20191201'
+    stocks = datasource_factory.get().index_weight('000905.SH', start_date,end_date)
     # np.random.shuffle(stocks)
+    assert len(stocks)>0, len(stocks)
     stocks = stocks[:5]
 
     # 行业数据

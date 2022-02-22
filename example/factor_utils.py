@@ -501,13 +501,13 @@ def handle_finance_ttm(stock_codes,
     for stock_code in stock_codes:
 
         # 过滤一只股票
-        df_stock_fininace = df_finance[df_finance['code'] == stock_code]
+        df_stock_finance = df_finance[df_finance['code'] == stock_code]
 
         # 处理每一天
         for the_date in trade_dates:
 
             # 找到最后发布的行：按照当前日作为最后一天，去反向搜索发布日在当前日之前的数据，取最后一条，就是最后发布的数据
-            series_last_one = df_stock_fininace[df_stock_fininace['datetime'] <= the_date].iloc[-1]
+            series_last_one = df_stock_finance[df_stock_finance['datetime'] <= the_date].iloc[-1]
 
             # 取出最后发布的财务日期
             finance_date = series_last_one[col_name_finance_date]
@@ -520,14 +520,15 @@ def handle_finance_ttm(stock_codes,
                 value = current_period_value
             else:
                 # 如果回溯到1季报、半年报、3季报，就用其 + 去年的年报 - 去年起对应的xxx报的数据，这样粗暴的公式，是为了简单
-                last_year_value = __last_year_value(df_stock_fininace, finance_date)
-                last_year_same_period_value = __last_year_period_value(df_stock_fininace, finance_date)
+
+                last_year_value = __last_year_value(df_stock_finance, col_name_finance_date, col_name_value, finance_date)
+                last_year_same_period_value = __last_year_period_value(df_stock_finance, col_name_finance_date, col_name_value, finance_date)
                 if last_year_value is None or last_year_same_period_value is None:
                     value = __calculate_ttm_by_peirod(current_period_value, finance_date)
                 else:
                     value = current_period_value + last_year_value - last_year_same_period_value
 
-            df_factor.append({'datetime': the_date, 'code': stock_code, ttm_col_name_value: value})
+            df_factor.append({'datetime': the_date, 'code': stock_code, ttm_col_name_value: value},ignore_index=True)
     return df_factor
 
 

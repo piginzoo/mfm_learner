@@ -85,6 +85,7 @@ def compile_industry(series_industry):
     def find_industry_code(chinese_name):
 
         # import pdb;pdb.set_trace()
+        # 找列[industry_name]中的值和中文行业名相等的行
         found_rows = df_industries.loc[df_industries['industry_name'] == chinese_name]
 
         for _, row in found_rows.iterrows():

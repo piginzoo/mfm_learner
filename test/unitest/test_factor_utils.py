@@ -34,18 +34,19 @@ def test_neutralize():
     """
     start_date = '20180101'
     end_date = '20191201'
-    stocks = datasource_factory.get().index_weight('000905.SH', start_date,end_date)
+    stocks = datasource_factory.get().index_weight('000905.SH', start_date, end_date)
     # np.random.shuffle(stocks)
-    assert len(stocks)>0, len(stocks)
+    assert len(stocks) > 0, len(stocks)
     stocks = stocks[:5]
 
-    # 行业数据
+    # 创建mock因子
     df_factor = __generate_mock_factor(stocks, start_date, end_date)
-    # df_industry = datasource_utils.compile_industry(df_industry)
-    # # 市值数据
-    # df_mv = datasource_factory.get().daily_basic(stocks, start_date, end_date)
-    # df_mv = datasource_utils.reset_index(df_mv)
-    neutralized_factor = factor_utils.neutralize(df_factor)  # df_industry, df_mv['total_mv'])
+    # 行业数据
+    df_stock_basic = datasource_factory.get().stock_basic(stocks)
+    # 市值数据
+    df_mv = datasource_factory.get().daily_basic(stocks, start_date, end_date)
+    df_mv = datasource_utils.reset_index(df_mv)
+    neutralized_factor = factor_utils.neutralize(df_factor,df_stock_basic, df_mv['total_mv'])
 
     print("中性化结果：")
     print(neutralized_factor)
@@ -77,6 +78,11 @@ def __generate_mock_factor(stocks, start_date, end_date):
 
 
 def test_handle_finance_ttm():
+    """
+    测试财务TTM处理，
+    这个方法会被用在各类财务处理中，如ROE_TTM，PEG_TTM...
+    """
+
     start_date = '20180101'
     end_date = '20191201'
     stock_codes = ['600000.SH']  # 浦发银行
@@ -85,15 +91,12 @@ def test_handle_finance_ttm():
     start_date_2years_ago = utils.last_year(start_date, num=2)
     datasource = datasource_factory.get()
     trade_dates = datasource.trade_cal(start_date, end_date)
-<<<<<<< HEAD
-    print(stock_codes, start_date_2years, end_date)
-    df_finance = datasource.fina_indicator(stock_codes, start_date_2years, end_date)
-=======
-
     df_finance = datasource.fina_indicator(stock_codes, start_date_2years_ago, end_date)
->>>>>>> b186d4e98075a98cb56f6bb98395df1af06cef7a
 
-    assert len(df_finance)>0
+    # TODO 懒得重新下载fina_indicator，临时trick一下
+    df_finance['end_date'] = df_finance['end_date'].apply(str)
+
+    assert len(df_finance) > 0
     df = factor_utils.handle_finance_ttm(stock_codes,
                                          df_finance,
                                          trade_dates,

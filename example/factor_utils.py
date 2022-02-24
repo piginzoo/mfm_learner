@@ -310,6 +310,9 @@ def neutralize(factor_df, df_stock_basic, df_mv):
     df_factor_temp = DataFrame(factor_df)  # 防止他是Series
     assert check_factor_format(factor_df, index_type='date_code')
     df_factor_temp = df_factor_temp.reset_index()
+
+    assert 'code' in df_factor_temp, df_factor_temp
+    assert 'code' in df_stock_basic, df_stock_basic
     df_factor_temp = df_factor_temp.merge(df_stock_basic[['code', 'industry']],
                                           on="code")  # stocks_info行太少，需要和factors做merge
     df_factor_temp = df_factor_temp.set_index(['datetime', 'code'])
@@ -483,33 +486,25 @@ def handle_finance_ttm(stock_codes,
     - 如果回溯到1季报、半年报、3季报，就用其 + 去年的年报 - 去年起对应的xxx报的数据，这样粗暴的公式，是为了简单
     """
 
+    # 提取，发布日期，股票，财务日期，财务指标 ，4列
     df_finance = df_finance[['datetime', 'code', col_name_finance_date, col_name_value]]
 
-    # # 为TTM，把时间提前2年
-    # start_date_2years = utils.last_year(start_date, num=2)
-    #
-    # trade_dates = datasource.trade_cal(start_date, end_date)
-    # df_finance = datasource.fina_indicator(stock_codes, start_date_2years, end_date)
-
     # 对时间，升序排列
-<<<<<<< HEAD
-    import pdb;pdb.set_trace()
-=======
->>>>>>> b186d4e98075a98cb56f6bb98395df1af06cef7a
     df_finance.sort_values('datetime', inplace=True)
 
+    # 未来的，ttm列名
     ttm_col_name_value = col_name_value + "_ttm"
+
+    # 创建空的结果DataFrame
     df_factor = pd.DataFrame(columns=['datetime', 'code', col_name_value])
 
     # 返回的数据，应该是交易日数据；一只一只股票的处理
     for stock_code in stock_codes:
 
         # 过滤一只股票
-<<<<<<< HEAD
-        df_stock_fininace = df_finance[df_finance['code'] == stock_code]
-=======
         df_stock_finance = df_finance[df_finance['code'] == stock_code]
->>>>>>> b186d4e98075a98cb56f6bb98395df1af06cef7a
+
+        logger.debug("处理股票[%s]财务数据%d条", stock_code, len(df_stock_finance))
 
         # 处理每一天
         for the_date in trade_dates:
@@ -526,17 +521,32 @@ def handle_finance_ttm(stock_codes,
             # 如果这条财务数据是年报数据
             if finance_date.endswith("1231"):
                 value = current_period_value
+                logger.debug("财务日[%s]是年报数据，使用年报指标[%.2f]作为当日指标", finance_date, value)
             else:
                 # 如果回溯到1季报、半年报、3季报，就用其 + 去年的年报 - 去年起对应的xxx报的数据，这样粗暴的公式，是为了简单
-
-                last_year_value = __last_year_value(df_stock_finance, col_name_finance_date, col_name_value, finance_date)
-                last_year_same_period_value = __last_year_period_value(df_stock_finance, col_name_finance_date, col_name_value, finance_date)
+                last_year_value = __last_year_value(df_stock_finance, col_name_finance_date, col_name_value,
+                                                    finance_date)
+                last_year_same_period_value = __last_year_period_value(df_stock_finance, col_name_finance_date,
+                                                                       col_name_value, finance_date)
                 if last_year_value is None or last_year_same_period_value is None:
                     value = __calculate_ttm_by_peirod(current_period_value, finance_date)
+                    logger.debug("财务日[%s]是非年报数据，无去年报指标，使用N倍当前指标[%.2f]作为当日指标", finance_date, value)
                 else:
                     value = current_period_value + last_year_value - last_year_same_period_value
+                    logger.debug("财务日[%s]是非年报数据，今年同期[%.2f]+年报指标[%.2f]-去年同期[%.2f]=[%.2f]作为当日指标",
+                                 finance_date,
+                                 current_period_value,
+                                 last_year_value,
+                                 last_year_same_period_value,
+                                 value)
 
-            df_factor.append({'datetime': the_date, 'code': stock_code, ttm_col_name_value: value},ignore_index=True)
+            df_factor = df_factor.append(
+                {'datetime': the_date,
+                 'code': stock_code,
+                 col_name_value: current_period_value,
+                 ttm_col_name_value: value},
+                ignore_index=True)
+    logger.debug("生成%d条TTM数据", len(df_factor))
     return df_factor
 
 
@@ -563,6 +573,7 @@ def __calculate_ttm_by_peirod(current_period_value, finance_date):
 
 # python -m example.factor_utils
 if __name__ == '__main__':
+    utils.init_logger()
     df = get_factor("clv", "20210101", "20210801")
     print(df.head(3))
     print(len(df))

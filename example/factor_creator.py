@@ -69,10 +69,10 @@ python -m example.factor_creator \
     --index 000905.SH 
 
 python -m example.factor_creator \
-    --factor turnover_6m \
-    --start 20210101 \
-    --end 20210801 \
-    --num 10 \
+    --factor roe_ttm \
+    --start 20180101 \
+    --end 20191230 \
+    --num 50 \
     --index 000905.SH 
 
 """

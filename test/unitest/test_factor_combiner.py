@@ -1,10 +1,10 @@
 import pandas as pd
 
-from example.factor_synthesizer import calc_monotony
+from example.analysis.score import calc_monotony
 
 """
 
-pytest  test/test_factor_combiner.py -s
+pytest -o log_cli=true test/unitest/test_factor_combiner.py -s
 
 """
 

@@ -449,14 +449,6 @@ def factor_synthesis2db(name, desc, df_factor):
     logger.debug("保存合成因子到数据库：表[%s] ，名称:%s, %d行", 'factor_synthesis', name, len(df_factor))
 
 
-# PERIOD_DEF = {
-#     '0331': 1,
-#     '0630': 2,
-#     '0930': 3,
-#     '1231': 4
-# }
-
-
 def handle_finance_ttm(stock_codes,
                        df_finance,
                        trade_dates,
@@ -521,7 +513,7 @@ def handle_finance_ttm(stock_codes,
             # 如果这条财务数据是年报数据
             if finance_date.endswith("1231"):
                 value = current_period_value
-                logger.debug("财务日[%s]是年报数据，使用年报指标[%.2f]作为当日指标", finance_date, value)
+                # logger.debug("财务日[%s]是年报数据，使用年报指标[%.2f]作为当日指标", finance_date, value)
             else:
                 # 如果回溯到1季报、半年报、3季报，就用其 + 去年的年报 - 去年起对应的xxx报的数据，这样粗暴的公式，是为了简单
                 last_year_value = __last_year_value(df_stock_finance, col_name_finance_date, col_name_value,
@@ -530,15 +522,15 @@ def handle_finance_ttm(stock_codes,
                                                                        col_name_value, finance_date)
                 if last_year_value is None or last_year_same_period_value is None:
                     value = __calculate_ttm_by_peirod(current_period_value, finance_date)
-                    logger.debug("财务日[%s]是非年报数据，无去年报指标，使用N倍当前指标[%.2f]作为当日指标", finance_date, value)
+                    # logger.debug("财务日[%s]是非年报数据，无去年报指标，使用N倍当前指标[%.2f]作为当日指标", finance_date, value)
                 else:
                     value = current_period_value + last_year_value - last_year_same_period_value
-                    logger.debug("财务日[%s]是非年报数据，今年同期[%.2f]+年报指标[%.2f]-去年同期[%.2f]=[%.2f]作为当日指标",
-                                 finance_date,
-                                 current_period_value,
-                                 last_year_value,
-                                 last_year_same_period_value,
-                                 value)
+                    # logger.debug("财务日[%s]是非年报数据，今年同期[%.2f]+年报指标[%.2f]-去年同期[%.2f]=[%.2f]作为当日指标",
+                    #              finance_date,
+                    #              current_period_value,
+                    #              last_year_value,
+                    #              last_year_same_period_value,
+                    #              value)
 
             df_factor = df_factor.append(
                 {'datetime': the_date,
@@ -568,7 +560,17 @@ def __last_year_period_value(df_stock_finance, finance_date_col_name, value_col_
 
 
 def __calculate_ttm_by_peirod(current_period_value, finance_date):
-    pass
+    PERIOD_DEF = {
+        '0331': 1,
+        '0630': 2,
+        '0930': 3,
+    }
+
+    periods = PERIOD_DEF.get(finance_date[-4:], None)
+    if periods is None:
+        logger.warning("无法根据财务日期[%s]得到财务的季度间隔数", finance_date)
+        return np.nan
+    return current_period_value * current_period_value
 
 
 # python -m example.factor_utils

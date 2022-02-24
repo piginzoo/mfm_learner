@@ -1,9 +1,7 @@
 import logging
-import math
 
-import numpy as np
-
-from datasource import datasource_utils, datasource
+from datasource import datasource_utils
+from example import factor_utils
 from example.factors.factor import Factor
 from utils import utils
 
@@ -54,66 +52,28 @@ class ROEFactor(Factor):
         super().__init__()
 
     def name(self):
-        return "roe"
+        return "roe_ttm"
 
-   def calculate(self, stock_codes, start_date, end_date, df_daily=None):
+    def calculate(self, stock_codes, start_date, end_date):
         """
         # 计算股票的PEG值
         # 输入：context(见API)；stock_list为list类型，表示股票池
         # 输出：df_PEG为dataframe: index为股票代码，data为相应的PEG值
         """
-        df = self.load_stock_data(stock_codes, start_date, end_date)
-        df['PEG'] = df['pe'] / df['netprofit_yoy']
+
+        start_date_2years_ago = utils.last_year(start_date, num=2)
+        trade_dates = self.datasource.trade_cal(start_date, end_date)
+        df_finance = self.datasource.fina_indicator(stock_codes, start_date_2years_ago, end_date)
+
+        # TODO 懒得重新下载fina_indicator，临时trick一下
+        df_finance['end_date'] = df_finance['end_date'].apply(str)
+
+        assert len(df_finance) > 0
+        df = factor_utils.handle_finance_ttm(stock_codes,
+                                             df_finance,
+                                             trade_dates,
+                                             col_name_value='roe',
+                                             col_name_finance_date='end_date')
+
         df = datasource_utils.reset_index(df)
-        return df['PEG']
-
-    def load_stock_data(self, stock_codes, start_date, end_date):
-        df_merge = None
-        for stock_code in stock_codes:
-            # 基本数据，包含：PE
-            df_basic = self.datasource.daily_basic(stock_code=stock_code, start_date=start_date, end_date=end_date)
-
-            # 财务数据，包含：归母公司净利润(TTM)增长率
-            df_finance = self.datasource.fina_indicator(stock_code=stock_code, start_date=start_date, end_date=end_date)
-
-            df_finance = df_finance.sort_index(level='datetime', ascending=True)  # 从早到晚排序
-
-            df_finance['datetime_next'] = df_finance['datetime'].shift(-1)
-            df_basic['netprofit_yoy'] = np.NaN
-            logger.debug("股票[%s] %s~%s 有%d条财务数据，但有%d条基础数据",
-                         stock_code, start_date, end_date, len(df_finance), len(df_basic))
-
-            for index, finance in df_finance.iterrows():
-
-                next_date = finance['datetime_next']
-                current_date = finance['datetime']
-                netprofit_yoy = finance['netprofit_yoy']
-
-                # 第一个区间，只能"2021.1.1之前的，不应该用2021.1.1去填充，但是，没办法，无法获得再之前的数据，只好用他了"
-                if index == 0:
-                    # logger.debug("开始 -> %s , 过滤条数 %d", current_date,
-                    #              len(df_basic.loc[(df_basic.datetime <= current_date)]))
-                    df_basic.loc[df_basic.datetime <= current_date, 'netprofit_yoy'] = netprofit_yoy
-
-                # bugfix,太诡异了，如果是nan，其实nan是一个float类型的,type(nan)==<float>
-                if next_date is None or (type(next_date) == float and math.isnan(next_date)):
-                    df_basic.loc[df_basic.datetime > current_date, 'netprofit_yoy'] = netprofit_yoy
-                    # logger.debug("%s -> 结束 , 过滤条数 %d", current_date,
-                    #              len(df_basic.loc[(df_basic.datetime > current_date)]))
-                else:
-                    df_basic.loc[(df_basic.datetime > current_date) &
-                                 (df_basic.datetime <= next_date), 'netprofit_yoy'] = netprofit_yoy
-                    # logger.debug("%s -> %s , 过滤条数 %d", current_date, next_date, len(
-                    #     df_basic.loc[(df_basic.datetime > current_date) & (df_basic.datetime <= next_date)]))
-
-            if df_merge is None:
-                df_merge = df_basic
-            else:
-                df_merge = df_merge.append(df_basic)
-            # logger.debug("加载%s~%s的股票[%s]的%d条PE和归母公司净利润(TTM)增长率的合并数据", start_date, end_date, stock_code, len(df_merge))
-        logger.debug("一共加载%s~%s %d条 PEG 数据", start_date, end_date, len(df_merge))
-
-        return df_merge
-
-
-
+        return df['roe_ttm']

@@ -1,4 +1,4 @@
-# pytest  test/unitest/test_factor_utils.py -s
+# pytest -o log_cli=true test/unitest/test_factor_utils.py -s
 import math
 from random import random
 

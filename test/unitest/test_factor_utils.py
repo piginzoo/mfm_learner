@@ -76,16 +76,18 @@ def __generate_mock_factor(stocks, start_date, end_date):
 
 
 def test_handle_finance_ttm():
-    start_date = '20200101'
-    end_date = '20201201'
+    start_date = '20180101'
+    end_date = '20191201'
     stock_codes = ['600000.SH']  # 浦发银行
 
     # 为TTM，把时间提前2年
     start_date_2years = utils.last_year(start_date, num=2)
     datasource = datasource_factory.get()
     trade_dates = datasource.trade_cal(start_date, end_date)
+    print(stock_codes, start_date_2years, end_date)
     df_finance = datasource.fina_indicator(stock_codes, start_date_2years, end_date)
 
+    assert len(df_finance)>0
     df = factor_utils.handle_finance_ttm(stock_codes,
                                          df_finance,
                                          trade_dates,

@@ -494,7 +494,8 @@ def handle_finance_ttm(stock_codes,
     # df_fininace = datasource.fina_indicator(stock_codes, start_date_2years, end_date)
 
     # 对时间，升序排列
-    df_finance.sort_index('datetime', inplace=True)
+    import pdb;pdb.set_trace()
+    df_finance.sort_values('datetime', inplace=True)
 
     col_name_value = col_name_value + "_ttm"
     df_factor = pd.DataFrame(columns=['datetime', 'code', col_name_value])
@@ -503,7 +504,7 @@ def handle_finance_ttm(stock_codes,
     for stock_code in stock_codes:
 
         # 过滤一只股票
-        df_stock_fininace = df_fininace[df_fininace['code'] == stock_code]
+        df_stock_fininace = df_finance[df_finance['code'] == stock_code]
 
         # 处理每一天
         for the_date in trade_dates:

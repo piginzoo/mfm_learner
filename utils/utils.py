@@ -138,13 +138,13 @@ def __date_span(date_type, unit, direction, s_date):
     """
     the_date = str2date(s_date)
     if date_type == 'year':
-        return date2str(the_date - relativedelta(years=unit) * direction)
+        return date2str(the_date + relativedelta(years=unit) * direction)
     elif date_type == 'month':
-        return date2str(the_date - relativedelta(months=unit) * direction)
+        return date2str(the_date + relativedelta(months=unit) * direction)
     elif date_type == 'week':
-        return date2str(the_date - relativedelta(weeks=unit) * direction)
+        return date2str(the_date + relativedelta(weeks=unit) * direction)
     elif date_type == 'day':
-        return date2str(the_date - relativedelta(days=unit) * direction)
+        return date2str(the_date + relativedelta(days=unit) * direction)
     else:
         raise ValueError(f"无法识别的date_type:{date_type}")
 

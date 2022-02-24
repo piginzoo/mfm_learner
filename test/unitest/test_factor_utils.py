@@ -32,10 +32,11 @@ def test_neutralize():
                    float_mv=None,
                    index_member=None):
     """
-    start_date = '20200101'
-    end_date = '20201201'
-    stocks = datasource_factory.get().index_weight('000300.SH', start_date)
+    start_date = '20180101'
+    end_date = '20191201'
+    stocks = datasource_factory.get().index_weight('000905.SH', start_date,end_date)
     # np.random.shuffle(stocks)
+    assert len(stocks)>0, len(stocks)
     stocks = stocks[:5]
 
     # 行业数据
@@ -81,17 +82,22 @@ def test_handle_finance_ttm():
     stock_codes = ['600000.SH']  # 浦发银行
 
     # 为TTM，把时间提前2年
-    start_date_2years = utils.last_year(start_date, num=2)
+    start_date_2years_ago = utils.last_year(start_date, num=2)
     datasource = datasource_factory.get()
     trade_dates = datasource.trade_cal(start_date, end_date)
+<<<<<<< HEAD
     print(stock_codes, start_date_2years, end_date)
     df_finance = datasource.fina_indicator(stock_codes, start_date_2years, end_date)
+=======
+
+    df_finance = datasource.fina_indicator(stock_codes, start_date_2years_ago, end_date)
+>>>>>>> b186d4e98075a98cb56f6bb98395df1af06cef7a
 
     assert len(df_finance)>0
     df = factor_utils.handle_finance_ttm(stock_codes,
                                          df_finance,
                                          trade_dates,
                                          col_name_value='roe',
-                                         col_name_finance_date='start_date')
+                                         col_name_finance_date='end_date')
     print("ROE_TTM:")
     print(df)

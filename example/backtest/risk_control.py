@@ -4,6 +4,8 @@ import numpy as np
 import talib
 import pandas as pd
 
+from utils import utils
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,6 +30,10 @@ class RiskControl():
         return pd.Series(self.portfolio_values).pct_change().std() * 3
 
     def portfolio_risk_control(self):
+        """
+        做组合总资产的风控
+        :return:  True，整体清仓  False，无动作
+        """
 
         # 使用当天的开盘价，来计算风险，也就是，如果开市就出现异常，就需要卖出
         today_value = self.strategy.broker.getvalue()
@@ -64,6 +70,8 @@ class RiskControl():
                      len(self.strategy.current_stocks))
         # 彻底退出回测
         self.strategy.env.runstop()
+        self.strategy.stop_flag = True
+
         logger.debug("$$$$$$$$$$$$$$$$$$$$$$全部清仓，退出整个回测交易$$$$$$$$$$$$$$$$$$$$$$")
         return True
 
@@ -74,9 +82,13 @@ class RiskControl():
         返回：触发风控清仓的股票列表。
         """
         self.portfolio_values.append(self.strategy.broker.getvalue())
+
+        # 如果True就代表整体清仓，就不在做个股的风控了
         if self.portfolio_risk_control(): return
 
         exclude_stock_codes = []
+
+        current_date = self.strategy.datas[0].datetime.datetime(0)
 
         # 处理每一只股票，都要保存期历史最高价
         for d in self.strategy.datas:
@@ -93,8 +105,10 @@ class RiskControl():
                 continue
 
             # import pdb;pdb.set_trace()
+
             # 如果股票在持仓列表，且满足最大回撤达到N倍ATR，则触发风控
-            logger.debug("股票[%s]历史最高价[%.2f]当前价[%.2f]回撤[%.2f]ATR[%.2f]",
+            logger.debug("日期[%s] 股票[%s] 历史最高价[%.2f] 当前价[%.2f] 回撤[%.2f] ATR[%.2f]",
+                         utils.date2str(current_date),
                          stock_code,
                          open_price,
                          highest_price,
@@ -103,7 +117,8 @@ class RiskControl():
 
             drawback = highest_price - open_price
             if drawback > self.atr_times * atr:
-                logger.warning("股票[%s]的开盘价[%.2f]的回撤[%.2f]大于%d倍的ATR[%.2f]，触发风控清仓",
+                logger.warning("日期[%s] 股票[%s]的开盘价[%.2f]的回撤[%.2f]大于%d倍的ATR[%.2f]，触发风控清仓",
+                               utils.date2str(current_date),
                                stock_code,
                                open_price,
                                drawback,

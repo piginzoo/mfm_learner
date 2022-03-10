@@ -185,12 +185,14 @@ def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, p
     """
     plt.clf()
     fig, axes = plt.subplots(len(quantile_cumulative_returns), 1, figsize=(18, 18))
+    # subplots很诡异，如果只有1个subplot，返回的ax是个单数，而不是list，所以统一成list
+    if type(axes)!=list:
+        axes = [axes]
     fig.tight_layout()  # 调整整体空白
     plt.subplots_adjust(wspace=0, hspace=0.3)  # 调整子图间距
 
     # 遍历每一个周期（1D，5D，10D）的数据
     for i, one_period_quantile_cumulative_returns in enumerate(quantile_cumulative_returns):
-
         ax = axes[i]  # 1D,5D,10D对应的axis
         color = cm.rainbow(np.linspace(0, 1, quantile))
         ymin, ymax = one_period_quantile_cumulative_returns.min(), one_period_quantile_cumulative_returns.max()
@@ -304,10 +306,10 @@ def save_analysis_result(factor_name, df_result):
 """
 # 测试用
 python -m example.factor_analyzer \
-    --factor clv \
-    --start 20170101 \
-    --end 20180101 \
-    --num 20 \
+    --factor roe_ttm \
+    --start 20180101 \
+    --end 20191230 \
+    --num 50 \
     --period 20 \
     --index 000905.SH
 """

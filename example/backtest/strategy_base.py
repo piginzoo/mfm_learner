@@ -21,6 +21,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
     def __init__(self, period, factor_dict, atr_times,risk):
         self.period = period
+        self.stop_flag = False
         self.risk = risk
         self.factor_dict = factor_dict
         self.current_stocks = []
@@ -136,6 +137,9 @@ class MultiStocksFactorStrategy(bt.Strategy):
         blacklist_stocks = []
         if self.risk:
             blacklist_stocks = self.risk_control.execute()
+
+        # 调用self.env.stoprun()后，还会run next方法，加个flag控制异常
+        if self.stop_flag: return
 
         # logger.debug("已经处理了%d个数据, 总共有%d个数据", len(self), self.data.buflen())
 

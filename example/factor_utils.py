@@ -455,6 +455,9 @@ def handle_finance_ttm(stock_codes,
                        col_name_value,
                        col_name_finance_date='end_date'):
     """
+    处理TTM：以当天为基准，向前滚动12个月的数据，
+    用于处理类ROE_TTM数据，当然不限于ROE，只要是同样逻辑的都支持。
+
     @:param finance_date  - 真正的财报定义的日期，如3.30、6.30、9.30、12.31
 
     ts_code    ann_date  end_date      roe

@@ -306,7 +306,7 @@ def save_analysis_result(factor_name, df_result):
 """
 # 测试用
 python -m example.factor_analyzer \
-    --factor roe_ttm \
+    --factor roe_yoy \
     --start 20180101 \
     --end 20191230 \
     --num 50 \

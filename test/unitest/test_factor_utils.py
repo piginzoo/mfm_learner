@@ -104,3 +104,21 @@ def test_handle_finance_ttm():
                                          col_name_finance_date='end_date')
     print("ROE_TTM:")
     print(df)
+
+
+
+def test_handle_finance_ttm():
+
+
+    start_date = '20180101'
+    end_date = '20191201'
+    stock_codes = ['600000.SH']  # 浦发银行
+
+    datasource = datasource_factory.get()
+    df = factor_utils.handle_finance_fill(datasource,
+                                          stock_codes,
+                                          start_date,
+                                          end_date,
+                                          finance_index_col_name_value='roe')
+    print("ROE:")
+    print(df)

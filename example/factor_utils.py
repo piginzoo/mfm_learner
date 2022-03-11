@@ -576,6 +576,62 @@ def __calculate_ttm_by_peirod(current_period_value, finance_date):
     return current_period_value * current_period_value
 
 
+def handle_finance_fill(datasource,
+                        stock_codes,
+                        start_date,
+                        end_date,
+                        finance_index_col_name_value):
+    """
+    处理财务数据填充，因为财政指标只在年报发布时候提供，所以要填充那些非发布日的数据，
+    比如财务数据仅提供了财务报表发表日的的数据，那么我们需要用这个数据去填充其他日子，
+    填充原则是，以发布日为基准，当日数据以最后发布日的数据为准，
+    算法是用通用日历来填充其他数据，但是，可能某天此股票停盘，无所谓，还是给他算出来，
+    实现是，按照日历创建空记录集，然后做左连接，空位用前面的数据补齐
+    有个细节，开始的日子需要再之前的财务数据，因此，我只好多query1年前的财务数据来处理，最终在过滤掉之前的数据
+    """
+
+    # 需要把提前1年的财务数据和日历都得到
+    start_date_1years_ago = utils.last_year(start_date, num=1)
+    # 交易日期（包含1年前）
+    trade_dates = datasource.trade_cal(start_date_1years_ago, end_date)
+    # 财务数据（包含1年前的）
+    df_finance = datasource.fina_indicator(stock_codes, start_date_1years_ago, end_date)
+    # 提取，发布日期，股票，财务日期，财务指标 ，4列
+    df_finance = df_finance[['code', 'datetime', finance_index_col_name_value]]
+    # 对时间，升序排列
+    df_finance.sort_values('datetime', inplace=True)
+    # 创建每个交易日为一行的一个辅助dataframe，用于生成每个股票的交易数据
+    df_calender = pd.DataFrame(trade_dates)
+    df_calender.columns = ['datetime']
+    # 创建空的结果DataFrame，保存最终结果
+    df_result = pd.DataFrame(trade_dates, columns=['code', 'datetime', finance_index_col_name_value])
+    # 返回的数据，应该是交易日数据；一只一只股票的处理
+    for stock_code in stock_codes:
+        # 过滤一只股票
+        df_stock_finance = df_finance[df_finance['code'] == stock_code]
+        logger.debug("处理股票[%s]财务数据%d条", stock_code, len(df_stock_finance))
+        # 左连接，交易日（左连接）财务数据，这样，没有的交易日，数据为NAN
+        df_join = df_calender.merge(df_stock_finance, how="left", on='datetime')
+        # 为防止日期顺序有问题，重新排序
+        df_join = df_join.sort_values('datetime')
+        # 向下填充nan值，这个是一个神奇的方法，跟Stack Overflow上学的
+        # 参考 https://stackoverflow.com/questions/27905295/how-to-replace-nans-by-preceding-or-next-values-in-pandas-dataframe
+        df_join = df_join.fillna(method='ffill')
+        # 补齐股票代码
+        df_join['code'] = stock_code
+        # 因为提前了1年的数据，所以，要把这些提前数据过滤掉
+        df_join = df_join[df_join.datetime >= start_date]
+
+        # 做一个断言，理论上不应该有nan数据
+        nan_sum = df_join[finance_index_col_name_value].isnull().sum()
+        assert nan_sum == 0, f"你需要多传一年的财务数据，防止NAN: {nan_sum}行NAN "
+
+        # 合并到总结果中
+        df_result = df_result.append(df_join, ignore_index=True)
+
+    return df_result
+
+
 # python -m example.factor_utils
 if __name__ == '__main__':
     utils.init_logger()

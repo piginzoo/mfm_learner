@@ -15,10 +15,14 @@ class Factor(ABC):
     def __init__(self):
         self.datasource = datasource_factory.create(CONF['datasource'])
 
+    # 英文名
     @abstractmethod
     def name(self):
         pass
 
+    # 中文名
+    def cname(self):
+        return "未定义"
 
     @abstractmethod
     def calculate(self, stock_codes, start_date, end_date, df_daily=None, df_basic=None):

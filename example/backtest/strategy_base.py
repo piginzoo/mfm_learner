@@ -12,6 +12,18 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+#
+#
+# class TradeResult():
+#     """
+#     date
+#     List<code    sell/buy    profit>
+#     """
+#     pass
+#     def trade(self,codes,buy_or_sells, profits):
+
+
+
 
 class MultiStocksFactorStrategy(bt.Strategy):
     """
@@ -25,6 +37,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.risk = risk
         self.factor_dict = factor_dict
         self.current_stocks = []
+        self.current_date=''
         self.risk_control = RiskControl(self, atr_times, period)
         logger.debug("因子选股：因子[%r], ATR倍数[%d], 调仓周期[%d]天", ",".join(list(factor_dict.keys())), atr_times, period)
 
@@ -89,7 +102,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         self.order = None
 
-    # 记录交易收益情况（可省略，默认不输出结果）
+    # 这个是一只股票的一个完整交易的生命周期：开仓，持有，卖出
     def notify_trade(self, trade):
         # 最后清仓
         # for sell_stock in self.current_stocks:
@@ -99,7 +112,11 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         if not trade.isclosed:
             return
-        logger.debug('策略收益：股票[%s], 毛收益 [%.2f], 净收益 [%.2f]', trade.data._name, trade.pnl, trade.pnlcomm)
+        open_date = utils.date2str(bt.num2date(trade.dtopen))
+        close_date = utils.date2str(bt.num2date(trade.dtopen))
+        logger.debug('策略收益：股票[%s], 毛收益 [%.2f], 净收益 [%.2f],交易开始日期[%s]~[%s]',
+                     trade.data._name, trade.pnl, trade.pnlcomm,
+                     open_date,close_date)
 
         # self.__print_broker()
 
@@ -113,7 +130,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.close(data=stock_data, exectype=bt.Order.Limit)
         self.current_stocks.remove(stock_code)
 
-        logger.debug('平仓股票 %s : 卖出%r股', stock_data._name, size)
+        logger.debug('[%s] 平仓股票 %s : 卖出%r股', self.current_date, stock_data._name, size)
         self.risk_control.post_sell(stock_code)
 
     def next(self):
@@ -145,6 +162,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         # 回测最后一天不进行买卖,datas[0]就是当天, bugfix:  之前self.datas[0].date(0)不行，因为df.index是datetime类型的
         current_date = self.datas[0].datetime.datetime(0)
+        self.current_date = utils.date2str(current_date)
 
         if not len(self.data) % self.period == 0: return
 
@@ -177,11 +195,11 @@ class MultiStocksFactorStrategy(bt.Strategy):
         to_sell_stocks = set(self.current_stocks) - set(selected_stocks)
 
         # 1. 清仓未在选择列表的股票
-        logger.debug("卖出股票：%r", to_sell_stocks)
+        logger.debug("[%s] 卖出股票：%r",self.current_date, to_sell_stocks)
         for sell_stock in to_sell_stocks:
             self.sell_out(sell_stock)
 
-        logger.debug("卖出%d只股票，剩余%d只持仓", len(to_sell_stocks), len(self.current_stocks))
+        logger.debug("[%s] 卖出%d只股票，剩余%d只持仓", self.current_date,len(to_sell_stocks), len(self.current_stocks))
 
         self.__print_broker()
 
@@ -204,7 +222,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         # 如果选中的股票在当前的持仓中，就忽略
         if stock_code in self.current_stocks:
-            logger.debug("%s 在持仓中，不动", stock_code)
+            logger.debug("[%s] %s 在持仓中，不动", self.current_date,stock_code)
             return
 
         # 根据名字获得对应那只股票的数据
@@ -213,7 +231,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         # 按次日开盘价计算下单量，下单量是100（手）的整数倍
         size = math.ceil(buy_amount / open_price)
-        logger.debug("购入股票[%s 股价%.2f] %d股，金额:%.2f", stock_code, open_price, size, buy_amount)
+        logger.debug("[%s] 购入股票[%s 股价%.2f] %d股，金额:%.2f", self.current_date,stock_code, open_price, size, buy_amount)
         self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
         self.current_stocks.append(stock_code)
         self.risk_control.post_buy(stock_code, open_price)
@@ -230,5 +248,5 @@ class MultiStocksFactorStrategy(bt.Strategy):
         top_n = math.ceil(0.2 * len(stock_codes))
         select_stocks = stock_codes[:top_n]
 
-        logger.debug("此次选中的股票为：%r", ",".join(select_stocks))
+        logger.debug("[%s] 此次选中的股票为：%r",self.current_date, ",".join(select_stocks))
         return select_stocks

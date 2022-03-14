@@ -43,28 +43,61 @@ def create_data_feed_class(factor_names):
     return type('PandasDataFeed', (PandasData,), {'lines': lines, 'params': params})
 
 
+def load_index_data(cerebro, index_code, start_date, end_date):
+    """
+    # 加载基准数据,并加入脑波 (benchmark can be a pandas Series or ticker)
+    # 基准数据有2个作用：1、锚定日期 2、作为胜率的比较基准
+    """
+    d_start_date = utils.str2date(start_date)
+    d_end_date = utils.str2date(end_date)
+    df_benchmark_index = datasource.index_daily(index_code=index_code, start_date=start_date, end_date=end_date)
+    df_benchmark_index = comply_backtrader_data_format(df_benchmark_index)
+    # df_benchmark_index = df_benchmark_index['close']
+    df_benchmark_index['ATR'] = 0
+    data = StockData(dataname=df_benchmark_index,
+                     fromdate=d_start_date,
+                     todate=d_end_date,
+                     plot=True)  # plot=False 不在plot图中显示个股价格
+    cerebro.adddata(data, name=index_code)
+    return df_benchmark_index
+
+
 def load_stock_data(cerebro, start_date, end_date, stock_codes, atr_period):
+    """
+    向backtrader的脑波中，灌入数据
+    :param cerebro:
+    :param start_date:
+    :param end_date:
+    :param stock_codes:
+    :param atr_period:
+    :return:
+    """
+
+    # 交易日是哪些天
+    trade_days = datasource.trade_cal(start_date, end_date)
+
     # 想脑波cerebro逐个追加每只股票的数据
     for stock_code in stock_codes:
 
+        # 读取每日交易数据
         df_stock = datasource.daily(stock_code, start_date, end_date)
-        trade_days = datasource.trade_cal(start_date, end_date)
-
+        # 如果交易数据缺失40%+，就忽略这个股票
         if len(df_stock) / len(trade_days) < 0.6:
             logger.warning("股票[%s] 缺失交易日[%d/总%d]天，超40%%，忽略此股票",
                            stock_code, len(df_stock), len(trade_days))
             continue
-
+        # 按照backtrader的要求格式，把数据捋好
         df_stock = comply_backtrader_data_format(df_stock)
 
-        d_start_date = utils.str2date(start_date)  # 开始日期
-        d_end_date = utils.str2date(end_date)  # 结束日期
-
+        # 增加一列ATR
         df_stock['atr'] = talib.ATR(df_stock.high.values, df_stock.low.values, df_stock.close.values,
                                     timeperiod=atr_period)
 
-        # plot=False 不在plot图中显示个股价格
-        data = StockData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date, plot=True)
+        # 灌入脑波
+        d_start_date = utils.str2date(start_date)  # 开始日期
+        d_end_date = utils.str2date(end_date)  # 结束日期
+        data = StockData(dataname=df_stock, fromdate=d_start_date, todate=d_end_date,
+                         plot=True)  # plot=False 不在plot图中显示个股价格
         cerebro.adddata(data, name=stock_code)
         logger.debug("初始化股票[%s]数据到脑波cerebro：%d 条", stock_code, len(df_stock))
 
@@ -89,7 +122,7 @@ def load_stock_data(cerebro, start_date, end_date, stock_codes, atr_period):
 
 def load_data_deperate(cerebro, start_date, end_date, stock_codes, factor_names):
     """
-    @deperate 废弃,之前是把因子并入股票数据的列后面
+    @deperate 废弃,之前是把因子并入股票数据的列后面，这个方法不可行，在设计上，放弃了，代码仅作参考
     :param cerebro:
     :param start_date:
     :param end_date:

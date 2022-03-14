@@ -14,7 +14,6 @@ from example.backtest import data_loader
 from example.backtest.strategy_multifactors import MultiFactorStrategy
 from example.backtest.strategy_singlefactor import SingleFactorStrategy
 from utils import utils
-from utils.utils import MyPlot
 
 """
 用factor_tester.py中合成的多因子，做选择股票的策略 ，去选择中证500的股票，跑收益率回测。使用backtrader来做回测框架。
@@ -99,26 +98,22 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     2016-06-29	0.06	0.019	0.058	0.049	0.042	0.053
     2016-06-30	0.03	0.012	0.037	0.027	0.010	0.077
     """
+    cerebro = bt.Cerebro()  # 初始化cerebro
+
     d_start_date = utils.str2date(start_date)
     d_end_date = utils.str2date(end_date)
-
-    cerebro = bt.Cerebro()  # 初始化cerebro
 
     stock_codes = datasource.index_weight(index_code, start_date, end_date)
     stock_codes = stock_codes[:stock_num]
 
-    # 基准数据,(benchmark can be a pandas Series or ticker)
-    df_benchmark_index = datasource.index_daily(index_code=index_code, start_date=start_date, end_date=end_date)
-    df_benchmark_index = comply_backtrader_data_format(df_benchmark_index)
-    df_benchmark_index = df_benchmark_index['close']
+    # 加载指数数据到脑波
+    df_benchmark_index = data_loader.load_index_data(cerebro, index_code, start_date, end_date)
 
     # 加载股票数据到脑波
     data_loader.load_stock_data(cerebro, start_date, end_date, stock_codes, atr_period)
 
-    ################## cerebro 整体设置 #####################
-
     # 设置启动资金
-    start_cash = 100000.0
+    start_cash = 500000.0
     cerebro.broker.setcash(start_cash)
 
     # https://baike.baidu.com/item/%E8%82%A1%E7%A5%A8%E4%BA%A4%E6%98%93%E6%89%8B%E7%BB%AD%E8%B4%B9/9080806
@@ -129,7 +124,6 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     # 告诉平台，我们是每次买卖股票数量固定的，stake=10就是10股。
     # 实际过程中，我们不可能如此简单的制定买卖的数目，而是要根据一定的规则，这就需要自己写一个sizers
     # cerebro.addsizer(Percent)
-
     strategy_class, factor_dict, name = __get_strategy_and_factor(factor_names=factor_names,
                                                                   stock_codes=stock_codes,
                                                                   start_date=start_date,
@@ -180,7 +174,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
         for year, year_return in result.analyzers.annual.get_analysis().items():
             logger.debug("\t %s : %.2f%%", year, year_return * 100)
         # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
-        quant_statistics(df_benchmark_index,result, period, name, factor_names, atr_period, atr_times)
+        quant_statistics(df_benchmark_index['close'], result, period, name, factor_names, atr_period, atr_times)
 
     b = Bokeh(stype='bar', tabs="multi", scheme=Tradimo())
     cerebro.plot(b)
@@ -195,7 +189,8 @@ def quant_statistics(df_benchmark_index, strat, period, name, factor_names, atr_
     returns.index = returns.index.tz_convert(None)  # 索引的时区要设置一下，否则出错
 
     # 输出html策略报告,rf为无风险利率
-    qs.reports.html(returns, benchmark=df_benchmark_index,
+    qs.reports.html(returns,
+                    benchmark=df_benchmark_index,
                     output='debug/回测报告_{}_{}天调仓_{}.html'.format(utils.today(), period, name),
                     title='{}日调仓,{},因子:{},ATR:{}天/{}倍'.format(period, name, factor_names, atr_p, atr_n), rf=0.0)
 

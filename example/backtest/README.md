@@ -66,3 +66,9 @@ data = PandasDataClass(dataname=df_stock, fromdate=d_start_date, todate=d_end_da
 
 所以，最终我采用了，通过传入因子名称的方法，在策略类的__init__中，加载因子数据的方法了，
 因子名字还得用逗号分隔，否则，丫又给product了。
+
+# 胜率计算
+
+# 换手率
+
+# 交易统计

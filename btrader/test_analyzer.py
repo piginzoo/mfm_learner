@@ -9,18 +9,7 @@ from backtrader import AutoOrderedDict
 
 class StatAnalyzer(bt.Analyzer):
     """
-    - [ ] 到底交易了几次
-    - [ ] 每次买入多少只，卖出多少只
-    - [ ] 每只卖出后的情况，赚还是亏
-    - [ ] 一共买入过多少只
-    - [ ] 一共卖出过多少只
-    - [ ] 卖出的盈亏比例
-
-    - [ ] 每天，市值情况是否打败了市场
-    - [ ] 日胜率
-    - [ ] 周胜率
-    - [ ] 月胜率
-    - [ ] 年胜率
+    测试所有的交易细节信息
     """
 
     def create_analysis(self):
@@ -147,7 +136,7 @@ class TestStrategy(bt.Strategy):
         self.log('(均线周期 %2d)期末资金 %.2f' % (self.params.maperiod, self.broker.getvalue()), doprint=True)
 
 
-# python test_analyzer.py
+# python -m btrader.test_analyzer
 if __name__ == '__main__':
     # 创建Cerebro引擎
     cerebro = bt.Cerebro()

@@ -2,7 +2,7 @@ import logging
 import math
 from abc import abstractmethod
 
-from example.backtest.stat_analyzer import AnalyzerHelper
+
 from example.backtest.risk_control import RiskControl
 from utils import utils
 

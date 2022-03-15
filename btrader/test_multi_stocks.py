@@ -1,6 +1,6 @@
 from datasource import datasource_factory
 from example.backtest import data_loader
-from example.backtest.stat_analyzer import StatAnalyzer, StatObserver
+from example.backtest.winrate_analyzer import WinRateAnalyzer, StatObserver
 from utils import utils
 
 """
@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     cerebro.broker.setcash(1000000)
     cerebro.broker.setcommission(commission=0.002)
-    cerebro.addanalyzer(StatAnalyzer)
+    cerebro.addanalyzer(WinRateAnalyzer)
     cerebro.addobserver(StatObserver)
     cerebro.addstrategy(SmaCross)  # 注入策略
     cerebro.run()

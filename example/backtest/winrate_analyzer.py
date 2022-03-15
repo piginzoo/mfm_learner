@@ -26,7 +26,7 @@ TradeDetail = namedtuple('Trade', ['date', 'buysell', 'pct_chg'])
  - 年胜率
 """
 
-class StatAnalyzer(bt.Analyzer):
+class WinRateAnalyzer(bt.Analyzer):
     """
     尝试用指标，发现很不好用，指标的那些破函数类，比如PctChange，
     所以放弃了，就直接粗暴得到line=>list=>dataframe，然后用dataframe来算了。

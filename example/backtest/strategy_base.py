@@ -2,6 +2,7 @@ import logging
 import math
 from abc import abstractmethod
 
+from example.backtest.stat_analyzer import AnalyzerHelper
 from example.backtest.risk_control import RiskControl
 from utils import utils
 
@@ -39,6 +40,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.current_stocks = []
         self.current_date=''
         self.risk_control = RiskControl(self, atr_times, period)
+        self.analyzer_helper = AnalyzerHelper()
         logger.debug("因子选股：因子[%r], ATR倍数[%d], 调仓周期[%d]天", ",".join(list(factor_dict.keys())), atr_times, period)
 
     def __print_broker(self):
@@ -117,7 +119,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
         logger.debug('策略收益：股票[%s], 毛收益 [%.2f], 净收益 [%.2f],交易开始日期[%s]~[%s]',
                      trade.data._name, trade.pnl, trade.pnlcomm,
                      open_date,close_date)
-
+        self.analyzer_helper.on_trade(trade)
         # self.__print_broker()
 
     def sell_out(self, stock_code):

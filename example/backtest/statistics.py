@@ -44,9 +44,9 @@ def show_stat(cerebro, results, stock_codes, factor_names, factor_policy, start_
             logger.debug("\t %s : %.2f%%", year, year_return * 100)
         print_trade_detail_stat(result.analyzers.trade.get_analysis())
 
-        logger.debug("日胜率    : %.1f", result.analyzers.winrate.get_analysis()['win_rate_day']*100)
-        logger.debug("月胜率    : %.1f", result.analyzers.winrate.get_analysis()['win_rate_month']*100)
-        logger.debug("年胜率    : %.1f", result.analyzers.winrate.get_analysis()['win_rate_year']*100)
+        logger.debug("日胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_day']*100)
+        logger.debug("月胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_month']*100)
+        logger.debug("年胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_year']*100)
 
         # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
         quant_statistics(df_benchmark_index['close'], result, period, factor_policy, factor_names, atr_period,
@@ -57,7 +57,7 @@ def show_stat(cerebro, results, stock_codes, factor_names, factor_policy, start_
     cerebro.plot(b)
 
 
-def quant_statistics(df_benchmark_index, strat, period, name, factor_policy, factor_names, atr_p, atr_n):
+def quant_statistics(df_benchmark_index, strat, period, factor_policy, factor_names, atr_p, atr_n):
     portfolio_stats = strat.analyzers.getbyname('PyFolio')  # 得到PyFolio分析者实例
 
     # 以下returns为以日期为索引的资产日收益率系列
@@ -68,7 +68,7 @@ def quant_statistics(df_benchmark_index, strat, period, name, factor_policy, fac
     # 输出html策略报告,rf为无风险利率
     qs.reports.html(returns,
                     benchmark=df_benchmark_index,
-                    output='debug/回测报告_{}_{}天调仓_{}.html'.format(utils.today(), period, name),
+                    output='debug/回测报告_{}_{}天调仓_{}.html'.format(utils.today(), period, factor_policy),
                     title='{}日调仓,{},因子:{},ATR:{}天/{}倍'.format(period, factor_policy, factor_names, atr_p, atr_n),
                     rf=0.0)
 
@@ -79,7 +79,6 @@ def quant_statistics(df_benchmark_index, strat, period, name, factor_policy, fac
 
 
 def print_trade_detail_stat(trade):
-    TradeAnalyzer()
     """
     TradeAnalyzer()
     total_total	10              总共几次交易
@@ -227,13 +226,19 @@ def print_trade_detail_stat(trade):
              max 0
              min 9223372036854775807
     """
-    logger.debug("净收益：%.2f%%", trade['pnl']['net']['total'])
-    logger.debug("每单净收益：%.2f%%", trade['pnl']['net']['average'])
-    logger.debug("赚钱次数：%.2f%%", trade['won']['total'])
-    logger.debug("赚钱总盈利：%.2f%%", trade['won']['pnl']['total'])
-    logger.debug("赚钱每单盈利：%.2f%%", trade['won']['pnl']['average'])
-    logger.debug("赚钱单次最大盈利：%.2f%%", trade['won']['pnl']['max'])
-    logger.debug("亏钱次数：%.2f%%", trade['lost']['total'])
-    logger.debug("亏钱总盈利：%.2f%%", trade['lost']['pnl']['total'])
-    logger.debug("亏钱每单盈利：%.2f%%", trade['lost']['pnl']['average'])
-    logger.debug("亏钱单次最大盈利：%.2f%%", trade['lost']['pnl']['max'])
+    logger.debug("总交易数：%d", trade['total']['total'])
+    logger.debug("完成交易：%d", trade['total']['open'])
+    logger.debug("未完交易：%d", trade['total']['closed'])
+
+    logger.debug("总净收益：%.2f", trade['pnl']['net']['total'])
+    logger.debug("单净收益：%.2f", trade['pnl']['net']['average'])
+
+    logger.debug("赚钱次数：%d", trade['won']['total'])
+    logger.debug("赚钱总额：%.2f", trade['won']['pnl']['total'])
+    logger.debug("赚钱每单：%.2f", trade['won']['pnl']['average'])
+    logger.debug("赚钱单最：%.2f", trade['won']['pnl']['max'])
+
+    logger.debug("亏钱次数：%d", trade['lost']['total'])
+    logger.debug("亏钱总额：%.2f", trade['lost']['pnl']['total'])
+    logger.debug("亏钱每单：%.2f", trade['lost']['pnl']['average'])
+    logger.debug("亏钱单最：%.2f", trade['lost']['pnl']['max'])

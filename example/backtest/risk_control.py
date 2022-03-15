@@ -1,15 +1,15 @@
 import logging
 
 import numpy as np
-import talib
 import pandas as pd
 
+from example.backtest.buysell_listener import BuySellListener
 from utils import utils
 
 logger = logging.getLogger(__name__)
 
 
-class RiskControl():
+class RiskControl(BuySellListener):
     """
     实现多因子的风控策略，
     目前实现了两种：
@@ -21,7 +21,7 @@ class RiskControl():
         self.strategy = strategy
         self.period = period
         self.atr_times = atr_times
-        self.current_stocks_highest_price = {}
+        self.current_stocks_highest_price = {}  # 保存当前的最高价格的股票+其价格
         self.portfolio_highest_value = self.strategy.broker.getvalue()  # 组合的最高价格
         self.portfolio_values = []  # 组合每天的市值
         logger.debug("创建风控对象：组合当前最高市值[%.2f]", self.portfolio_highest_value)
@@ -43,8 +43,7 @@ class RiskControl():
             self.portfolio_highest_value = today_value
             return False
 
-
-        if np.isnan(self._volatility()):return False
+        if np.isnan(self._volatility()): return False
 
         if len(self.portfolio_values) < 2 * self.period: return False
 
@@ -128,8 +127,8 @@ class RiskControl():
                 exclude_stock_codes.append(stock_code)
         return exclude_stock_codes
 
-    def post_buy(self, stock_code, price):
+    def on_buy(self, stock_code, price):
         self.current_stocks_highest_price[stock_code] = price
 
-    def post_sell(self, stock_code):
+    def on_sell(self, stock_code):
         self.current_stocks_highest_price.pop(stock_code)

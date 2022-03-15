@@ -2,7 +2,7 @@ import logging
 import math
 from abc import abstractmethod
 
-
+from example.backtest.buysell_recorder import BuySellRecorder
 from example.backtest.risk_control import RiskControl
 from utils import utils
 
@@ -37,10 +37,24 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.stop_flag = False
         self.risk = risk
         self.factor_dict = factor_dict
-        self.current_stocks = []
         self.current_date=''
         self.risk_control = RiskControl(self, atr_times, period)
         logger.debug("因子选股：因子[%r], ATR倍数[%d], 调仓周期[%d]天", ",".join(list(factor_dict.keys())), atr_times, period)
+
+        self.buysell_recorder = BuySellRecorder()
+
+        self.buysell_listeners = []
+        self.buysell_listeners.append(self.buysell_recorder)
+        self.buysell_listeners.append(self.risk_control)
+
+    def __post_buy(self,stock_code,price):
+        for l in self.buysell_listeners:
+            l.post_buy(stock_code,price)
+
+    def __post_sell(self,stock_code):
+        for l in self.buysell_listeners:
+            l.post_sell(stock_code)
+
 
     def __print_broker(self):
         # logger.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -106,7 +120,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
     # 这个是一只股票的一个完整交易的生命周期：开仓，持有，卖出
     def notify_trade(self, trade):
         # 最后清仓
-        # for sell_stock in self.current_stocks:
+        # for sell_stock in self.buysell_recorder.get(:
         #     stock_data = self.getdatabyname(sell_stock)
         #     self.close(data=stock_data, exectype=bt.Order.Limit)
         #     logger.debug('最后平仓股票 %s', stock_data._name)
@@ -128,10 +142,10 @@ class MultiStocksFactorStrategy(bt.Strategy):
         # self.sell(data=stock_data,exectype=bt.Order.Limit,size=size)
         size = self.getposition(stock_data, self.broker).size
         self.close(data=stock_data, exectype=bt.Order.Limit)
-        self.current_stocks.remove(stock_code)
 
         logger.debug('[%s] 平仓股票 %s : 卖出%r股', self.current_date, stock_data._name, size)
-        self.risk_control.post_sell(stock_code)
+
+        self.__post_sell(stock_code)
 
     def next(self):
         """
@@ -192,14 +206,14 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         # 以往买入的标的，本次不在标的中，则先平仓
         # "常规下单函数主要有 3 个：买入 buy() 、卖出 sell()、平仓 close() "
-        to_sell_stocks = set(self.current_stocks) - set(selected_stocks)
+        to_sell_stocks = set(self.buysell_recorder.get()) - set(selected_stocks)
 
         # 1. 清仓未在选择列表的股票
         logger.debug("[%s] 卖出股票：%r",self.current_date, to_sell_stocks)
         for sell_stock in to_sell_stocks:
             self.sell_out(sell_stock)
 
-        logger.debug("[%s] 卖出%d只股票，剩余%d只持仓", self.current_date,len(to_sell_stocks), len(self.current_stocks))
+        logger.debug("[%s] 卖出%d只股票，剩余%d只持仓", self.current_date,len(to_sell_stocks), len(self.buysell_recorder.get()))
 
         self.__print_broker()
 
@@ -218,27 +232,31 @@ class MultiStocksFactorStrategy(bt.Strategy):
     def _buy_in(self, stock_code, buy_amount):
         # 防止股票不在数据集中
         if stock_code not in self.getdatanames():
+            logger.warning("[%s] 股票[%s]不在数据集中",self.current_date,stock_code)
             return
 
         # 如果选中的股票在当前的持仓中，就忽略
-        if stock_code in self.current_stocks:
+        if stock_code in self.buysell_recorder.get():
             logger.debug("[%s] %s 在持仓中，不动", self.current_date,stock_code)
             return
 
         # 根据名字获得对应那只股票的数据
         stock_data = self.getdatabyname(stock_code)
+
+        # 买，用当天的开盘价，假设的场景是，你决定一早就买了，就按当天的开盘价买
         open_price = stock_data.open[0]
 
-        # 按次日开盘价计算下单量，下单量是100（手）的整数倍
+        # TODO：按次日开盘价计算下单量，下单量是100（手）的整数倍 ？？？次日价格，还是，本日价格？
         size = math.ceil(buy_amount / open_price)
         logger.debug("[%s] 购入股票[%s 股价%.2f] %d股，金额:%.2f", self.current_date,stock_code, open_price, size, buy_amount)
         self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
-        self.current_stocks.append(stock_code)
-        self.risk_control.post_buy(stock_code, open_price)
+
+        self.__post_buy(stock_code, open_price)
 
     def _select_top_n(self, stock_codes, blacklist_stocks):
         """
-        剔除在黑名单上的股票后，选择前1/5的股票
+        剔除在黑名单上的股票后，选择前1/5的股票，
+        短期没有其他类似需求，不做重构
         :param stock_codes:
         :return:
         """

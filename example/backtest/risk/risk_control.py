@@ -132,8 +132,10 @@ class RiskControl(TradeListener):
         stock_code = trade.data._name
 
         # 新创建交易，那么就是认为是买入
-        if trade.status == Trade.Created:
+        if trade.status == Trade.Open:
             self.current_stocks_highest_price[stock_code] = trade.price
+
+        # import pdb; pdb.set_trace()
 
         # 关闭交易，相当于卖出
         if trade.status == Trade.Closed:

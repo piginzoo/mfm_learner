@@ -1,12 +1,9 @@
 import logging
-from collections import namedtuple
 
 import backtrader as bt
-from pandas import DataFrame
-
-from utils import utils
 
 logger = logging.getLogger(__name__)
+
 
 class RebalanceAnalyzer(bt.Analyzer):
     """
@@ -18,4 +15,7 @@ class RebalanceAnalyzer(bt.Analyzer):
         self.rets = bt.AutoOrderedDict()
 
     def stop(self):
-        self.rets.rebalance_rate = sum(self.strategy.rebalance_rates)/len(self.strategy.rebalance_rates)
+        if len(self.strategy.rebalance_rates) == 0:
+            self.rets.rebalance_rate
+        else:
+            self.rets.rebalance_rate = sum(self.strategy.rebalance_rates) / len(self.strategy.rebalance_rates)

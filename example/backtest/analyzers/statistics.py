@@ -9,7 +9,8 @@ from utils import utils
 logger = logging.getLogger(__name__)
 
 
-def show_stat(cerebro, results, stock_codes, factor_names, factor_policy, start_cash, start_date, end_date, period,
+def show_stat(cerebro, results, stock_codes, factor_names,
+              start_cash, start_date, end_date, period,
               df_benchmark_index, atr_period, atr_times):
     broker = cerebro.broker
     d_start_date = utils.str2date(start_date)
@@ -24,7 +25,7 @@ def show_stat(cerebro, results, stock_codes, factor_names, factor_policy, start_
         logger.debug("调仓周期：%d 天" % period)
         logger.debug("股票个数: %d 只", len(stock_codes))
         logger.debug("投资期间: %s~%s, %d 天", start_date, end_date, (d_end_date - d_start_date).days)
-        logger.debug("因子策略: %s", factor_policy)
+        logger.debug("因子策略: %s", factor_names)
         logger.debug('期初投资: %.2f', start_cash)
         logger.debug('期末总额: %.2f', portvalue)
         logger.debug('剩余现金: %.2f', broker.getcash())
@@ -33,10 +34,20 @@ def show_stat(cerebro, results, stock_codes, factor_names, factor_policy, start_
         logger.debug('收益率  : %.2f%%', pnl / portvalue * 100)
         logger.debug("夏普比  : %.2f%%", result.analyzers.sharpe.get_analysis()['sharperatio'] * 100)
         logger.debug("回撤    : %.2f%%", result.analyzers.DW.get_analysis().drawdown)
+
         logger.debug("总收益  : %.2f%%", result.analyzers.returns.get_analysis()['rtot'] * 100)
         logger.debug("年化收益: %.2f%%", result.analyzers.returns.get_analysis()['ravg'] * 100)
         logger.debug("平均收益: %.2f%%", result.analyzers.returns.get_analysis()['rnorm100'])
-        logger.debug("期间统计    : %r", result.analyzers.period_stats.get_analysis())
+
+        logger.debug("每年收益   : %.2f%%", result.analyzers.period_stats.get_analysis()['average'])
+        logger.debug("年收益方差  : %.2f%%", result.analyzers.period_stats.get_analysis()['stddev'])
+        logger.debug("正收益年数  : %d年", result.analyzers.period_stats.get_analysis()['positive'])
+        logger.debug("负收益年数  : %d年", result.analyzers.period_stats.get_analysis()['negative'])
+        logger.debug("最好的收益  : %.2f%%", result.analyzers.period_stats.get_analysis()['best'])
+        logger.debug("最差的收益  : %.2f%%", result.analyzers.period_stats.get_analysis()['worst'])
+
+        logger.debug("换仓率      : %r", result.analyzers.rebalance.get_analysis()['rebalance_rate'])
+
 
         logger.debug("年化:")
         for year, year_return in result.analyzers.annual.get_analysis().items():
@@ -48,7 +59,7 @@ def show_stat(cerebro, results, stock_codes, factor_names, factor_policy, start_
         logger.debug("年胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_year']*100)
 
         # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
-        quant_statistics(df_benchmark_index['close'], result, period, factor_policy, factor_names, atr_period,
+        quant_statistics(df_benchmark_index['close'], result, period, factor_names, atr_period,
                          atr_times)
 
 
@@ -56,7 +67,7 @@ def show_stat(cerebro, results, stock_codes, factor_names, factor_policy, start_
     cerebro.plot(b)
 
 
-def quant_statistics(df_benchmark_index, strat, period, factor_policy, factor_names, atr_p, atr_n):
+def quant_statistics(df_benchmark_index, strat, period, factor_names, atr_p, atr_n):
     portfolio_stats = strat.analyzers.getbyname('PyFolio')  # 得到PyFolio分析者实例
 
     # 以下returns为以日期为索引的资产日收益率系列
@@ -67,8 +78,8 @@ def quant_statistics(df_benchmark_index, strat, period, factor_policy, factor_na
     # 输出html策略报告,rf为无风险利率
     qs.reports.html(returns,
                     benchmark=df_benchmark_index,
-                    output='debug/回测报告_{}_{}天调仓_{}.html'.format(utils.today(), period, factor_policy),
-                    title='{}日调仓,{},因子:{},ATR:{}天/{}倍'.format(period, factor_policy, factor_names, atr_p, atr_n),
+                    output='debug/回测报告_{}_{}天调仓_{}.html'.format(utils.today(), period, factor_names),
+                    title='{}日调仓,因子:{},ATR:{}天/{}倍'.format(period, factor_names, atr_p, atr_n),
                     rf=0.0)
 
     # print(qs.reports.metrics(returns=returns, mode='full'))

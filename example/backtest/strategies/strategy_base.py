@@ -13,6 +13,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 #
 #
 # class TradeResult():
@@ -24,19 +25,17 @@ logger = logging.getLogger(__name__)
 #     def trade(self,codes,buy_or_sells, profits):
 
 
-
-
 class MultiStocksFactorStrategy(bt.Strategy):
     """
     多个股票的回测的父类，是一个**基类**，
     有个抽象方法，叫selected_stocks(current_date)用来选取当期股票
     """
 
-    def __init__(self, period, factor_dict, atr_times,risk):
+    def __init__(self, period, factor_dict, atr_times, risk):
         self.period = period
         self.stop_flag = False
         self.factor_dict = factor_dict
-        self.current_date=''
+        self.current_date = ''
         self.rebalance_rates = []
 
         self.risk = risk
@@ -49,9 +48,9 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.trade_listeners.append(self.trade_recorder)
         self.trade_listeners.append(self.risk_control)
 
-    def __post_trade(self,trade):
+    def __post_trade(self, trade):
         for l in self.trade_listeners:
-            l.post_trade(trade)
+            l.on_trade(trade)
 
     def __print_broker(self):
         # logger.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -127,7 +126,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
             close_date = utils.date2str(bt.num2date(trade.dtopen))
             logger.debug('策略收益：股票[%s], 毛收益 [%.2f], 净收益 [%.2f],交易开始日期[%s]~[%s]',
                          trade.data._name, trade.pnl, trade.pnlcomm,
-                         open_date,close_date)
+                         open_date, close_date)
 
         self.__post_trade(trade)
 
@@ -143,7 +142,6 @@ class MultiStocksFactorStrategy(bt.Strategy):
         self.close(data=stock_data, exectype=bt.Order.Limit)
 
         logger.debug('[%s] 平仓股票 %s : 卖出%r股', self.current_date, stock_data._name, size)
-
 
     def next(self):
         """
@@ -195,15 +193,17 @@ class MultiStocksFactorStrategy(bt.Strategy):
         to_sell_stocks = set(self.trade_recorder.get_stocks()) - set(selected_stocks)
 
         # 计算调仓率
-        rebalance_rate = len(to_sell_stocks)/len(self.trade_recorder.get_stocks())
-        self.rebalance_rates.append(rebalance_rate)
+        if len(self.trade_recorder.get_stocks()) > 0:
+            rebalance_rate = len(to_sell_stocks) / len(self.trade_recorder.get_stocks())
+            self.rebalance_rates.append(rebalance_rate)
 
         # 1. 清仓未在选择列表的股票
-        logger.debug("[%s] 卖出股票：%r",self.current_date, to_sell_stocks)
+        logger.debug("[%s] 卖出股票：%r", self.current_date, to_sell_stocks)
         for sell_stock in to_sell_stocks:
             self.sell_out(sell_stock)
 
-        logger.debug("[%s] 卖出%d只股票，剩余%d只持仓", self.current_date,len(to_sell_stocks), len(self.trade_recorder.get_stocks()))
+        logger.debug("[%s] 卖出%d只股票，剩余%d只持仓", self.current_date, len(to_sell_stocks),
+                     len(self.trade_recorder.get_stocks()))
 
         self.__print_broker()
 
@@ -222,12 +222,12 @@ class MultiStocksFactorStrategy(bt.Strategy):
     def _buy_in(self, stock_code, buy_amount):
         # 防止股票不在数据集中
         if stock_code not in self.getdatanames():
-            logger.warning("[%s] 股票[%s]不在数据集中",self.current_date,stock_code)
+            logger.warning("[%s] 股票[%s]不在数据集中", self.current_date, stock_code)
             return
 
         # 如果选中的股票在当前的持仓中，就忽略
         if stock_code in self.trade_recorder.get_stocks():
-            logger.debug("[%s] %s 在持仓中，不动", self.current_date,stock_code)
+            logger.debug("[%s] %s 在持仓中，不动", self.current_date, stock_code)
             return
 
         # 根据名字获得对应那只股票的数据
@@ -238,9 +238,8 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         # TODO：按次日开盘价计算下单量，下单量是100（手）的整数倍 ？？？次日价格，还是，本日价格？
         size = math.ceil(buy_amount / open_price)
-        logger.debug("[%s] 购入股票[%s 股价%.2f] %d股，金额:%.2f", self.current_date,stock_code, open_price, size, buy_amount)
+        logger.debug("[%s] 购入股票[%s 股价%.2f] %d股，金额:%.2f", self.current_date, stock_code, open_price, size, buy_amount)
         self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
-
 
     def _select_top_n(self, stock_codes, blacklist_stocks):
         """
@@ -255,5 +254,5 @@ class MultiStocksFactorStrategy(bt.Strategy):
         top_n = math.ceil(0.2 * len(stock_codes))
         select_stocks = stock_codes[:top_n]
 
-        logger.debug("[%s] 此次选中的股票为：%r",self.current_date, ",".join(select_stocks))
+        logger.debug("[%s] 此次选中的股票为：%r", self.current_date, ",".join(select_stocks))
         return select_stocks

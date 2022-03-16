@@ -89,7 +89,7 @@ def __get_strategy_and_factor(factor_names, stock_codes, start_date, end_date):
     raise ValueError("无效的因子选股策略：" + factor_policy)
 
 
-def main(start_date, end_date, index_code, period, stock_num, factor_names, factor_policy, risk, atr_period, atr_times):
+def main(start_date, end_date, index_code, period, stock_num, factor_names, risk, atr_period, atr_times):
     """
     datetime    open    high    low     close   volume  openi..
     2016-06-24	0.16	0.002	0.085	0.078	0.173	0.214
@@ -148,7 +148,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     results = cerebro.run(optreturn=True)
 
     show_stat(cerebro, results, stock_codes, factor_names,
-              factor_policy, start_cash, start_date, end_date, period,
+              start_cash, start_date, end_date, period,
               df_benchmark_index,atr_period, atr_times)
 
 
@@ -195,7 +195,6 @@ if __name__ == '__main__':
     start_time = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--factor', type=str, help="单个因子名、多个（逗号分割）、所有（all）")
-    parser.add_argument('-t', '--type', type=str, help="合成还是分开使用：synthesis|separated")
     parser.add_argument('-s', '--start', type=str, help="开始日期")
     parser.add_argument('-e', '--end', type=str, help="结束日期")
     parser.add_argument('-i', '--index', type=str, help="股票池code")
@@ -212,7 +211,6 @@ if __name__ == '__main__':
          args.period,
          args.num,
          args.factor,
-         args.type,
          args.risk,
          args.atr_p,
          args.atr_n)

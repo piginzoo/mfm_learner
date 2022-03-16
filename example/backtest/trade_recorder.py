@@ -11,8 +11,9 @@ class TradeRecorder(TradeListener):
     def on_trade(self, trade):
         stock_code = trade.data._name
 
+        # import pdb;pdb.set_trace()
         # 新创建交易，那么就是认为是买入
-        if trade.status == Trade.Created:
+        if trade.status == Trade.Open:
             self.current_stocks.append(stock_code)
 
         # 关闭交易，相当于卖出

@@ -1,10 +1,9 @@
 import logging
-import math
 
 import pandas as pd
 from pandas import DataFrame
 
-from example.backtest.strategy_base import MultiStocksFactorStrategy
+from example.backtest.strategies.strategy_base import MultiStocksFactorStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ class MultiFactorStrategy(MultiStocksFactorStrategy):
         - 每次都是满仓，即用卖出的股票头寸，全部购入新的股票，头寸仅在新购入股票中平均分配
         - 如果没有头寸，则不再购买（这种情况应该不会出现）
         """
-        logger.debug("已经处理了%d个数据, 总共有%d个数据", len(self), self.data.buflen())
+        logger.debug("已经处理了%d个bar, 总共有%d个bar", len(self), self.data.buflen())
 
         # logger.debug("--------------------------------------------------")
         # logger.debug('当前可用资金:%r', self.broker.getcash())

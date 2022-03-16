@@ -483,6 +483,8 @@ def handle_finance_ttm(stock_codes,
 
     # 提取，发布日期，股票，财务日期，财务指标 ，4列
     df_finance = df_finance[['datetime', 'code', col_name_finance_date, col_name_value]]
+    # 剔除Nan
+    df_finance.dropna(inplace=True)
 
     # 对时间，升序排列
     df_finance.sort_values('datetime', inplace=True)
@@ -515,6 +517,7 @@ def handle_finance_ttm(stock_codes,
 
             # 如果这条财务数据是年报数据
             if finance_date.endswith("1231"):
+                # 直接用这条数据了
                 value = current_period_value
                 # logger.debug("财务日[%s]是年报数据，使用年报指标[%.2f]作为当日指标", finance_date, value)
             else:
@@ -523,10 +526,12 @@ def handle_finance_ttm(stock_codes,
                                                     finance_date)
                 last_year_same_period_value = __last_year_period_value(df_stock_finance, col_name_finance_date,
                                                                        col_name_value, finance_date)
+                # 如果去年年报数据为空，或者，也找不到去年的同期的数据，
                 if last_year_value is None or last_year_same_period_value is None:
                     value = __calculate_ttm_by_peirod(current_period_value, finance_date)
                     # logger.debug("财务日[%s]是非年报数据，无去年报指标，使用N倍当前指标[%.2f]作为当日指标", finance_date, value)
                 else:
+                    # 当日指标 = 今年同期 + 年报指标 - 去年同期
                     value = current_period_value + last_year_value - last_year_same_period_value
                     # logger.debug("财务日[%s]是非年报数据，今年同期[%.2f]+年报指标[%.2f]-去年同期[%.2f]=[%.2f]作为当日指标",
                     #              finance_date,
@@ -557,9 +562,12 @@ def __last_year_period_value(df_stock_finance, finance_date_col_name, value_col_
     # 获得去年财务年报的时间，20211030=>20201030
     last_year_finance_date = utils.last_year(current_finance_date)
     df = df_stock_finance[df_stock_finance[finance_date_col_name] == last_year_finance_date]
-    assert len(df) == 0 or len(df) == 1, str(len(df))
+    # assert len(df) == 0 or len(df) == 1, str(df)
     if len(df) == 1: return df[value_col_name].item()
-    return None
+    if len(df) == 0: return None
+    logger.warning("记录数超过2条，取第一条：%r",df)
+    return df[value_col_name].iloc[0]
+
 
 
 def __calculate_ttm_by_peirod(current_period_value, finance_date):

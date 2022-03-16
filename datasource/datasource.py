@@ -144,6 +144,11 @@ class DataSource():
     def fina_indicator(self, stock_code, start_date, end_date):
         pass
 
+    # 利润表
+    @abstractmethod
+    def income(self, stock_code, start_date, end_date):
+        pass
+
     @abstractmethod
     def trade_cal(self, start_date, end_date, exchange='SSE'):
         pass

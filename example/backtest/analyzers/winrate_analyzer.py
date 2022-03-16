@@ -4,8 +4,6 @@ from collections import namedtuple
 import backtrader as bt
 from pandas import DataFrame
 
-from utils import utils
-
 logger = logging.getLogger(__name__)
 
 TradeDetail = namedtuple('Trade', ['date', 'buysell', 'pct_chg'])

@@ -5,13 +5,14 @@ import time
 import backtrader as bt  # 引入backtrader框架
 import backtrader.analyzers as bta  # 添加分析函数
 
+from example.backtest.analyzers.statistics import show_stat
+from example.backtest.analyzers.winrate_analyzer import WinRateAnalyzer
+from example.backtest.strategies.strategy_multifactors import MultiFactorStrategy
+from example.backtest.strategies.strategy_singlefactor import SingleFactorStrategy
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
 from example.backtest import data_loader
-from example.backtest.statistics import show_stat
-from example.backtest.strategy_multifactors import MultiFactorStrategy
-from example.backtest.strategy_singlefactor import SingleFactorStrategy
-from example.backtest.winrate_analyzer import WinRateAnalyzer
+from example.backtest.analyzers.rebalance_analyzer import RebalanceAnalyzer
 from utils import utils
 
 """
@@ -138,6 +139,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     cerebro.addanalyzer(bt.analyzers.AnnualReturn, _name='annual')
     cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')  # 加入PyFolio分析者,这个是为了做quantstats分析用
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade')
+    cerebro.addanalyzer(RebalanceAnalyzer, _name='rebalance')
     cerebro.addanalyzer(WinRateAnalyzer, _name='winrate')
 
     # 打印

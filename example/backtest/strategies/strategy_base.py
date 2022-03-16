@@ -2,8 +2,8 @@ import logging
 import math
 from abc import abstractmethod
 
-from example.backtest.buysell_recorder import BuySellRecorder
-from example.backtest.risk_control import RiskControl
+from example.backtest.risk.risk_control import RiskControl
+from example.backtest.trade_recorder import TradeRecorder
 from utils import utils
 
 utils.init_logger()
@@ -35,26 +35,23 @@ class MultiStocksFactorStrategy(bt.Strategy):
     def __init__(self, period, factor_dict, atr_times,risk):
         self.period = period
         self.stop_flag = False
-        self.risk = risk
         self.factor_dict = factor_dict
         self.current_date=''
+        self.rebalance_rates = []
+
+        self.risk = risk
         self.risk_control = RiskControl(self, atr_times, period)
         logger.debug("因子选股：因子[%r], ATR倍数[%d], 调仓周期[%d]天", ",".join(list(factor_dict.keys())), atr_times, period)
 
-        self.buysell_recorder = BuySellRecorder()
+        self.trade_recorder = TradeRecorder()
 
-        self.buysell_listeners = []
-        self.buysell_listeners.append(self.buysell_recorder)
-        self.buysell_listeners.append(self.risk_control)
+        self.trade_listeners = []
+        self.trade_listeners.append(self.trade_recorder)
+        self.trade_listeners.append(self.risk_control)
 
-    def __post_buy(self,stock_code,price):
-        for l in self.buysell_listeners:
-            l.post_buy(stock_code,price)
-
-    def __post_sell(self,stock_code):
-        for l in self.buysell_listeners:
-            l.post_sell(stock_code)
-
+    def __post_trade(self,trade):
+        for l in self.trade_listeners:
+            l.post_trade(trade)
 
     def __print_broker(self):
         # logger.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -120,18 +117,20 @@ class MultiStocksFactorStrategy(bt.Strategy):
     # 这个是一只股票的一个完整交易的生命周期：开仓，持有，卖出
     def notify_trade(self, trade):
         # 最后清仓
-        # for sell_stock in self.buysell_recorder.get(:
+        # for sell_stock in self.trade_recorder.get(:
         #     stock_data = self.getdatabyname(sell_stock)
         #     self.close(data=stock_data, exectype=bt.Order.Limit)
         #     logger.debug('最后平仓股票 %s', stock_data._name)
 
-        if not trade.isclosed:
-            return
-        open_date = utils.date2str(bt.num2date(trade.dtopen))
-        close_date = utils.date2str(bt.num2date(trade.dtopen))
-        logger.debug('策略收益：股票[%s], 毛收益 [%.2f], 净收益 [%.2f],交易开始日期[%s]~[%s]',
-                     trade.data._name, trade.pnl, trade.pnlcomm,
-                     open_date,close_date)
+        if trade.isclosed:
+            open_date = utils.date2str(bt.num2date(trade.dtopen))
+            close_date = utils.date2str(bt.num2date(trade.dtopen))
+            logger.debug('策略收益：股票[%s], 毛收益 [%.2f], 净收益 [%.2f],交易开始日期[%s]~[%s]',
+                         trade.data._name, trade.pnl, trade.pnlcomm,
+                         open_date,close_date)
+
+        self.__post_trade(trade)
+
         # self.__print_broker()
 
     def sell_out(self, stock_code):
@@ -145,7 +144,6 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         logger.debug('[%s] 平仓股票 %s : 卖出%r股', self.current_date, stock_data._name, size)
 
-        self.__post_sell(stock_code)
 
     def next(self):
         """
@@ -180,15 +178,6 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         if not len(self.data) % self.period == 0: return
 
-        # logger.debug("--------------------------------------------------")
-        # logger.debug('当前可用资金:%r', self.broker.getcash())
-        # logger.debug('当前总资产:%r', self.broker.getvalue())
-        # logger.debug('当前持仓量:%r', self.broker.getposition(self.data).size)
-        # logger.debug('当前持仓成本:%r', self.broker.getposition(self.data).price)
-        # logger.debug('当前持仓量:%r', self.getposition(self.data).size)
-        # logger.debug('当前持仓成本:%r', self.getposition(self.data).price)
-        # logger.debug("--------------------------------------------------")
-
         logger.debug("-" * 50)
         logger.debug("第%d个交易日：%r ", len(self.data), utils.date2str(current_date))
 
@@ -197,23 +186,24 @@ class MultiStocksFactorStrategy(bt.Strategy):
 
         # 选择topN的
         selected_stocks = self._select_top_n(selected_stocks, blacklist_stocks)
-
         if selected_stocks is None: return
-
         if type(selected_stocks) == np.array: selected_stocks = selected_stocks.tolist()
-
         logger.debug("此次选中的股票为：%r", ",".join(selected_stocks))
 
         # 以往买入的标的，本次不在标的中，则先平仓
         # "常规下单函数主要有 3 个：买入 buy() 、卖出 sell()、平仓 close() "
-        to_sell_stocks = set(self.buysell_recorder.get()) - set(selected_stocks)
+        to_sell_stocks = set(self.trade_recorder.get_stocks()) - set(selected_stocks)
+
+        # 计算调仓率
+        rebalance_rate = len(to_sell_stocks)/len(self.trade_recorder.get_stocks())
+        self.rebalance_rates.append(rebalance_rate)
 
         # 1. 清仓未在选择列表的股票
         logger.debug("[%s] 卖出股票：%r",self.current_date, to_sell_stocks)
         for sell_stock in to_sell_stocks:
             self.sell_out(sell_stock)
 
-        logger.debug("[%s] 卖出%d只股票，剩余%d只持仓", self.current_date,len(to_sell_stocks), len(self.buysell_recorder.get()))
+        logger.debug("[%s] 卖出%d只股票，剩余%d只持仓", self.current_date,len(to_sell_stocks), len(self.trade_recorder.get_stocks()))
 
         self.__print_broker()
 
@@ -236,7 +226,7 @@ class MultiStocksFactorStrategy(bt.Strategy):
             return
 
         # 如果选中的股票在当前的持仓中，就忽略
-        if stock_code in self.buysell_recorder.get():
+        if stock_code in self.trade_recorder.get_stocks():
             logger.debug("[%s] %s 在持仓中，不动", self.current_date,stock_code)
             return
 
@@ -251,7 +241,6 @@ class MultiStocksFactorStrategy(bt.Strategy):
         logger.debug("[%s] 购入股票[%s 股价%.2f] %d股，金额:%.2f", self.current_date,stock_code, open_price, size, buy_amount)
         self.buy(data=stock_data, size=size, price=open_price, exectype=bt.Order.Limit)
 
-        self.__post_buy(stock_code, open_price)
 
     def _select_top_n(self, stock_codes, blacklist_stocks):
         """

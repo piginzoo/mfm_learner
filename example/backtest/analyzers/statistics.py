@@ -1,7 +1,6 @@
 import logging
 
 import quantstats as qs
-from backtrader.analyzers import TradeAnalyzer
 from backtrader_plotting import Bokeh
 from backtrader_plotting.schemes import Tradimo
 

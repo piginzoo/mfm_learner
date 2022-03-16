@@ -2,14 +2,15 @@ import logging
 
 import numpy as np
 import pandas as pd
+from backtrader import Trade
 
-from example.backtest.buysell_listener import BuySellListener
+from example.backtest.trade_listener import TradeListener
 from utils import utils
 
 logger = logging.getLogger(__name__)
 
 
-class RiskControl(BuySellListener):
+class RiskControl(TradeListener):
     """
     实现多因子的风控策略，
     目前实现了两种：
@@ -127,8 +128,13 @@ class RiskControl(BuySellListener):
                 exclude_stock_codes.append(stock_code)
         return exclude_stock_codes
 
-    def on_buy(self, stock_code, price):
-        self.current_stocks_highest_price[stock_code] = price
+    def on_trade(self, trade):
+        stock_code = trade.data._name
 
-    def on_sell(self, stock_code):
-        self.current_stocks_highest_price.pop(stock_code)
+        # 新创建交易，那么就是认为是买入
+        if trade.status == Trade.Created:
+            self.current_stocks_highest_price[stock_code] = trade.price
+
+        # 关闭交易，相当于卖出
+        if trade.status == Trade.Closed:
+            self.current_stocks_highest_price.pop(stock_code)

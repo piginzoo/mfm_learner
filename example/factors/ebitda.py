@@ -65,5 +65,4 @@ class EBITDAFactor(Factor):
                                              col_name_finance_date='end_date')
 
         df = datasource_utils.reset_index(df)
-        import pdb; pdb.set_trace()
         return df['ebita_ttm']

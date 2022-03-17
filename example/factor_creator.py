@@ -55,7 +55,7 @@ def calculate_and_save(factor_name, factor, start_date, end_date, index_code, st
 
 """
 python -m example.factor_creator \
-    --factor ebitda_ttm \
+    --factor clv \
     --start 20080101 \
     --end 20220209 \
     --num 100000 \
@@ -69,7 +69,7 @@ python -m example.factor_creator \
     --index 000905.SH 
 
 python -m example.factor_creator \
-    --factor roe_yoy \
+    --factor momentum_10d \
     --start 20180101 \
     --end 20191230 \
     --num 50 \

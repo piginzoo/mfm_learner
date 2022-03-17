@@ -155,7 +155,7 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, risk
 """
 # 测试用
 python -m example.factor_backtester \
-    --factor roe_yoy \
+    --factor momentum_3m \
     --start 20180101 \
     --end 20191230 \
     --num 50 \

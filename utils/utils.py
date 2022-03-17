@@ -112,8 +112,24 @@ def tomorrow(s_date):
     return future('day', 1, s_date)
 
 
-def last_year(s_date,num=1):
+def last(date_type, unit, s_date):
+    return __date_span(date_type, unit, -1, s_date)
+
+
+def last_year(s_date, num=1):
     return last('year', num, s_date)
+
+
+def last_month(s_date, num=1):
+    return last('month', num, s_date)
+
+
+def last_week(s_date, num=1):
+    return last('week', num, s_date)
+
+
+def last_day(s_date, num=1):
+    return last('day', num, s_date)
 
 
 def today():
@@ -123,10 +139,6 @@ def today():
 
 def future(date_type, unit, s_date):
     return __date_span(date_type, unit, 1, s_date)
-
-
-def last(date_type, unit, s_date):
-    return __date_span(date_type, unit, -1, s_date)
 
 
 def __date_span(date_type, unit, direction, s_date):

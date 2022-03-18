@@ -1,6 +1,6 @@
 import logging
 
-from example.backtest.strategy_base import MultiStocksFactorStrategy
+from example.backtest.strategies.strategy_base import MultiStocksFactorStrategy
 from utils import utils
 
 logger = logging.getLogger(__name__)

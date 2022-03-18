@@ -4,15 +4,15 @@ import time
 
 import backtrader as bt  # 引入backtrader框架
 import backtrader.analyzers as bta  # 添加分析函数
-import quantstats as qs
-from backtrader_plotting import Bokeh
-from backtrader_plotting.schemes import Tradimo
 
+from example.backtest.analyzers.statistics import show_stat
+from example.backtest.analyzers.winrate_analyzer import WinRateAnalyzer
+from example.backtest.strategies.strategy_multifactors import MultiFactorStrategy
+from example.backtest.strategies.strategy_singlefactor import SingleFactorStrategy
 from datasource import datasource_factory, datasource_utils
 from example import factor_utils
 from example.backtest import data_loader
-from example.backtest.strategy_multifactors import MultiFactorStrategy
-from example.backtest.strategy_singlefactor import SingleFactorStrategy
+from example.backtest.analyzers.rebalance_analyzer import RebalanceAnalyzer
 from utils import utils
 
 """
@@ -89,7 +89,7 @@ def __get_strategy_and_factor(factor_names, stock_codes, start_date, end_date):
     raise ValueError("无效的因子选股策略：" + factor_policy)
 
 
-def main(start_date, end_date, index_code, period, stock_num, factor_names, factor_policy, risk, atr_period, atr_times):
+def main(start_date, end_date, index_code, period, stock_num, factor_names, risk, atr_period, atr_times):
     """
     datetime    open    high    low     close   volume  openi..
     2016-06-24	0.16	0.002	0.085	0.078	0.173	0.214
@@ -99,9 +99,6 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     2016-06-30	0.03	0.012	0.037	0.027	0.010	0.077
     """
     cerebro = bt.Cerebro()  # 初始化cerebro
-
-    d_start_date = utils.str2date(start_date)
-    d_end_date = utils.str2date(end_date)
 
     stock_codes = datasource.index_weight(index_code, start_date, end_date)
     stock_codes = stock_codes[:stock_num]
@@ -141,69 +138,24 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, fact
     cerebro.addanalyzer(bt.analyzers.PeriodStats, _name='period_stats')
     cerebro.addanalyzer(bt.analyzers.AnnualReturn, _name='annual')
     cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')  # 加入PyFolio分析者,这个是为了做quantstats分析用
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade')
+    cerebro.addanalyzer(RebalanceAnalyzer, _name='rebalance')
+    cerebro.addanalyzer(WinRateAnalyzer, _name='winrate')
 
     # 打印
     logger.debug('回测期间：%r ~ %r , 初始资金: %r', start_date, end_date, start_cash)
     # 运行回测
     results = cerebro.run(optreturn=True)
-    # 打印最后结果
-    portvalue = cerebro.broker.getvalue()
-    pnl = portvalue - start_cash
 
-    for i, result in enumerate(results):
-
-        # 打印结果
-        logger.debug("-" * 80)
-        logger.debug("调仓周期：%d 天" % period)
-        logger.debug("股票个数: %d 只", len(stock_codes))
-        logger.debug("投资期间: %s~%s, %d 天", start_date, end_date, (d_end_date - d_start_date).days)
-        logger.debug("因子策略: %s", factor_policy)
-        logger.debug('期初投资: %.2f', start_cash)
-        logger.debug('期末总额: %.2f', portvalue)
-        logger.debug('剩余现金: %.2f', cerebro.broker.getcash())
-        logger.debug('持仓头寸: %.2f', portvalue - cerebro.broker.getcash())
-        logger.debug('净收益额: %.2f', pnl)
-        logger.debug('收益率  : %.2f%%', pnl / portvalue * 100)
-        logger.debug("夏普比  : %.2f%%", result.analyzers.sharpe.get_analysis()['sharperatio'] * 100)
-        logger.debug("回撤    : %.2f%%", result.analyzers.DW.get_analysis().drawdown)
-        logger.debug("总收益  : %.2f%%", result.analyzers.returns.get_analysis()['rtot'] * 100)
-        logger.debug("年化收益: %.2f%%", result.analyzers.returns.get_analysis()['ravg'] * 100)
-        logger.debug("平均收益: %.2f%%", result.analyzers.returns.get_analysis()['rnorm100'])
-        logger.debug("期间统计    : %r", result.analyzers.period_stats.get_analysis())
-        logger.debug("年化:")
-        for year, year_return in result.analyzers.annual.get_analysis().items():
-            logger.debug("\t %s : %.2f%%", year, year_return * 100)
-        # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
-        quant_statistics(df_benchmark_index['close'], result, period, name, factor_names, atr_period, atr_times)
-
-    b = Bokeh(stype='bar', tabs="multi", scheme=Tradimo())
-    cerebro.plot(b)
-
-
-def quant_statistics(df_benchmark_index, strat, period, name, factor_names, atr_p, atr_n):
-    portfolio_stats = strat.analyzers.getbyname('PyFolio')  # 得到PyFolio分析者实例
-
-    # 以下returns为以日期为索引的资产日收益率系列
-    returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
-
-    returns.index = returns.index.tz_convert(None)  # 索引的时区要设置一下，否则出错
-
-    # 输出html策略报告,rf为无风险利率
-    qs.reports.html(returns,
-                    benchmark=df_benchmark_index,
-                    output='debug/回测报告_{}_{}天调仓_{}.html'.format(utils.today(), period, name),
-                    title='{}日调仓,{},因子:{},ATR:{}天/{}倍'.format(period, name, factor_names, atr_p, atr_n), rf=0.0)
-
-    # print(qs.reports.metrics(returns=returns, mode='full'))
-    # df = qs.reports.metrics(returns=returns, mode='full', display=False)
-    # print("返回的QuantStats报表：\n%r", df)
-    # qs.reports.basic(returns)
+    show_stat(cerebro, results, stock_codes, factor_names,
+              start_cash, start_date, end_date, period,
+              df_benchmark_index,atr_period, atr_times)
 
 
 """
 # 测试用
 python -m example.factor_backtester \
-    --factor clv \
+    --factor momentum_3m \
     --start 20180101 \
     --end 20191230 \
     --num 50 \
@@ -243,7 +195,6 @@ if __name__ == '__main__':
     start_time = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--factor', type=str, help="单个因子名、多个（逗号分割）、所有（all）")
-    parser.add_argument('-t', '--type', type=str, help="合成还是分开使用：synthesis|separated")
     parser.add_argument('-s', '--start', type=str, help="开始日期")
     parser.add_argument('-e', '--end', type=str, help="结束日期")
     parser.add_argument('-i', '--index', type=str, help="股票池code")
@@ -260,7 +211,6 @@ if __name__ == '__main__':
          args.period,
          args.num,
          args.factor,
-         args.type,
          args.risk,
          args.atr_p,
          args.atr_n)

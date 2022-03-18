@@ -203,7 +203,7 @@ def quant_statistics(df_benchmark_index, strat, period, name, factor_names, atr_
 """
 # 测试用
 python -m example.factor_backtester \
-    --factor roe_yoy \
+    --factor clv \
     --start 20180101 \
     --end 20191230 \
     --num 50 \

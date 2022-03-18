@@ -6,16 +6,20 @@ import time
 
 from example import factor_creator, factor_analyzer, factor_backtester
 from utils import utils
+import logging
 
+logger = logging.getLogger(__name__)
 
 def main(factor_name, start_date, end_date, index_code, stock_num,period):
     factor_creator.main(factor_name, start_date, end_date, index_code, stock_num)
-    factor_analyzer.main(factor_name, start_date, end_date, index_code, stock_num, period)
-    factor_backtester.main(start_date, end_date, index_code, period, stock_num, factor_name, risk=False, atr_period=None, atr_times=None)
+    logger.debug("\n\n\t\t%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n")
+    factor_analyzer.main([factor_name], start_date, end_date, index_code, [period], stock_num)
+    logger.debug("\n\n\t\t%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n")
+    factor_backtester.main(start_date, end_date, index_code, period, stock_num, factor_name, risk=False, atr_period=15, atr_times=3)
 
 # python -m example.factor_main
 """
-python -m example.factor_creator \
+python -m example.factor_main \
     --factor momentum_10d \
     --start 20180101 \
     --end 20191230 \
@@ -41,4 +45,3 @@ if __name__ == '__main__':
          args.index,
          args.num,
          args.period)
-

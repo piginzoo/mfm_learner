@@ -126,15 +126,18 @@ def main(start_date, end_date, index_code, period, stock_num, factor_names, risk
                                                                   start_date=start_date,
                                                                   end_date=end_date)
 
-    # 将交易策略加载到回测系统中
+    # 将交易策略加载到回测系统中，使用addstrategy支持自定义参数，使用optstrategy就不行了，靠！
     # cerebro.addstrategy(strategy_class, period, factor_data)
     # 不用上面的，只能加一个，这里我们加多个调仓期支持（periods）
     cerebro.addstrategy(strategy_class, period=period, factor_dict=factor_dict, atr_times=atr_times, risk=risk)
+
+    # 1年期国债 2%： https://www.cbirc.gov.cn/cn/view/pages/index/guozhai.html
 
     # 添加分析对象
     cerebro.addanalyzer(bta.SharpeRatio, _name="sharpe", timeframe=bt.TimeFrame.Days)  # 夏普指数
     cerebro.addanalyzer(bt.analyzers.DrawDown, _name='DW')  # 回撤分析
     cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
+    cerebro.addanalyzer(bt.analyzers.Calmar, _name='calmar') # 卡玛比率 - Calmar：超额收益➗最大回撤
     cerebro.addanalyzer(bt.analyzers.PeriodStats, _name='period_stats')
     cerebro.addanalyzer(bt.analyzers.AnnualReturn, _name='annual')
     cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')  # 加入PyFolio分析者,这个是为了做quantstats分析用

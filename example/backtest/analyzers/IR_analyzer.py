@@ -8,21 +8,6 @@ logger = logging.getLogger(__name__)
 
 TradeDetail = namedtuple('Trade', ['date', 'buysell', 'pct_chg'])
 
-"""
-我关心下面的指标：
- - 到底交易了几次
- - 每次买入多少只，卖出多少只
- - 每只卖出后的情况，赚还是亏
- - 一共买入过多少只
- - 一共卖出过多少只
- - 卖出的盈亏比例
- - 每天，市值情况是否打败了市场
- - 日胜率
- - 周胜率
- - 月胜率
- - 年胜率
-"""
-
 
 class WinRateAnalyzer(bt.Analyzer):
     """

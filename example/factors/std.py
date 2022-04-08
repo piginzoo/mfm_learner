@@ -19,7 +19,8 @@ https://zhuanlan.zhihu.com/p/30158144
 mapping = [
     {'name': 'std_10d', 'cname': '10日波动率', 'days': 10},
     {'name': 'std_1m', 'cname': '1月波动率', 'days': 20},
-    {'name': 'std_3m', 'cname': '3月波动率', 'days': 60}
+    {'name': 'std_3m', 'cname': '3月波动率', 'days': 60},
+    {'name': 'std_6m', 'cname': '6月波动率', 'days': 120}
 ]
 
 

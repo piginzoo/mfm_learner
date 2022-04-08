@@ -54,9 +54,26 @@ def show_stat(cerebro, results, stock_codes, factor_names,
             logger.debug("\t %s : %.2f%%", year, year_return * 100)
         print_trade_detail_stat(result.analyzers.trade.get_analysis())
 
-        logger.debug("日胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_day']*100)
-        logger.debug("月胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_month']*100)
-        logger.debug("年胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_year']*100)
+        logger.debug("日胜数pk基准: %d", result.analyzers.winrate.get_analysis()['win_day'])
+        logger.debug("日败数pk基准: %d", result.analyzers.winrate.get_analysis()['fail_day'])
+        logger.debug("日胜率pk基准: %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_day']*100)
+        logger.debug("月胜数pk基准: %d", result.analyzers.winrate.get_analysis()['win_month'])
+        logger.debug("月败数pk基准: %d", result.analyzers.winrate.get_analysis()['fail_month'])
+        logger.debug("月胜率pk基准: %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_month'] * 100)
+        logger.debug("年胜数pk基准: %d", result.analyzers.winrate.get_analysis()['win_year'])
+        logger.debug("年胜数pk基准: %d", result.analyzers.winrate.get_analysis()['fail_year'])
+        logger.debug("年胜数pk基准: %.1f%%", result.analyzers.winrate.get_analysis()['win_rate_year']*100)
+
+        logger.debug("日胜数    : %d", result.analyzers.winrate.get_analysis()['positive_day'])
+        logger.debug("日败数    : %d", result.analyzers.winrate.get_analysis()['negative_day'])
+        logger.debug("日胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['pnl_rate_day']*100)
+        logger.debug("月胜数    : %d", result.analyzers.winrate.get_analysis()['positive_month'])
+        logger.debug("月败数    : %d", result.analyzers.winrate.get_analysis()['negative_month'])
+        logger.debug("月胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['pnl_rate_month'] * 100)
+        logger.debug("年胜数    : %d", result.analyzers.winrate.get_analysis()['positive_year'])
+        logger.debug("年胜数    : %d", result.analyzers.winrate.get_analysis()['negative_year'])
+        logger.debug("年胜率    : %.1f%%", result.analyzers.winrate.get_analysis()['pnl_rate_year']*100)
+
 
         # cerebro.plot(plotter=MyPlot(), style="candlestick", iplot=False)
         quant_statistics(df_benchmark_index['close'], result, period, factor_names, atr_period,
@@ -108,7 +125,7 @@ def print_trade_detail_stat(trade):
     won_pnl_max	16.645              赢的最大单次收益
     lost_total	3                   输次数
     lost_pnl_total	-19.8265        输总负收益
-    lost_pnl_average	-6.608833333输平均负收益
+    lost_pnl_average	-6.608833333输平均负收益 PNL = Positive Negative Loss
     ============================================================================================================
     Provides statistics on closed trades (keeps also the count of open ones)
     - Total Open/Closed Trades

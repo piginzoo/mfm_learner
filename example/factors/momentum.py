@@ -53,7 +53,7 @@ class MomentumFactor(Factor):
     def name(self):
         return [m['name'] for m in mapping]
 
-    def name(self):
+    def cname(self):
         return [m['cname'] for m in mapping]
 
     def calculate(self, stock_codes, start_date, end_date, df_daily=None):

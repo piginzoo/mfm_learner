@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 fields = ['index_code','industry_name','parent_code','level','industry_code','is_pub','src']
 
 class IndexClassify(BaseDownload):
+    """
+    下载行业分类信息
+    """
 
     def get_table_name(self):
         return "index_classify"

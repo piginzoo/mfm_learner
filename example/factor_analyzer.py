@@ -186,7 +186,7 @@ def plot_quantile_cumulative_returns(quantile_cumulative_returns, factor_name, p
     plt.clf()
     fig, axes = plt.subplots(len(quantile_cumulative_returns), 1, figsize=(18, 18))
     # subplots很诡异，如果只有1个subplot，返回的ax是个单数，而不是list，所以统一成list
-    if type(axes)!=list:
+    if type(axes) != list:
         axes = [axes]
     fig.tight_layout()  # 调整整体空白
     plt.subplots_adjust(wspace=0, hspace=0.3)  # 调整子图间距
@@ -241,6 +241,7 @@ def main(factor_names, start_date, end_date, index_code, periods, num):
     :param periods: 调仓周期，如 20,30
     :param num: 股票池中使用多少只作为测试子集，仅用于测试
     """
+
     pd.set_option('display.max_rows', 1000)
     matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字体
     matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号
@@ -287,7 +288,7 @@ def save_analysis_result(factor_name, df_result):
     engine = utils.connect_db()
 
     # 先删除旧的因子分析结果
-    if db_utils.is_table_exist(engine,"factor_analysis"):
+    if db_utils.is_table_exist(engine, "factor_analysis"):
         db_utils.run_sql(engine, f"delete from factor_analysis where factor='{factor_name}'")
 
     # 按照调仓周期不同，分别存成不同的记录，本来 1D,5D,10D是在列上
@@ -296,8 +297,8 @@ def save_analysis_result(factor_name, df_result):
     period_columns = get_forward_returns_columns(all_columns)
     without_period_columns = [c for c in all_columns if c not in period_columns]
     for period_column in period_columns:
-        df_one_period = df_result[without_period_columns+[period_column]]
-        df_one_period.columns = ['name_cn','name_en','metrics']
+        df_one_period = df_result[without_period_columns + [period_column]]
+        df_one_period.columns = ['name_cn', 'name_en', 'metrics']
         df_one_period['factor'] = factor_name
         df_one_period['period'] = period_column
         df_one_period.to_sql('factor_analysis', engine, index=False, if_exists="append")
@@ -331,13 +332,13 @@ if __name__ == '__main__':
         periods = [int(args.period)]
 
     if "," in args.factor:
-        factors = [f for f in args.factor.split(",")]
+        factor_names = [f for f in args.factor.split(",")]
     elif args.factor == "all":
-        factors = factor_utils.get_factor_names()
+        factor_names = factor_utils.get_factor_names()
     else:
-        factors = [args.factor]
+        factor_names = [args.factor]
 
-    main(factors,
+    main(factor_names,
          args.start,
          args.end,
          args.index,

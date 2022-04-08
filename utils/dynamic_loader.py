@@ -15,7 +15,7 @@ def create_factor_by_name(name, factor_dict):
         if type(factor_name) == list and name in factor_name: return factor
         if factor.name() == name: return factor
     logger.warning("无法根据名称[%s]创建因子实例",name)
-    return None
+    raise ValueError(f"无法根据名称{name}创建因子实例")
 
 
 # 对构造函数的参数做类型转换，目前仅支持int，未来可以自由扩充

@@ -1,9 +1,6 @@
 import tushare
-import numpy as np
-import utils
 
-conf = utils.load_config()
-pro = tushare.pro_api(conf['tushare']['token'])
+pro = tushare.pro_api()
 
 
 def get_last_day():
@@ -19,9 +16,28 @@ def get_index_weight():
     df.to_csv("debug/index.csv")
     return df
 
-# python -m test.test_tushare
+def test_rolling():
+    import pandas as pd
+    import numpy as np
+    data = []
+    for i in range(20):
+        data.append(['ts1',i])
+    for i in range(20):
+        data.append(['ts2',i])
+    data[10] = ['ts1',np.nan]
+    data[11] = ['ts1', np.nan]
+    data[12] = ['ts1', np.nan]
+
+    df = pd.DataFrame(data,columns=['ts_code','pct_chg'])
+    data = df.groupby('ts_code').pct_chg.rolling(2,min_periods=1).std(skipna = True)
+    print(data)
+
+
+
+# python -m test.toy.test_tushare
 if __name__ == '__main__':
-    df = get_last_day()
-    print(df)
-    print(df.info())
+    # df = get_last_day()
+    # print(df)
+    # print(df.info())
+    test_rolling()
 

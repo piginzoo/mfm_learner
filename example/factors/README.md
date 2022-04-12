@@ -334,6 +334,12 @@ trade_date
 
 参考：https://www.bilibili.com/read/cv13893224?spm_id_from=333.999.0.0
 
+## [波动率因子Std](https://github.com/piginzoo/mfm_learner/tree/main/example/factors/std.py)
+
+[波动率因子](https://zhuanlan.zhihu.com/p/30158144)：
+波动率因子有很多，我这里的是std，标准差，
+而算标准差，又要设置时间窗口，这里设定了10，20，60，即半个月、1个月、3个月
+
 ## [特质波动率因子ivff](https://github.com/piginzoo/mfm_learner/tree/main/example/factors/ivff.py)
 所谓"特质波动率"： 就是源于一个现象"低特质波动的股票，未来预期收益更高"。
 

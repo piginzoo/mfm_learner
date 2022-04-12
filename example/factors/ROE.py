@@ -68,11 +68,6 @@ class ROETTMFactor(Factor):
         return "roe_ttm"
 
     def calculate(self, stock_codes, start_date, end_date):
-        """
-        # 计算股票的PEG值
-        # 输入：context(见API)；stock_list为list类型，表示股票池
-        # 输出：df_PEG为dataframe: index为股票代码，data为相应的PEG值
-        """
 
         start_date_2years_ago = utils.last_year(start_date, num=2)
         trade_dates = self.datasource.trade_cal(start_date, end_date)
@@ -124,7 +119,7 @@ class ROEYOYFactor(Factor):
         return "roe_yoy"
 
     def cname(self):
-        return "净资产收益率同比增长率"
+        return "净资产收益率同比增长率(ROE变动)"
 
     def calculate(self, stock_codes, start_date, end_date):
 

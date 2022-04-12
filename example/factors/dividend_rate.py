@@ -5,6 +5,7 @@ from example.factors.factor import Factor
 
 class DividendRateFactor(Factor):
     """
+    DividendRat
     股息率TTM=近12个月股息总额/当日总市值
 
     tushare样例数据：

@@ -24,6 +24,8 @@ class MarketValueFactor(Factor):
     def name(self):
         return "mv"
 
+    def cname(self):
+        return "市值"
 
     def calculate(self, stock_codes, start_date, end_date):
         df_basic = self.datasource.daily_basic(stock_codes, start_date, end_date)

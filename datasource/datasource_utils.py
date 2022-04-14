@@ -68,7 +68,8 @@ def load_daily_data(datasource, stock_codes, start_date, end_date):
 
 def compile_industry(series_industry):
     """
-    把行业列（文字）转换成统一的行业码
+    把行业列（文字）转换成统一的行业码，
+    使用的是申万的2014版（一级28个/二级104个），没用2021版本：https://tushare.pro/document/2?doc_id=181）
     如 "家用电器" => '330000'
     ----------
     index_classify结果：

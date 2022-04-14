@@ -55,9 +55,12 @@ def preprocess(factors):
     if type(factors) == DataFrame and len(factors.columns) == 1:
         factors = factors.iloc[:, 0]
 
-    factors = factors.groupby(level='datetime').apply(fill_nan)  # 填充NAN
-    factors = factors.groupby(level='datetime').apply(winsorize)  # 去极值
-    factors = factors.groupby(level='datetime').apply(standardize)  # 标准化
+    """
+    做标准化处理，都是基于截面的，即某一天，多只股票，之间的值填充nan，去极值，标准化
+    """
+    factors = factors.groupby(level='datetime').apply(fill_nan)  # 填充NAN，以截面的均值来填充nan
+    factors = factors.groupby(level='datetime').apply(winsorize)  # 去极值，把分数为97.5%和2.5%之外的异常值替换成分位数值
+    factors = factors.groupby(level='datetime').apply(standardize)  # 标准化（减去均值除以方差）
     logger.debug("规范化预处理，%d行", len(factors))
     return factors
 
@@ -274,7 +277,7 @@ def neutralize(factor_df, df_stock_basic, df_mv):
 
     def _generate_cross_sectional_residual(data):
         """
-        就是把industry，变成one-hot，然后和signal做多元回归，求残差
+        就是把industry，变成one-hot，然后和signal（因子值）做多元回归，求残差
         --------------------------------------------------
         date        code        signal          industry
         2016-06-24	000123.SH   1.1             23
@@ -285,6 +288,7 @@ def neutralize(factor_df, df_stock_basic, df_mv):
         :return:
         """
         for _, X in data.groupby(level=0):
+            # signal就是因子值
             signal = X.pop("signal")  # pop这写法骚啊，就是单独取一列的意思，和X['pop']一个意思，不过，还包含了删除这列
             """
             pd.get_dummies(['A','B','A','C'])
@@ -311,11 +315,14 @@ def neutralize(factor_df, df_stock_basic, df_mv):
     assert check_factor_format(factor_df, index_type='date_code')
     df_factor_temp = df_factor_temp.reset_index()
 
+    # 行业中性化
     assert 'code' in df_factor_temp, df_factor_temp
     assert 'code' in df_stock_basic, df_stock_basic
+    # 把因子数据，和，股票基础数据（包含行业）做merge
     df_factor_temp = df_factor_temp.merge(df_stock_basic[['code', 'industry']],
                                           on="code")  # stocks_info行太少，需要和factors做merge
     df_factor_temp = df_factor_temp.set_index(['datetime', 'code'])
+    # 这步很重要，行业数据是中文的（吐槽tushare），我必须要转成申万的行业代码
     df_industry = datasource_utils.compile_industry(df_factor_temp['industry'])
 
     data = []

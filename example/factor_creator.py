@@ -69,7 +69,7 @@ python -m example.factor_creator \
     --index 000905.SH 
 
 python -m example.factor_creator \
-    --factor momentum_10d \
+    --factor bm \
     --start 20180101 \
     --end 20191230 \
     --num 50 \

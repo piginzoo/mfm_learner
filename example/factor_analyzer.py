@@ -24,15 +24,15 @@ datasource = datasource_factory.create()
 def test_by_alphalens(factor_name, factors, df_stocks, index_prices, df_stock_basic, df_mv, periods):
     """
     用AlphaLens有个细节，就是你要防止未来函数，
-
     第二个输入变量是股票的价格数据，它是一个二维数据表(DataFrame)，行是时间，列是股票代码。
     第一是输入的价格数据必须是正确的， 必须是按照信号发出进行回测的，否则会产生前视偏差(lookahead bias)或者使用 到“未来函数”，
     可以加一个缓冲窗口递延交易来解决。例如，通常按照收盘价的回测其实就包含了这样的前视偏差，所以递延到第二天开盘价回测。
     """
 
+    # 因子预处理
     factors = factor_utils.preprocess(factors)
 
-    # 中性化后的
+    # 中性化
     factors = factor_utils.neutralize(factors, df_stock_basic, df_mv)
 
     # column为股票代码，index为日期，值为收盘价
@@ -42,7 +42,7 @@ def test_by_alphalens(factor_name, factors, df_stocks, index_prices, df_stock_ba
     df_stock_close = df_stock_close[df_stock_close.index.isin(factors.index.get_level_values('datetime'))]
 
     """
-    这个是数据规整，
+    这个是数据规整，也就是把因子数据，还有股票的1D，5D，10D的累计收益率都准备好（不同的跨期收益）
     factors - 必须是 index=[日期|股票], factor value
     prices - 行情数据，一般都是收盘价，index=[日期]，列是所有的股票
     groups - 行业归属数据，就是每天、每只股票隶属哪个行业：index=[日期], 列是：[股票，它归属的行业代码]
@@ -53,14 +53,16 @@ def test_by_alphalens(factor_name, factors, df_stocks, index_prices, df_stock_ba
     # 里面是一张张被称之为撕页(tear sheet)的图片，记录所有与回测相关的 结果
     # create_full_tear_sheet(factor_data, long_short=False)
 
+    # group其实就是行业的意思，这里
     long_short = True
     group_neutral = False
     by_group = False
 
-    # plotting.plot_quantile_statistics_table(factor_data)
+    # 按照不同的周期（其实就是factor_data中的1D、5D、10D的列），按照因子排序的分层quantile收益率，对，是分层收益率
     factor_returns, mean_quantile_ret_bydate = \
         create_returns_tear_sheet(factor_data, long_short, group_neutral, by_group, set_context=False,
                                   factor_name=factor_name)
+    # plotting.plot_quantile_statistics_table(factor_data)
 
     # 临时保存一下数据，for 单元测试用
     # mean_quantile_ret_bydate.to_csv("test/data/mean_quantile_ret_bydate.csv")
@@ -68,6 +70,8 @@ def test_by_alphalens(factor_name, factors, df_stocks, index_prices, df_stock_ba
     logger.debug("factor_returns 因子和股票收益率整合数据(只显示3行)\n%r", factor_returns.head(3))
     logger.debug("mean_quantile_ret_bydate 分层的收益率的每期数据，这个最重要(只显示3行)\n:%r", mean_quantile_ret_bydate.head(3))  # !!!
 
+    # 计算IC，上面算出了1D，5D，10D等N日的收益率了，
+    # 接下来，看因子值，和，N日的回报率的相关性，即IC，IC其实就是皮尔斯系数
     ic_data, (ic_mean_0_t_values, p_value, skew, kurtosis) = \
         create_information_tear_sheet(factor_data,
                                       group_neutral,
@@ -77,6 +81,10 @@ def test_by_alphalens(factor_name, factors, df_stocks, index_prices, df_stock_ba
 
     logger.debug("ic_data(只显示3行):\n%r", ic_data.head(3))
     logger.debug("ic_mean_0_t_values(只显示3行):\n%r", ic_mean_0_t_values[:3])  # 这个是IC们的均值是不是0的检验T值
+
+    """
+    注意！上面，其实一直没有跑回归，去算因子的收益率，但是，参考《》
+    """
 
     factor_return_0_t_vlues, factor_returns = factor_returns_regression(factor_data)
 
@@ -147,9 +155,10 @@ def factor_returns_regression(factor_data):
         tvalues = []
         factor_returns = []
 
+        # 按照不同的间隔日期，来做不同间隔日期（1D，5D，10D...)的因子收益率
         for column in get_forward_returns_columns(date_data.columns):
             returns = date_data[column]
-            t_value, factor_return = regression(returns, factors)  # 这个是一天
+            t_value, factor_return = regression(returns, factors)  # 这个是一天，横截面，这一天，因子的收益率
             tvalues.append(t_value)
             factor_returns.append(factor_return)
         return tvalues, factor_returns
@@ -157,12 +166,15 @@ def factor_returns_regression(factor_data):
     # 因为要重新分组，所以先拷贝一个
     factor_data = factor_data.copy()
     # 按照日期分组
-    groups = factor_data.groupby(level='date')
+    date_groups = factor_data.groupby(level='date')
 
     df_factor_returns = []
     df_tavlues = []
-    for name, df_cross_section in groups:
-        # 按照日期分组计算
+    # 循环每一天，对每一天，都回归出一个收益率，这样形成一个收益率序列
+    # 但是因为，我们同时处理不同周期的（1D，5D，10D...），这个的收益率序列是不同周期的
+    for name, df_cross_section in date_groups:
+        # 按照某一天进行截面回归，返回的是某一天（或者某5天，10天）的因子收益率，
+        # 以及tvalues（tvalue是判断因子收益率不为0的T检验值）
         tvalues, factor_returns = cross_section_regression(df_cross_section)
         df_factor_returns.append(factor_returns)
         df_tavlues.append(tvalues)
@@ -257,21 +269,26 @@ def main(factor_names, start_date, end_date, index_code, periods, num):
 
     # 市值数据，用于市值中性化
     df_mv = datasource.daily_basic(stock_codes, start_date, end_date)
+    # 设置成'datetime', 'code'的联合索引，alphalens要求的
     df_mv = datasource_utils.reset_index(df_mv)
+    # 获得市值数据
     df_mv = df_mv['total_mv']
 
     # 股票的基本信息，主要为为了获得行业信息
     df_stock_basic = datasource.stock_basic(stock_codes)
 
-    # 获得指数（股票池）的每日价格信息
+    # 获得指数（股票池 - 基准）的每日价格信息
     index_prices = datasource.index_daily(index_code, start_date=start_date, end_date=end_date)
     assert len(index_prices) > 0, index_prices
 
+    # 获得因子信息（注意：因子需要用factor_creator提前创建）
     for factor_name in factor_names:
+        # 获得目标的多只股票的因子信息
         df_factor = factor_utils.get_factor(factor_name, stock_codes, start_date, end_date)
         if df_factor is None or len(df_factor) == 0:
             logger.warning("无法加载因子[%s]，请运行因子创建程序去创建因子：factor_create.py", factor_name)
             continue
+        # 通过alphlens测试因子
         df_result = test_by_alphalens(factor_name, df_factor, df_stocks, index_prices, df_stock_basic, df_mv, periods)
         save_analysis_result(factor_name, df_result)
         logger.debug("换仓周期%r的 [%s]因子得分", periods, factor_name)
@@ -307,7 +324,7 @@ def save_analysis_result(factor_name, df_result):
 """
 # 测试用
 python -m example.factor_analyzer \
-    --factor roe_yoy \
+    --factor bm \
     --start 20180101 \
     --end 20191230 \
     --num 50 \

@@ -135,8 +135,7 @@ def factor_returns_regression(factor_data):
         """
         截面回归，每一天，50只股票的收益，50只股票的因子，
         回归出：因子收益率、T值
-
-        R_i = alpha + beta_i * f + e_i
+        R_i = beta_i * f + e_i
         f就是因子收益
         """
 
@@ -144,32 +143,35 @@ def factor_returns_regression(factor_data):
             factors = sm.add_constant(factors)
             model = sm.OLS(returns, factors)  # 定义x，y
             results = model.fit()
+            # 这个Tvalue，是回归系数不为0的假设显著性检验
             t_value = results.tvalues[1]
             factor_return = results.params[1]
-            # import pdb;pdb.set_trace()
             return t_value, factor_return
 
         factors = date_data['factor']
         # get_forward_returns_columns会返回1D,2D,...的列名，是alphalens内嵌的函数
-        # 针对每个日子，都进行处理
+        # 针对每个周期（1D，5D，10D），都进行处理，所以有多少个周期，就有多少个因子收益率值和T值
         tvalues = []
         factor_returns = []
 
         # 按照不同的间隔日期，来做不同间隔日期（1D，5D，10D...)的因子收益率
         for column in get_forward_returns_columns(date_data.columns):
             returns = date_data[column]
+            # 回归啥呢？回归因子收益率：股票收益率r = 因子值 * 因子收益率 + 残差，这里的待求系数为 "因子收益率"
             t_value, factor_return = regression(returns, factors)  # 这个是一天，横截面，这一天，因子的收益率
-            tvalues.append(t_value)
+            tvalues.append(t_value) # tvalue，是因子收益率不为0的显著性t检验
             factor_returns.append(factor_return)
         return tvalues, factor_returns
 
     # 因为要重新分组，所以先拷贝一个
     factor_data = factor_data.copy()
+
     # 按照日期分组
     date_groups = factor_data.groupby(level='date')
 
     df_factor_returns = []
     df_tavlues = []
+
     # 循环每一天，对每一天，都回归出一个收益率，这样形成一个收益率序列
     # 但是因为，我们同时处理不同周期的（1D，5D，10D...），这个的收益率序列是不同周期的
     for name, df_cross_section in date_groups:
@@ -177,7 +179,8 @@ def factor_returns_regression(factor_data):
         # 以及tvalues（tvalue是判断因子收益率不为0的T检验值）
         tvalues, factor_returns = cross_section_regression(df_cross_section)
         df_factor_returns.append(factor_returns)
-        df_tavlues.append(tvalues)
+        df_tavlues.append(tvalues) # 这里有N天的截面T检验值
+
     column_names = get_forward_returns_columns(factor_data.columns)
     date_index = factor_data.index.unique(level='date')
     df_tavlues = DataFrame(df_tavlues, index=date_index, columns=column_names)

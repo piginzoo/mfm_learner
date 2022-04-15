@@ -269,7 +269,7 @@ def neutralize(factor_df, df_stock_basic, df_mv):
         return stock_codes, start_date, end_date
 
     def _ols_by_numpy(x, y):
-        # least-squares，最小二乘，m是回归系数：y = m * x
+        # least-squares，最小二乘，m是回归系数：y = m * x + resid
         m = np.linalg.lstsq(x, y)[0]
         # 得到残差
         resid = y - (x @ m)
@@ -322,6 +322,7 @@ def neutralize(factor_df, df_stock_basic, df_mv):
     df_factor_temp = df_factor_temp.merge(df_stock_basic[['code', 'industry']],
                                           on="code")  # stocks_info行太少，需要和factors做merge
     df_factor_temp = df_factor_temp.set_index(['datetime', 'code'])
+
     # 这步很重要，行业数据是中文的（吐槽tushare），我必须要转成申万的行业代码
     df_industry = datasource_utils.compile_industry(df_factor_temp['industry'])
 
@@ -341,6 +342,7 @@ def neutralize(factor_df, df_stock_basic, df_mv):
     data.append(industry_standard)
 
     data = pd.concat(data, axis=1).dropna()  # 按列(axis=1)合并，其实是贴到最后一列上，索引要相同，都是 [datetime|code]
+    # 做行业中性化 = one-hot行业回归后的残差
     residuals = pd.concat(_generate_cross_sectional_residual(data))
 
     """"

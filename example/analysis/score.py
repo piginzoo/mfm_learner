@@ -162,7 +162,8 @@ def score_regression(df_result, t_values, factor_returns):
     return_mean = factor_returns.apply(lambda s: s.mean(), axis=0)
     # 因子正收益的比例
     return_positive_rate = factor_returns.apply(lambda s: len(s[s > 0]) / len(s), axis=0)
-    # 因子收益不为0的t检验显著性
+
+    # 因子收益（回归出来的）不为0的t检验显著性(T的绝对值的均值)
     tvalue_mean = t_values.apply(lambda s: s.mean(), axis=0)
     tvalue_significant_rate = t_values.apply(lambda s: len(s[np.abs(s) > 2]) / len(s), axis=0)
 
@@ -282,7 +283,7 @@ def score_ic(df_result, ic_data, t_values, skew, kurtosis):
     df_result = __result(df_result, "IC显著≠0T值", "ic_0_tvalue", t_values)
 
     """
-    2.看IR是不是大于0.02
+    2.看IR是不是大于0.02，IR = IC的多周期均值 / IC的标准差，
     """
     ir_data = ic_data.apply(lambda df: np.abs(df.mean() / df.std()))
     df_result = __result(df_result, "IR值     ", "IR", ir_data)

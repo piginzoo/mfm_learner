@@ -7,8 +7,7 @@ import pandas as pd
 import sqlalchemy
 
 from utils import utils
-from utils.tushare_download import download_utils
-from utils.tushare_download.download_utils import is_table_index_exist, is_table_exist
+from utils.db_utils import is_table_index_exist, is_table_exist, create_db_index
 
 ROWS = None
 
@@ -104,7 +103,7 @@ def import_file(file, table_name):
         logger.debug("表[%s]已经具有了索引，无需再创建", table_name)
         return
 
-    download_utils.create_db_index(db_engine, table_name, df)
+    create_db_index(db_engine, table_name, df)
 
 
 def main(dir, file, table_name):
@@ -117,8 +116,8 @@ def main(dir, file, table_name):
 """
 # 导入单个文件
 python -m utils.tushare_download.db_importer \
-    -f data/tushare_download/daily_hfq_20080101_20220209.csv \
-    -t  daily_hfq
+    -f data/tushare_download/fina_indicator_20080101_20220221.csv \
+    -t  fina_indicator
 
 # 导入所有的
 python -m utils.tushare_download.db_importer \

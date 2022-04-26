@@ -11,9 +11,9 @@ from utils.tushare_download.downloaders.trade_cal import TradeCalendar
 
 
 def main():
-    Daily().download()
-    DailyBasic().download()
-    FinanceIndicator().download()
+    # Daily().download()
+    # DailyBasic().download()
+    # FinanceIndicator().download()
     IndexDaily().download()
     IndexWeight().download()
     TradeCalendar().download()

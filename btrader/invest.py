@@ -158,7 +158,7 @@ def main():
     cerebro.addanalyzer(bt.analyzers.AnnualReturn, _name='annual')
     cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')  # 加入PyFolio分析者,这个是为了做quantstats分析用
 
-    results = cerebro.run()
+    results = cerebro.run(maxcpus=1)
 
     def format_print(title, results):
         print(title, ":")
@@ -200,8 +200,8 @@ def quant_statistics(strat, period, code, name):
 if __name__ == '__main__':
     code = "000905.SH"  # 中证500
     code = "000300.SH"  # 沪深300
-    code = '001938'  # 基金代码 001938：时代先锋 002943 ： 广发多因子
-    name = '时代先锋'
+    code = '003327'  # 基金代码 001938：时代先锋 002943 ： 广发多因子
+    name = '万家鑫景A'
     start_date = "20150101"
     end_date = "20210115"
     period = (10, 22, 30, 60)

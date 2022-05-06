@@ -18,7 +18,7 @@ CALL_INTERVAL = 60 / MAX_PER_SECOND  # 150毫秒,1分钟400次
 EALIEST_DATE = '20080101'  # 最早的数据日期
 
 
-class BaseDownload():
+class BaseDownloader():
     """
     主要实现一个下载基类，用于完成，控制下载速度，和反复尝试，以及保存到数据库中的基础功能
     """
@@ -48,7 +48,7 @@ class BaseDownload():
         """
         raise NotImplemented()
 
-    def get_start_date(self):
+    def get_start_date(self,where=None):
         """
         如果表存在，就返回关键日期字段中，最后的日期，
         这个函数主要用于帮助下载后续日期的数据。
@@ -62,7 +62,10 @@ class BaseDownload():
 
         table_name = self.get_table_name()
         date_column_name = self.get_date_column_name()
-        df = pd.read_sql('select max({}) from {}'.format(date_column_name, table_name), self.db_engine)
+        if where:
+            df = pd.read_sql('select max({}) from {} where {}'.format(date_column_name, table_name,where), self.db_engine)
+        else:
+            df = pd.read_sql('select max({}) from {}'.format(date_column_name, table_name), self.db_engine)
         assert len(df) == 1
         latest_date = df.iloc[:, 0].item()
         if latest_date is None:
@@ -117,6 +120,7 @@ class BaseDownload():
                 # print(kwargs)
                 df = func(**kwargs)
                 self.retry_count = 0
+                time.sleep(self.call_interval)
                 return df
             except:
                 logger.exception("调用Tushare函数[%s]失败:%r", str(func), kwargs)
@@ -136,4 +140,5 @@ class BaseDownload():
 
         file_path = os.path.join(self.save_dir, name)
         df.to_csv(file_path)
+        logger.debug("保存到文件：%s中，%d条", file_path, len(df))
         return file_path

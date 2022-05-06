@@ -3,12 +3,15 @@ import logging
 import pandas as pd
 
 from utils import utils
-from utils.tushare_download.downloaders.base_downloader import BaseDownload
+from utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
 logger = logging.getLogger(__name__)
 
 
-class PeriodlyDownloader(BaseDownload):
+class PeriodlyDownloader(BaseDownloader):
+    """
+    本来是想给index_daily用的，但是，由于他们需要挨个支持每个指数的下载，
+    """
 
     def get_table_name(self):
         return "index_weight"

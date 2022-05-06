@@ -1,7 +1,7 @@
 import logging
 
 from utils import utils
-from utils.tushare_download.downloaders.batch_downloader import BatchDownloader
+from utils.tushare_download.downloaders.base.batch_downloader import BatchDownloader
 
 logger = logging.getLogger(__name__)
 

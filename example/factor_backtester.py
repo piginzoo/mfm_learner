@@ -55,7 +55,7 @@ class Percent(bt.Sizer):
 def comply_backtrader_data_format(df):
     df = df.rename(columns={'vol': 'volume'})  # 列名准从backtrader的命名规范
     df['openinterest'] = 0  # backtrader需要这列，所以给他补上
-    df = datasource_utils.reset_index(df, date_only=True)  # 只设置日期列为索引
+    df = datasource_utils.reset_index(df, date_only=True, date_format="%Y-%m-%d")  # 只设置日期列为索引
     df = df.sort_index(ascending=True)
     return df
 

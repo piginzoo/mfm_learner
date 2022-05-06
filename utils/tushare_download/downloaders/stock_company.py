@@ -1,4 +1,4 @@
-from utils.tushare_download.downloaders.base_downloader import BaseDownload
+from utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
 """
 stock_company
@@ -15,7 +15,7 @@ from utils import utils
 logger = logging.getLogger(__name__)
 
 
-class StockCompany(BaseDownload):
+class StockCompany(BaseDownloader):
 
     def download(self):
         df_stock_company = self.pro.stock_company(exchange='', fields='ts_code,reg_capital,city,employees')

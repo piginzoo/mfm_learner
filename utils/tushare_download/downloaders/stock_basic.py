@@ -1,6 +1,4 @@
-import tushare as ts
-
-from utils.tushare_download.downloaders.base_downloader import BaseDownload
+from utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
 """
 stock_basic
@@ -32,7 +30,7 @@ logger = logging.getLogger(__name__)
 # 查询当前所有正常上市交易的股票列表
 # L 是没有退市的
 
-class StockBasic(BaseDownload):
+class StockBasic(BaseDownloader):
 
     def download(self):
 

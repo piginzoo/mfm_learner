@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 import utils.utils
 from utils import utils
-from utils.tushare_download.downloaders.base_downloader import BaseDownload
+from utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ TRADE_DAYS_PER_YEAR = 252  # 1年的交易日
 MAX_RECORDS = 4800  # 最多一次的下载行数，tushare是5000，稍微降一下到4800
 
 
-class BatchDownloader(BaseDownload):
+class BatchDownloader(BaseDownloader):
     """
     用于下载所有的股票，一只一只股票的，
     可以支持1只，

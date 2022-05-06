@@ -1,12 +1,12 @@
 import logging
 
 from utils import utils
-from utils.tushare_download.downloaders.base_downloader import BaseDownload
+from utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
 logger = logging.getLogger(__name__)
 
 
-class TradeCalendar(BaseDownload):
+class TradeCalendar(BaseDownloader):
 
     def get_table_name(self):
         return "trade_cal"

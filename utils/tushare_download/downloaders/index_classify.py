@@ -1,14 +1,13 @@
 import logging
 
 from utils import utils
-from utils.tushare_download.downloaders.base_downloader import BaseDownload
-from utils.tushare_download.downloaders.periodly_downloader import PeriodlyDownloader
+from utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
 logger = logging.getLogger(__name__)
 
 fields = ['index_code','industry_name','parent_code','level','industry_code','is_pub','src']
 
-class IndexClassify(BaseDownload):
+class IndexClassify(BaseDownloader):
     """
     下载行业分类信息
     """

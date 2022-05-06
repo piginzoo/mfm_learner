@@ -11,11 +11,11 @@ from utils.tushare_download.downloaders.trade_cal import TradeCalendar
 
 
 def main():
-    # Daily().download()
-    # DailyBasic().download()
+    Daily().download()
+    DailyBasic().download()
     FinanceIndicator().download()
-    IndexDaily().download()
-    IndexWeight().download()
+    IndexDaily(["000001.SH","000905.SH", "000300.SH", "000016.SH"]).download()
+    IndexWeight(["000001.SH","000905.SH", "000300.SH", "000016.SH"]).download()
     TradeCalendar().download()
 
 

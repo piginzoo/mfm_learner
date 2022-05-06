@@ -18,7 +18,7 @@ class FinanceIndicator(BatchDownloader):
         return "fina_indicator"
 
     def get_date_column_name(self):
-        return "anna_date"
+        return "ann_date"
 
 
 # python -m utils.tushare_download.downloaders.fina_indicator

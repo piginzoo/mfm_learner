@@ -14,7 +14,7 @@ def main():
     # Daily().download()
     # DailyBasic().download()
     # FinanceIndicator().download()
-    IndexDaily().download()
+    IndexDaily(["000001.SH","000905.SH", "000300.SH", "000016.SH"]).download()
     IndexWeight().download()
     TradeCalendar().download()
 

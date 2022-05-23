@@ -31,6 +31,8 @@ logger = logging.getLogger(__name__)
 # L 是没有退市的
 
 class StockBasic(BaseDownloader):
+    def get_table_name(self):
+        return "stock_basic"
 
     def download(self):
 
@@ -44,7 +46,7 @@ class StockBasic(BaseDownloader):
         self.to_db(df_stock_basic, if_exists='replace')
 
 
-# python -m utils.tushare_download.stock_basic
+# python -m utils.tushare_downloaders.stock_basic
 if __name__ == '__main__':
     utils.init_logger()
     downloader = StockBasic()

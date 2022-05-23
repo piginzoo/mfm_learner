@@ -7,12 +7,14 @@ from utils.tushare_download.downloaders.daily_basic import DailyBasic
 from utils.tushare_download.downloaders.fina_indicator import FinanceIndicator
 from utils.tushare_download.downloaders.index_daily import IndexDaily
 from utils.tushare_download.downloaders.index_weight import IndexWeight
+from utils.tushare_download.downloaders.stock_basic import StockBasic
 from utils.tushare_download.downloaders.stock_company import StockCompany
 from utils.tushare_download.downloaders.trade_cal import TradeCalendar
 
 
 def main():
     StockCompany().download()
+    StockBasic().download()
     TradeCalendar().download()
     Daily().download()
     DailyBasic().download()

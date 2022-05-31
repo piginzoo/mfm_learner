@@ -86,6 +86,17 @@ python -m utils.tushare_download.downloaders.index_weight
 python -m utils.tushare_download.downloaders.fina_indicator
 ```
 
+5、下载过程中，会将下载完的数据，保存到文件夹`data/tushare_download`中，如果中途失败，或者插入数据库失败，可以手工从文件导入：
+
+例如：
+
+```
+# 导入单个文件
+python -m utils.tushare_download.db_importer \
+    -f data/tushare_download/fina_indicator_20080101_20220221.csv \
+    -t  fina_indicator
+```
+
 # 其他
 
 参考使用致敬大神的代码，

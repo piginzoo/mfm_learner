@@ -4,9 +4,7 @@ import logging
 import os
 import warnings
 
-import matplotlib.pyplot as plt
 import yaml
-from backtrader.plot import Plot_OldSync
 from dateutil.relativedelta import relativedelta
 from pandas import Series
 from sqlalchemy import create_engine
@@ -189,8 +187,3 @@ def init_logger():
     for handler in handlers:
         handler.setLevel(level=logging.DEBUG)
         handler.setFormatter(formatter)
-
-
-class MyPlot(Plot_OldSync):
-    def show(self):
-        plt.savefig("debug/backtrader回测.jpg")

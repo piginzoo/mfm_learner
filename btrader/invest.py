@@ -13,6 +13,14 @@ from backtrader.feeds import PandasData
 from datasource import datasource_factory
 from example.factor_backtester import comply_backtrader_data_format
 
+import matplotlib.pyplot as plt
+from backtrader.plot import Plot_OldSync
+
+
+class MyPlot(Plot_OldSync):
+    def show(self):
+        plt.savefig("debug/backtrader回测.jpg")
+
 
 class MyStrategy(bt.Strategy):
     """

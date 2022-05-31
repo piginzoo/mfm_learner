@@ -42,6 +42,38 @@
 
 # 运行
 
+需要手工创建库，表不用，然后一次性拉取，也可以逐一拉取。时间比较长，请耐心。
+
+可运行比较少的交易日历表，来验证拉取流程是否正常：`python -m utils.tushare_download.downloaders.trade_cal`
+
+1、创建数据库
+
+```
+CREATE DATABASE IF NOT EXISTS tushare DEFAULT CHARSET utf8 COLLATE utf8_general_ci;
+```
+
+2、配置 conf/config.yml 文件
+```
+    tushare:
+            token: 'bf542ab154ed6bdc1a3842b71ec8c29fab7f78cbdec4a70a04f0bf5f'
+    mysql:
+            uid: 'root'
+            pwd: '123456'
+            db:  'tushare'
+            host: '127.0.0.1'
+            port: 3306
+```
+
+3、运行一次性拉取
+
+比较慢，估计3~4个小时：
+
+```
+python -m utils.tushare_download.updator
+```
+
+4、也可以，逐一拉取
+
 ```
 python -m utils.tushare_download.downloaders.stock_company
 python -m utils.tushare_download.downloaders.stock_basic

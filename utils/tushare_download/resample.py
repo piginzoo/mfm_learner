@@ -26,6 +26,11 @@ def main(code=None):
         df = datasource.daily(stock_code=stock_code)
         df = datasource_utils.reset_index(df, date_only=True, date_format="%Y%m%d")
         df = df.sort_index(ascending=True)
+
+        if len(df)==0:
+            logger.error("股票[%s]数据不存在，无法进行采样，请尽快下载其数据！",stock_code)
+            continue
+
         process(db_engine, stock_code, df, "weekly")
         process(db_engine, stock_code, df, "monthly")
         pbar.update(1)

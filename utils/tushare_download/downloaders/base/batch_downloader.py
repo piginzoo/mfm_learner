@@ -58,7 +58,7 @@ class BatchDownloader(BaseDownloader):
 
         start_date = self.get_start_date()
         end_date = utils.date2str(datetime.datetime.now())
-        stock_codes = self.get_stock_codes()
+        stock_codes = utils.get_stock_codes(self.db_engine)
 
         logger.debug("准备下载 %s~%s, %d 只股票的基本信息", start_date, end_date, len(stock_codes))
 

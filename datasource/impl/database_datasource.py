@@ -19,14 +19,20 @@ class DatabaseDataSource(DataSource):
         self.tushare = TushareDataSource()
 
     # 返回每日行情数据，不限字段
-    def __daliy_one(self, stock_code, start_date, end_date):
-        df = pd.read_sql(
-            f'select * from daily_hfq where ts_code="{stock_code}" and trade_date>="{start_date}" and trade_date<="{end_date}"',
-            self.db_engine)
-        return df
+    def __daliy_one(self, stock_code, start_date=None, end_date=None):
+        if start_date is None or end_date is None:
+            df = pd.read_sql(
+                f'select * from daily_hfq where ts_code="{stock_code}"',
+                self.db_engine)
+            return df
+        else:
+            df = pd.read_sql(
+                f'select * from daily_hfq where ts_code="{stock_code}" and trade_date>="{start_date}" and trade_date<="{end_date}"',
+                self.db_engine)
+            return df
 
     @post_query
-    def daily(self, stock_code, start_date, end_date):
+    def daily(self, stock_code, start_date=None, end_date=None):
         if type(stock_code) == list:
             df_all = None
             start_time = time.time()

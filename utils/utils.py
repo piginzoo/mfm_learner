@@ -4,6 +4,7 @@ import logging
 import os
 import warnings
 
+import pandas as pd
 import yaml
 from dateutil.relativedelta import relativedelta
 from pandas import Series
@@ -15,6 +16,11 @@ import utils
 logger = logging.getLogger(__name__)
 
 DB_FILE = "../data/tushare.db"
+
+
+def get_stock_codes(db_engine):
+    df = pd.read_sql('select * from stock_basic', db_engine)
+    return df['ts_code']
 
 
 def load_config():
@@ -187,3 +193,39 @@ def init_logger():
     for handler in handlers:
         handler.setLevel(level=logging.DEBUG)
         handler.setFormatter(formatter)
+
+
+def __calc_OHLC_in_group(df_in_group):
+    """
+    计算一个分组内的最大的、最小的、开盘、收盘 4个值
+    """
+    # 先复制最后一条（即周五或者月末日），为了得到所有的字段
+    df_result = df_in_group.tail(1).copy()
+    df_result['open'] = df_in_group.loc[df_in_group.index.min()]['open']
+    df_result['close'] = df_in_group.loc[df_in_group.index.max()]['close']
+    df_result['high'] = df_in_group['high'].max()
+    df_result['low'] = df_in_group['low'].min()
+    df_result['volume'] = df_in_group['volume'].sum()
+    df_result['amount'] = df_in_group['amount'].sum()
+    return df_result
+
+
+def day2month(df):
+    """
+    返回，数据中，每个月，最后一天的数据
+    """
+    df_result = df.groupby(df.index.to_period('M')).apply(__calc_OHLC_in_group)
+    df_result = df_result.droplevel(level=0)
+    df_result['pct_chg'] = df_result.close.pct_change()
+    return df_result
+
+
+def day2week(df):
+    """
+    返回，数据中，每周，最后一天的数据
+    """
+    # to_period是转成
+    df_result = df.groupby(df.index.to_period('W')).apply(__calc_OHLC_in_group)
+    df_result = df_result.droplevel(level=0)
+    df_result['pct_chg'] = df_result.close.pct_change()
+    return df_result

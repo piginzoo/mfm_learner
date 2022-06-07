@@ -121,7 +121,7 @@ def cache(dir,str_fields=None):
 class DataSource():
 
     @abstractmethod
-    def daily(self, stock_code, start_date, end_date):
+    def daily(self, stock_code, start_date=None, end_date=None):
         pass
 
     # 返回每日的其他信息，主要是市值啥的

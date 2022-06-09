@@ -17,9 +17,9 @@ datasource = datasource_factory.get()
 2008~2022，14.5年，754条周数据，174条月数据
 """
 
+
 def main(code=None):
     db_engine = utils.connect_db()
-
 
     if code is None:
         stock_codes = utils.get_stock_codes(db_engine)
@@ -27,10 +27,10 @@ def main(code=None):
         stock_codes = [code]
 
     is_weekly = precheck("W")
-    is_monthly = precheck("W")
+    is_monthly = precheck("M")
 
     if not is_weekly and not is_monthly:
-        logger.info("今天 %s 不是周最后交易日和月最后交易日，无需生成数据", utils.str2date(datetime.date.today()))
+        logger.info("今天 %s 不是周最后交易日和月最后交易日，无需生成数据", utils.date2str(datetime.date.today()))
         return
 
     pbar = tqdm(total=len(stock_codes))
@@ -39,13 +39,14 @@ def main(code=None):
         df = datasource_utils.reset_index(df, date_only=True, date_format="%Y%m%d")
         df = df.sort_index(ascending=True)
 
-        if len(df)==0:
-            logger.error("股票[%s]数据不存在，无法进行采样，请尽快下载其数据！",stock_code)
+        if len(df) == 0:
+            logger.error("股票[%s]数据不存在，无法进行采样，请尽快下载其数据！", stock_code)
             continue
 
         if is_weekly: process(db_engine, stock_code, df, "weekly")
         if is_monthly: process(db_engine, stock_code, df, "monthly")
         pbar.update(1)
+
 
 def precheck(period):
     """
@@ -54,14 +55,15 @@ def precheck(period):
     :return:
     """
     today = datetime.date.today()
-    df = datasource.trade_cal(exchange='SSE', start_date=today, is_open=1)
-    df['cal_date'] = pd.to_datetime(df['cal_date'],format="%Y%m%d")
+    df = datasource.trade_cal(exchange='SSE', start_date=today, end_date='20990101')
+    df = pd.DataFrame(df,columns=['cal_date'])
+    df['cal_date'] = pd.to_datetime(df['cal_date'], format="%Y%m%d")
     if pd.Timestamp(today) not in df['cal_date'].unique(): return False
 
     df = df[['cal_date']].set_index('cal_date')
     df_group = df.groupby(df.index.to_period(period))
     now = datetime.date.today()
-    for period,dates in df_group:
+    for period, dates in df_group:
         if period.start_time < pd.Timestamp(today) < period.end_time:
             return dates.index[-1] == pd.Timestamp(now)
     return False
@@ -79,12 +81,10 @@ def delete_stale(engine, code, table_name):
 
 
 def process(db_engine, code, df_daily, period):
-
     # 做一个数据采样：月或者周
     if period == "weekly":
         df = utils.day2week(df_daily)
     elif period == "monthly":
-        precheck("M")
         df = utils.day2month(df_daily)
     else:
         raise ValueError(period)
@@ -109,7 +109,7 @@ def process(db_engine, code, df_daily, period):
               if_exists="append",
               dtype=dtype_dic,
               chunksize=1000)
-    logger.debug("导入股票 [%s] %d条数据=>db[表%s] ", code, len(df), table_name)
+    logger.debug("导入股票 [%s] %s周期 %d条数据=>db[表%s] ", code, period, len(df), table_name)
 
 
 """

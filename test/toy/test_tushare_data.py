@@ -1,9 +1,13 @@
+from datetime import date
+
 import pandas as pd
 import os
 import time
 
 from mfm_learner.utils import utils
+import tushare
 
+pro = tushare.pro_api()
 TUSHARE_DATA_DIR="data/tushare_data/data"
 
 def daily(fuquan="hfq"):
@@ -15,7 +19,13 @@ def daily(fuquan="hfq"):
     # df = pd.read_csv(file_path)
     return df
 
-# python -m test.test_tushare_data
+
+def test_trade_cal():
+    __date = utils.date2str(date.today())
+    df = pro.trade_cal(exchange='SSE', start_date=__date, is_open=1)
+    print(df)
+
+# python -m test.toy.test_tushare_data
 if __name__ == '__main__':
     start_time = time.time()
     # df = daily()
@@ -36,9 +46,11 @@ if __name__ == '__main__':
     # print("从数据库中加载",str(time.time()-start_time), " s")
     # start_time = time.time()
 
-    db_engine = utils.connect_db()
-    df = pd.read_sql('select * from daily where ts_code="000001.SZ"', db_engine)
+    # db_engine = utils.connect_db()
+    # df = pd.read_sql('select * from daily where ts_code="000001.SZ"', db_engine)
 
-    print("从数据库中加载", str(time.time() - start_time), " s")
-    print(df.head(1))
+    # print("从数据库中加载", str(time.time() - start_time), " s")
+    # print(df.head(1))
     # start_time = time.time()
+
+    df = test_trade_cal()

@@ -12,9 +12,13 @@ from mfm_learner.utils import utils, db_utils
 logger = logging.getLogger(__name__)
 datasource = datasource_factory.get()
 
+"""
+2008~2022，14.5年，754条周数据，174条月数据
+"""
 
 def main(code=None):
     db_engine = utils.connect_db()
+
 
     if code is None:
         stock_codes = utils.get_stock_codes(db_engine)
@@ -37,10 +41,13 @@ def main(code=None):
 
 def precheck():
     """
-    从库中加载数据，寻找到其最旧日期，如果不到
+    1. 最松：如果今天，不是交易日的月末，或者，周的最后一天就不运行，需要考虑节假日导致周五或者月末休市，所以要参考交易日期
+    TODO: 2. 查看数据库中的每只股票的最后日期，如果这个日期不是上周、上月末的日期，那么，就需要重新生成，
     :return:
     """
-    pass
+    datasource.trade_cal()
+
+
 
 
 def delete_stale(engine, code, table_name):

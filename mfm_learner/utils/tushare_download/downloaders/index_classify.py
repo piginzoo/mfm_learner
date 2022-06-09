@@ -21,7 +21,7 @@ class IndexClassify(BaseDownloader):
         self.to_db(df,if_exists="replace")
 
 
-# python -m utils.tushare_download.downloaders.index_classify
+# python -m mfm_learner.utils.tushare_download.downloaders.index_classify
 if __name__ == '__main__':
     utils.init_logger()
     downloader = IndexClassify()

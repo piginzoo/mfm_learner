@@ -35,6 +35,13 @@ def main(code=None):
         process(db_engine, stock_code, df, "monthly")
         pbar.update(1)
 
+def precheck():
+    """
+    从库中加载数据，寻找到其最旧日期，如果不到
+    :return:
+    """
+    pass
+
 
 def delete_stale(engine, code, table_name):
     delete_sql = f"""
@@ -81,7 +88,7 @@ def process(db_engine, code, df_daily, period):
 
 
 """
-python -m utils.tushare_download.resample -c 603233.SH
+python -m mfm_learner.utils.tushare_download.resample -c 603233.SH
 """
 if __name__ == '__main__':
     utils.init_logger()

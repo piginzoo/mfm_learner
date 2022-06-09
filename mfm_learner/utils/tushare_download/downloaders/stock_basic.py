@@ -46,7 +46,7 @@ class StockBasic(BaseDownloader):
         self.to_db(df_stock_basic, if_exists='replace')
 
 
-# python -m utils.tushare_downloaders.stock_basic
+# python -m mfm_learner.utils.tushare_downloaders.stock_basic
 if __name__ == '__main__':
     utils.init_logger()
     downloader = StockBasic()

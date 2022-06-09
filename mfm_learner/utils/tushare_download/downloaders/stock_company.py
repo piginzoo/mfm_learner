@@ -36,7 +36,7 @@ class StockCompany(BaseDownloader):
         return "stock_company"
 
 
-# python -m utils.tushare_download.downloaders.stock_company
+# python -m mfm_learner.utils.tushare_download.downloaders.stock_company
 if __name__ == '__main__':
     utils.init_logger()
     downloader = StockCompany()

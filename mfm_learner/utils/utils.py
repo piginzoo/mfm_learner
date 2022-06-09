@@ -1,18 +1,14 @@
 import calendar
 import datetime
 import logging
-import os
 import warnings
 
 import pandas as pd
-import yaml
 from dateutil.relativedelta import relativedelta
-from mfm_learner.utils import CONF
 from pandas import Series
 from sqlalchemy import create_engine
 
-import conf
-
+from mfm_learner.utils import CONF
 
 logger = logging.getLogger(__name__)
 
@@ -22,17 +18,6 @@ DB_FILE = "../data/tushare.db"
 def get_stock_codes(db_engine):
     df = pd.read_sql('select * from stock_basic', db_engine)
     return df['ts_code']
-
-
-def load_config():
-    if not os.path.exists(conf.CONF_PATH):
-        raise ValueError("配置文件[conf/config.yml]不存在!(参考conf/config.sample.yml):" + conf.CONF_PATH)
-    f = open(conf.CONF_PATH, 'r', encoding='utf-8')
-    result = f.read()
-    # 转换成字典读出来
-    data = yaml.load(result, Loader=yaml.FullLoader)
-    logger.info("读取配置文件:%r", conf.CONF_PATH)
-    return data
 
 
 def connect_db():

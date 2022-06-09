@@ -50,7 +50,7 @@ class IndexWeight(PeriodlyDownloader):
         self.to_db(df_all)
 
 
-# python -m utils.tushare_download.downloaders.index_weight
+# python -m mfm_learner.utils.tushare_download.downloaders.index_weight
 if __name__ == '__main__':
     utils.init_logger()
     downloader = IndexWeight(["000001.SH", "000905.SH", "000300.SH", "000016.SH"])

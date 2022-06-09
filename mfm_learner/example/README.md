@@ -50,7 +50,7 @@ datasource: 'tushare'
 
 ### 使用数据库
 
-`python -m utils.db_creator`
+`python -m mfm_learner.utils.db_creator`
 
 我们使用的数据是 [B站UP主致敬大神](https://www.bilibili.com/video/BV1564y1b7PR) 提供的离线tushare数据（数据是有偿的）。
 通过这个命令，可以把csv导入到本地的mysql，并可以创建索引， 这样做在加载单只股票的时候可以加速。

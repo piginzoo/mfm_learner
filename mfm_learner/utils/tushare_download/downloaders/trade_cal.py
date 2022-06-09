@@ -23,7 +23,7 @@ class TradeCalendar(BaseDownloader):
         self.to_db(df, if_exists='replace')
 
 
-# python -m utils.tushare_download.downloaders.trade_cal
+# python -m mfm_learner.utils.tushare_download.downloaders.trade_cal
 if __name__ == '__main__':
     utils.init_logger()
     downloader = TradeCalendar()

@@ -66,4 +66,4 @@ for i,file in enumerate(files):
     print("------------------------------ 完成 %d/%d ------------------------------" %(i,len(files)))
 
 
-# python -m utils.db_creator
+# python -m mfm_learner.utils.db_creator

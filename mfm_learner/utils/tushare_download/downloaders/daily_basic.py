@@ -22,7 +22,7 @@ class DailyBasic(BatchDownloader):
         return "trade_date"
 
 
-# python -m utils.tushare_download.downloaders.daily_basic
+# python -m mfm_learner.utils.tushare_download.downloaders.daily_basic
 if __name__ == '__main__':
     utils.init_logger()
     downloader = DailyBasic()

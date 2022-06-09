@@ -69,7 +69,7 @@ def dynamic_instantiation(package_name, parent_class):
     return objs
 
 
-# python -m utils.dynamic_loader
+# python -m mfm_learner.utils.dynamic_loader
 if __name__ == "__main__":
     utils.init_logger()
     from mfm_learner.example.factors.factor import Factor

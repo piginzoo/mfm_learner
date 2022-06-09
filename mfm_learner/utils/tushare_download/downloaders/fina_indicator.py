@@ -21,7 +21,7 @@ class FinanceIndicator(BatchDownloader):
         return "ann_date"
 
 
-# python -m utils.tushare_download.downloaders.fina_indicator
+# python -m mfm_learner.utils.tushare_download.downloaders.fina_indicator
 if __name__ == '__main__':
     utils.init_logger()
     downloader = FinanceIndicator()

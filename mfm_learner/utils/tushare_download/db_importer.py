@@ -115,12 +115,12 @@ def main(dir, file, table_name):
 
 """
 # 导入单个文件
-python -m utils.tushare_download.db_importer \
+python -m mfm_learner.utils.tushare_download.db_importer \
     -f data/tushare_download/fina_indicator_20080101_20220221.csv \
     -t  fina_indicator
 
 # 导入所有的
-python -m utils.tushare_download.db_importer \
+python -m mfm_learner.utils.tushare_download.db_importer \
     -d data/tushare_data/data
 """
 if __name__ == '__main__':

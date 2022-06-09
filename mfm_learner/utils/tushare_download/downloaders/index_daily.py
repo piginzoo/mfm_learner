@@ -49,7 +49,7 @@ class IndexDaily(BaseDownloader):
         self.to_db(df_all)
 
 
-# python -m utils.tushare_download.downloaders.index_daily
+# python -m mfm_learner.utils.tushare_download.downloaders.index_daily
 if __name__ == '__main__':
     utils.init_logger()
     downloader = IndexDaily(["000001.SH", "000905.SH", "000300.SH", "000016.SH"])

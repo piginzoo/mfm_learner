@@ -44,7 +44,7 @@
 
 需要手工创建库，表不用，然后一次性拉取，也可以逐一拉取。时间比较长，请耐心。
 
-可运行比较少的交易日历表，来验证拉取流程是否正常：`python -m utils.tushare_download.downloaders.trade_cal`
+可运行比较少的交易日历表，来验证拉取流程是否正常：`python -m mfm_learner.utils.tushare_download.downloaders.trade_cal`
 
 1、创建数据库
 
@@ -69,21 +69,21 @@ CREATE DATABASE IF NOT EXISTS tushare DEFAULT CHARSET utf8 COLLATE utf8_general_
 比较慢，估计3~4个小时：
 
 ```
-python -m utils.tushare_download.updator
+python -m mfm_learner.utils.tushare_download.updator
 ```
 
 4、也可以，逐一拉取
 
 ```
-python -m utils.tushare_download.downloaders.stock_company
-python -m utils.tushare_download.downloaders.stock_basic
-python -m utils.tushare_download.downloaders.trade_cal
-python -m utils.tushare_download.downloaders.daily
-python -m utils.tushare_download.downloaders.daily_basic
-python -m utils.tushare_download.downloaders.index_daily
-python -m utils.tushare_download.downloaders.index_classify
-python -m utils.tushare_download.downloaders.index_weight
-python -m utils.tushare_download.downloaders.fina_indicator
+python -m mfm_learner.utils.tushare_download.downloaders.stock_company
+python -m mfm_learner.utils.tushare_download.downloaders.stock_basic
+python -m mfm_learner.utils.tushare_download.downloaders.trade_cal
+python -m mfm_learner.utils.tushare_download.downloaders.daily
+python -m mfm_learner.utils.tushare_download.downloaders.daily_basic
+python -m mfm_learner.utils.tushare_download.downloaders.index_daily
+python -m mfm_learner.utils.tushare_download.downloaders.index_classify
+python -m mfm_learner.utils.tushare_download.downloaders.index_weight
+python -m mfm_learner.utils.tushare_download.downloaders.fina_indicator
 ```
 
 5、下载过程中，会将下载完的数据，保存到文件夹`data/tushare_download`中，如果中途失败，或者插入数据库失败，可以手工从文件导入：
@@ -92,7 +92,7 @@ python -m utils.tushare_download.downloaders.fina_indicator
 
 ```
 # 导入单个文件
-python -m utils.tushare_download.db_importer \
+python -m mfm_learner.utils.tushare_download.db_importer \
     -f data/tushare_download/fina_indicator_20080101_20220221.csv \
     -t  fina_indicator
 ```

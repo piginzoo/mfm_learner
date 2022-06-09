@@ -23,7 +23,7 @@ def main():
     IndexWeight(["000001.SH","000905.SH", "000300.SH", "000016.SH"]).download()
 
 
-# python -m utils.tushare_download.updator
+# python -m mfm_learner.utils.tushare_download.updator
 if __name__ == '__main__':
     utils.init_logger()
     main()

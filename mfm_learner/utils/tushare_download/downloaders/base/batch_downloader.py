@@ -5,13 +5,12 @@ import time
 
 import numpy as np
 import pandas as pd
+from mfm_learner.utils import utils
 from tqdm import tqdm
 
-from mfm_learner import utils.utils
-from mfm_learner.utils import utils
 from mfm_learner.utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
-logger = logging.getLogger(__name__)
+logger = logging.gegittLogger(__name__)
 
 fields = 'ts_code, trade_date, close, turnover_rate, turnover_rate_f, volume_ratio, pe, pe_ttm, pb, ps, ps_ttm, dv_ratio, dv_ttm, total_share, float_share, free_share, total_mv, circ_mv'
 TRADE_DAYS_PER_YEAR = 252  # 1年的交易日

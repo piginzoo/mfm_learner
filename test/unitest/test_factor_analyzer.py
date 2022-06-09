@@ -1,4 +1,4 @@
-from example import factor_analyzer
+from mfm_learner.example import factor_analyzer
 from test.unitest import test_utils
 
 # pytest test/unitest/test_factor_analyzer.py -s

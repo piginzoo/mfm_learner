@@ -1,6 +1,6 @@
 import pandas as pd
 
-from example.analysis.score import calc_monotony
+from mfm_learner.example.analysis.score import calc_monotony
 
 """
 

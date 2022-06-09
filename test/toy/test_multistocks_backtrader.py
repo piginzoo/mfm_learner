@@ -4,7 +4,7 @@ import backtrader as bt
 from backtrader.feeds import PandasData
 
 from datasource import datasource_factory
-from example.backtest.data_loader import comply_backtrader_data_format
+from mfm_learner.example.backtest.data_loader import comply_backtrader_data_format
 from utils import utils
 import numpy as np
 logger = logging.getLogger(__name__)

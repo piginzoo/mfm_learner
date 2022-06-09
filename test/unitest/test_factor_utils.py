@@ -10,7 +10,7 @@ from utils import utils
 utils.init_logger()
 
 from datasource import datasource_factory, datasource_utils
-from example import factor_utils
+from mfm_learner.example import factor_utils
 
 allowed_error = 0.00000001
 

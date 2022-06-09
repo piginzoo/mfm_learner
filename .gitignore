@@ -7,3 +7,6 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .DS_Store
+dist/
+*.egg-info
+build/

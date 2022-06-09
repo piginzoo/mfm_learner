@@ -7,12 +7,12 @@ from pandas import DataFrame, Series
 from sklearn import preprocessing
 
 from datasource import datasource_factory, datasource_utils
-from example.factors.clv import CLVFactor
-from example.factors.ivff import IVFFFactor
-from example.factors.market_value import MarketValueFactor
-from example.factors.momentum import MomentumFactor
-from example.factors.peg import PEGFactor
-from example.factors.turnover_rate import TurnOverFactor
+from mfm_learner.example.factors.clv import CLVFactor
+from mfm_learner.example.factors.ivff import IVFFFactor
+from mfm_learner.example.factors.market_value import MarketValueFactor
+from mfm_learner.example.factors.momentum import MomentumFactor
+from mfm_learner.example.factors.peg import PEGFactor
+from mfm_learner.example.factors.turnover_rate import TurnOverFactor
 from utils import utils
 
 logger = logging.getLogger(__name__)
@@ -422,7 +422,7 @@ def factor2db(name, factor):
     else:
         return __factor2db_one(name, factor)
 
-# python -m example.factor_utils
+# python -m mfm_learner.example.factor_utils
 if __name__ == '__main__':
     df = get_factor_from_db("clv","20210101","20210801")
     print(df.head(3))

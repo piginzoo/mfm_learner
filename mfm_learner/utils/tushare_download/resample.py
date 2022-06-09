@@ -2,8 +2,9 @@
 依据现有的daily数据，生成周和月的数据
 """
 import argparse
+import datetime
 import logging
-
+import pandas as pd
 import sqlalchemy
 from tqdm import tqdm
 from mfm_learner.datasource import datasource_factory, datasource_utils
@@ -25,6 +26,13 @@ def main(code=None):
     else:
         stock_codes = [code]
 
+    is_weekly = precheck("W")
+    is_monthly = precheck("W")
+
+    if not is_weekly and not is_monthly:
+        logger.info("今天 %s 不是周最后交易日和月最后交易日，无需生成数据", utils.str2date(datetime.date.today()))
+        return
+
     pbar = tqdm(total=len(stock_codes))
     for stock_code in stock_codes:
         df = datasource.daily(stock_code=stock_code)
@@ -35,19 +43,28 @@ def main(code=None):
             logger.error("股票[%s]数据不存在，无法进行采样，请尽快下载其数据！",stock_code)
             continue
 
-        process(db_engine, stock_code, df, "weekly")
-        process(db_engine, stock_code, df, "monthly")
+        if is_weekly: process(db_engine, stock_code, df, "weekly")
+        if is_monthly: process(db_engine, stock_code, df, "monthly")
         pbar.update(1)
 
-def precheck():
+def precheck(period):
     """
     1. 最松：如果今天，不是交易日的月末，或者，周的最后一天就不运行，需要考虑节假日导致周五或者月末休市，所以要参考交易日期
     TODO: 2. 查看数据库中的每只股票的最后日期，如果这个日期不是上周、上月末的日期，那么，就需要重新生成，
     :return:
     """
-    datasource.trade_cal()
+    today = datetime.date.today()
+    df = datasource.trade_cal(exchange='SSE', start_date=today, is_open=1)
+    df['cal_date'] = pd.to_datetime(df['cal_date'],format="%Y%m%d")
+    if pd.Timestamp(today) not in df['cal_date'].unique(): return False
 
-
+    df = df[['cal_date']].set_index('cal_date')
+    df_group = df.groupby(df.index.to_period(period))
+    now = datetime.date.today()
+    for period,dates in df_group:
+        if period.start_time < pd.Timestamp(today) < period.end_time:
+            return dates.index[-1] == pd.Timestamp(now)
+    return False
 
 
 def delete_stale(engine, code, table_name):
@@ -67,6 +84,7 @@ def process(db_engine, code, df_daily, period):
     if period == "weekly":
         df = utils.day2week(df_daily)
     elif period == "monthly":
+        precheck("M")
         df = utils.day2month(df_daily)
     else:
         raise ValueError(period)

@@ -1,3 +1,4 @@
+import datetime
 from datetime import date
 
 import pandas as pd
@@ -21,9 +22,18 @@ def daily(fuquan="hfq"):
 
 
 def test_trade_cal():
-    __date = utils.date2str(date.today())
-    df = pro.trade_cal(exchange='SSE', start_date=__date, is_open=1)
-    print(df)
+    today = datetime.date.today()
+    df = pro.trade_cal(exchange='SSE', start_date=utils.date2str(date.today()), is_open=1)
+    df['cal_date'] = pd.to_datetime(df['cal_date'],format="%Y%m%d")
+    if pd.Timestamp(today) not in df['cal_date'].unique(): return False
+    df = df[['cal_date']].set_index('cal_date')
+    df_group = df.groupby(df.index.to_period('W'))
+    now = datetime.date.today()
+    for period,dates in df_group:
+        if period.start_time < pd.Timestamp(today) < period.end_time:
+            return dates.index[-1] == pd.Timestamp(now)
+    return False
+
 
 # python -m test.toy.test_tushare_data
 if __name__ == '__main__':
@@ -53,4 +63,4 @@ if __name__ == '__main__':
     # print(df.head(1))
     # start_time = time.time()
 
-    df = test_trade_cal()
+    print(test_trade_cal())

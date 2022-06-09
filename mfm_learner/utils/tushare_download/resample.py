@@ -6,8 +6,8 @@ import logging
 
 import sqlalchemy
 from tqdm import tqdm
-from datasource import datasource_factory, datasource_utils
-from utils import utils, db_utils
+from mfm_learner.datasource import datasource_factory, datasource_utils
+from mfm_learner.utils import utils, db_utils
 
 logger = logging.getLogger(__name__)
 datasource = datasource_factory.get()

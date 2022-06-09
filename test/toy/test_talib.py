@@ -1,7 +1,7 @@
 # https://www.jianshu.com/p/f6e3caacc7cb
 import talib as ta
 
-from datasource import datasource_factory
+from mfm_learner.datasource import datasource_factory
 
 datasource = datasource_factory.get()
 

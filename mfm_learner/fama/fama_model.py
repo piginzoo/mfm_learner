@@ -2,11 +2,11 @@ import logging
 
 import pandas as pd
 
-from utils import utils
+from mfm_learner.utils import utils
 
 utils.init_logger()
 
-from datasource import datasource_factory, datasource_utils
+from mfm_learner.datasource import datasource_factory, datasource_utils
 
 logger = logging.getLogger(__name__)
 datasource = datasource_factory.get()

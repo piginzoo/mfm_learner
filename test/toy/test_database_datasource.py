@@ -1,4 +1,4 @@
-from datasource import datasource_factory
+from mfm_learner.datasource import datasource_factory
 
 ds = datasource_factory.get()
 df = ds.index_weight("000905.SH","20080101","20220209")

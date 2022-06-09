@@ -12,7 +12,7 @@ from sklearn import linear_model
 from sklearn import preprocessing
 
 # 中位数去极值法
-import utils
+from mfm_learner import utils
 
 
 def filter_MAD(df, factor, n=5):

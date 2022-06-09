@@ -4,7 +4,7 @@ import quantstats as qs
 from backtrader_plotting import Bokeh
 from backtrader_plotting.schemes import Tradimo
 
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

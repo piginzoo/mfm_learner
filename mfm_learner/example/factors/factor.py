@@ -1,12 +1,12 @@
 import logging
 from abc import ABC, abstractmethod
 
-from datasource import datasource_factory
-from utils import CONF
+from mfm_learner.datasource import datasource_factory
+from mfm_learner.utils import CONF
 import pandas as pd
 from sqlalchemy import Table, MetaData
 
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

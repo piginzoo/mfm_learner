@@ -3,7 +3,7 @@ from datetime import datetime
 
 import akshare as ak
 
-from datasource.datasource import DataSource, post_query, cache
+from mfm_learner.datasource.datasource import DataSource, post_query, cache
 
 logger = logging.getLogger(__name__)
 

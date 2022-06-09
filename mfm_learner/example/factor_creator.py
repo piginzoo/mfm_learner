@@ -5,10 +5,10 @@ import argparse
 import logging
 import time
 
-from datasource import datasource_factory
+from mfm_learner.datasource import datasource_factory
 from mfm_learner.example import factor_utils
 from mfm_learner.example.factors.factor import Factor
-from utils import utils, dynamic_loader
+from mfm_learner.utils import utils, dynamic_loader
 
 datasource = datasource_factory.get()
 

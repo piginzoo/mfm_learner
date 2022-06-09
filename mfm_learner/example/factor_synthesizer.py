@@ -6,10 +6,10 @@ import matplotlib
 import pandas as pd
 from jaqs_fxdayu.research.signaldigger import multi_factor
 
-from datasource import datasource_factory, datasource_utils
+from mfm_learner.datasource import datasource_factory, datasource_utils
 from mfm_learner.example import factor_utils
 from mfm_learner.example.factor_utils import to_panel_of_stock_columns
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

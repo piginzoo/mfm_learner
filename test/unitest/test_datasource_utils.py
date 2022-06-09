@@ -1,12 +1,12 @@
 # pytest  test/unitest/test_datasource_utils.py -s
-import utils
+from mfm_learner import utils
 import pandas as pd
 
-from datasource.impl.akshare_datasource import AKShareDataSource
+from mfm_learner.datasource.impl.akshare_datasource import AKShareDataSource
 
 utils.utils.init_logger()
-from datasource import datasource_utils as dsu
-from datasource.impl.tushare_datasource import TushareDataSource
+from mfm_learner.datasource import datasource_utils as dsu
+from mfm_learner.datasource.impl.tushare_datasource import TushareDataSource
 
 
 def test_compile_industry():

@@ -7,7 +7,7 @@
 - 3.公司市值=流通股数x每股股价
 - 4.账面市值比(BM)=股东权益/公司市值=(每股净资产x流通股数)/(流通股数x每股股价)=每股净资产/每股股价=B/P=市净率的倒数
 """
-from datasource import datasource_utils
+from mfm_learner.datasource import datasource_utils
 from mfm_learner.example.factors.factor import Factor
 
 

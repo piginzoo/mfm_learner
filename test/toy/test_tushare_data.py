@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import time
 
-from utils import utils
+from mfm_learner.utils import utils
 
 TUSHARE_DATA_DIR="data/tushare_data/data"
 

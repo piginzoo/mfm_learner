@@ -1,7 +1,7 @@
 import logging
 import tushare
-from utils import utils
-from utils.tushare_download.downloaders.base.batch_downloader import BatchDownloader
+from mfm_learner.utils import utils
+from mfm_learner.utils.tushare_download.downloaders.base.batch_downloader import BatchDownloader
 
 logger = logging.getLogger(__name__)
 

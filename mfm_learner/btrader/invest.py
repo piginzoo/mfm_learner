@@ -1,6 +1,6 @@
 import quantstats as qs
 
-from utils import utils
+from mfm_learner.utils import utils
 
 utils.init_logger()
 
@@ -10,7 +10,7 @@ import backtrader as bt
 # 创建策略继承bt.Strategy
 from backtrader.feeds import PandasData
 
-from datasource import datasource_factory
+from mfm_learner.datasource import datasource_factory
 from mfm_learner.example.factor_backtester import comply_backtrader_data_format
 
 import matplotlib.pyplot as plt

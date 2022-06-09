@@ -6,9 +6,9 @@ import time
 
 import pandas as pd
 
-from datasource.datasource import DataSource, post_query
-from datasource.impl.tushare_datasource import TushareDataSource
-from utils import utils, logging_time, db_utils
+from mfm_learner.datasource.datasource import DataSource, post_query
+from mfm_learner.datasource.impl.tushare_datasource import TushareDataSource
+from mfm_learner.utils import utils, logging_time, db_utils
 
 logger = logging.getLogger(__name__)
 

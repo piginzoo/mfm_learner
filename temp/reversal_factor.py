@@ -17,7 +17,7 @@ from matplotlib.font_manager import FontProperties
 from scipy import stats as st
 
 import data_provider
-import utils
+from mfm_learner import utils
 
 logger = logging.getLogger(__name__)
 

@@ -5,8 +5,8 @@ import time
 
 import tushare
 
-import utils
-from datasource.datasource import DataSource, post_query, cache
+from mfm_learner import utils
+from mfm_learner.datasource.datasource import DataSource, post_query, cache
 
 logger = logging.getLogger(__name__)
 

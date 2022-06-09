@@ -17,7 +17,7 @@ df1 = pd.DataFrame(data1,columns=["code","datetime","BP","CFP","EP","ILLIQUIDITY
 df1 = df1.set_index(["code","datetime"])
 
 import matplotlib.cm as cm
-from utils import utils
+from mfm_learner.utils import utils
 import matplotlib.pyplot as plt
 
 

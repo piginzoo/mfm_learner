@@ -6,8 +6,8 @@ import time
 import pandas as pd
 import sqlalchemy
 
-from utils import utils
-from utils.db_utils import is_table_index_exist, is_table_exist, create_db_index
+from mfm_learner.utils import utils
+from mfm_learner.utils.db_utils import is_table_index_exist, is_table_exist, create_db_index
 
 ROWS = None
 

@@ -1,5 +1,5 @@
 import logging
-import utils
+from mfm_learner import utils
 utils.init_logger()
 
 import matplotlib

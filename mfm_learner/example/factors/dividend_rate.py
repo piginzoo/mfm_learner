@@ -1,4 +1,4 @@
-from datasource import datasource_utils
+from mfm_learner.datasource import datasource_utils
 from mfm_learner.example.factor_utils import handle_finance_fill
 from mfm_learner.example.factors.factor import Factor
 

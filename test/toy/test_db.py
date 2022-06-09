@@ -1,6 +1,6 @@
 import sqlalchemy as sa
 
-import utils.utils
+from mfm_learner import utils.utils
 
 
 def is_table_exist(engine, name):

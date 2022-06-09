@@ -2,7 +2,7 @@
 import empyrical as e
 import matplotlib.pyplot as plt
 
-from datasource import datasource_factory, datasource_utils
+from mfm_learner.datasource import datasource_factory, datasource_utils
 
 datasource = datasource_factory.get()
 

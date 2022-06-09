@@ -13,7 +13,7 @@ matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # 指定默认字
 matplotlib.rcParams['axes.unicode_minus'] = False  # 正常显示负号
 matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号'-'显示为方块的问题
 
-import utils
+from mfm_learner import utils
 
 utils.init_logger()
 import data_provider

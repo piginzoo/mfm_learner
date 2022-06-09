@@ -17,7 +17,7 @@
 # 参考：https://www.bilibili.com/read/cv13893224?spm_id_from=333.999.0.0
 import logging
 
-from datasource import datasource_utils
+from mfm_learner.datasource import datasource_utils
 from mfm_learner.example.factors.factor import Factor
 
 logger = logging.getLogger(__name__)

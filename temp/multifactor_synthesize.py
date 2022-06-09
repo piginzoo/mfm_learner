@@ -8,7 +8,7 @@ import scipy.stats as scst
 import statsmodels.api as sm
 from sklearn.covariance import LedoitWolf
 
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

@@ -12,10 +12,10 @@ from alphalens.tears import create_information_tear_sheet, create_returns_tear_s
 from alphalens.utils import get_clean_factor_and_forward_returns, get_forward_returns_columns
 from pandas import DataFrame
 
-from datasource import datasource_factory, datasource_utils
+from mfm_learner.datasource import datasource_factory, datasource_utils
 from mfm_learner.example import factor_utils
 from mfm_learner.example.analysis.score import score
-from utils import utils, db_utils
+from mfm_learner.utils import utils, db_utils
 
 logger = logging.getLogger(__name__)
 datasource = datasource_factory.create()

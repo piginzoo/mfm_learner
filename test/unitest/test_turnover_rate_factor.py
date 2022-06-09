@@ -1,6 +1,6 @@
-from utils import utils
+from mfm_learner.utils import utils
 utils.init_logger()
-from datasource import datasource_factory
+from mfm_learner.datasource import datasource_factory
 from mfm_learner.example.factors.turnover_rate import TurnOverFactor
 
 

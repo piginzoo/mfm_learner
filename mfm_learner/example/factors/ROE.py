@@ -1,9 +1,9 @@
 import logging
 
-from datasource import datasource_utils
+from mfm_learner.datasource import datasource_utils
 from mfm_learner.example import factor_utils
 from mfm_learner.example.factors.factor import Factor
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

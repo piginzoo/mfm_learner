@@ -5,7 +5,7 @@ import pandas as pd
 from backtrader import Trade
 
 from mfm_learner.example.backtest.trade_listener import TradeListener
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

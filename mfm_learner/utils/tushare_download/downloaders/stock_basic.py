@@ -1,4 +1,4 @@
-from utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
+from mfm_learner.utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
 """
 stock_basic
@@ -22,7 +22,7 @@ city        str     Y 所在城市
 employees   int     Y 员工人数
 """
 import logging
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

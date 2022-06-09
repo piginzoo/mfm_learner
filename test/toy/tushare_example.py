@@ -1,6 +1,6 @@
 import tushare as ts
 import jqdatasdk
-import utils
+from mfm_learner import utils
 
 conf = utils.load_config()
 token = conf['tushare']['token']

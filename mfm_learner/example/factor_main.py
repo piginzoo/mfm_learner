@@ -5,7 +5,7 @@ import argparse
 import time
 
 from mfm_learner.example import factor_creator, factor_analyzer, factor_backtester
-from utils import utils
+from mfm_learner.utils import utils
 import logging
 
 logger = logging.getLogger(__name__)

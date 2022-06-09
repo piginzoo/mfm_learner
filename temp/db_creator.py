@@ -11,7 +11,7 @@ import time
 import pandas as pd
 import sqlalchemy
 
-from utils import utils
+from mfm_learner.utils import utils
 
 BASE_DIR = "data/tushare_data/data"
 ROWS = None # 测试的话，改成100，全量改成None

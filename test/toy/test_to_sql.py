@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import Table, MetaData
 
-from utils import utils
+from mfm_learner.utils import utils
 
 data1 = [
     ['000001.SZ', '2016-06-24', 0.165260, 0.002198, 0.085632, -0.078074, 0.173832, 0.214377, 0.068445],

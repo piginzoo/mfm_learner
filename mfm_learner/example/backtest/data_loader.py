@@ -3,9 +3,9 @@ import logging
 import talib
 from backtrader.feeds import PandasData
 
-from datasource import datasource_factory, datasource_utils
+from mfm_learner.datasource import datasource_factory, datasource_utils
 from mfm_learner.example import factor_utils
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

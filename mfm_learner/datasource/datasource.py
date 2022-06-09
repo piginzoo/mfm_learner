@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 import pandas as pd
 from pandas import DataFrame
 
-from datasource.impl.fields_mapper import MAPPER
-from utils import CONF
+from mfm_learner.datasource.impl.fields_mapper import MAPPER
+from mfm_learner.utils import CONF
 
 logger = logging.getLogger(__name__)
 

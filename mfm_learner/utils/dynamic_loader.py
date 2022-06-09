@@ -3,7 +3,7 @@ import inspect
 import logging
 from pkgutil import walk_packages
 
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

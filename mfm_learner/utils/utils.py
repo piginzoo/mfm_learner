@@ -7,11 +7,12 @@ import warnings
 import pandas as pd
 import yaml
 from dateutil.relativedelta import relativedelta
+from mfm_learner.utils import CONF
 from pandas import Series
 from sqlalchemy import create_engine
 
 import conf
-import utils
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +36,11 @@ def load_config():
 
 
 def connect_db():
-    uid = utils.CONF['datasources']['mysql']['uid']
-    pwd = utils.CONF['datasources']['mysql']['pwd']
-    db = utils.CONF['datasources']['mysql']['db']
-    host = utils.CONF['datasources']['mysql']['host']
-    port = utils.CONF['datasources']['mysql']['port']
+    uid = CONF['datasources']['mysql']['uid']
+    pwd = CONF['datasources']['mysql']['pwd']
+    db = CONF['datasources']['mysql']['db']
+    host = CONF['datasources']['mysql']['host']
+    port = CONF['datasources']['mysql']['port']
     engine = create_engine("mysql+pymysql://{}:{}@{}:{}/{}?charset={}".format(uid, pwd, host, port, db, 'utf8'))
     # engine = create_engine('sqlite:///' + DB_FILE + '?check_same_thread=False', echo=echo)  # 是否显示SQL：, echo=True)
     return engine

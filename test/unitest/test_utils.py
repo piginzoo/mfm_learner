@@ -7,8 +7,8 @@ from random import random
 import pandas as pd
 from pandas import DataFrame
 
-from datasource import datasource_factory, datasource_utils
-from utils import utils
+from mfm_learner.datasource import datasource_factory, datasource_utils
+from mfm_learner.utils import utils
 
 # pytest test/unitest/test_utils.py -s
 

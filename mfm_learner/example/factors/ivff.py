@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import statsmodels.formula.api as sm
 
-from datasource import datasource_utils
+from mfm_learner.datasource import datasource_utils
 from mfm_learner.example.factors.factor import Factor
-from fama import fama_model
+from mfm_learner.fama import fama_model
 
 logger = logging.getLogger(__name__)
 

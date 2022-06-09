@@ -6,7 +6,7 @@ from alphalens.tears import create_returns_tear_sheet, create_information_tear_s
 from alphalens.tears import plotting
 from alphalens.utils import get_clean_factor_and_forward_returns
 
-import utils
+from mfm_learner import utils
 
 conf = utils.load_config()
 ts.set_token(conf['tushare']['token'])

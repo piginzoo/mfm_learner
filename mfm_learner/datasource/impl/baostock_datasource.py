@@ -4,7 +4,7 @@ from datetime import datetime
 import baostock as bs
 import pandas as pd
 
-from datasource.datasource import DataSource, post_query
+from mfm_learner.datasource.datasource import DataSource, post_query
 
 logger = logging.getLogger(__name__)
 

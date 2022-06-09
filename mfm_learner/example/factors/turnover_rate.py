@@ -25,7 +25,7 @@ import logging
 
 import numpy as np
 
-from datasource import datasource_utils
+from mfm_learner.datasource import datasource_utils
 from mfm_learner.example.factors.factor import Factor
 
 logger = logging.getLogger(__name__)

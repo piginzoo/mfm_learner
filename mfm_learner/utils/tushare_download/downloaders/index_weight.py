@@ -3,8 +3,8 @@ import logging
 
 import pandas as pd
 
-from utils import utils
-from utils.tushare_download.downloaders.base.periodly_downloader import PeriodlyDownloader
+from mfm_learner.utils import utils
+from mfm_learner.utils.tushare_download.downloaders.base.periodly_downloader import PeriodlyDownloader
 
 logger = logging.getLogger(__name__)
 

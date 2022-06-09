@@ -1,6 +1,6 @@
 import logging
 import tushare as ts
-import utils
+from mfm_learner import utils
 
 logger = logging.getLogger(__name__)
 

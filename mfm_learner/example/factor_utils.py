@@ -5,9 +5,9 @@ import pandas as pd
 from pandas import DataFrame, Series
 from sklearn import preprocessing
 
-from datasource import datasource_utils, datasource_factory
+from mfm_learner.datasource import datasource_utils, datasource_factory
 from mfm_learner.example.factors.factor import Factor
-from utils import utils, dynamic_loader, logging_time, db_utils
+from mfm_learner.utils import utils, dynamic_loader, logging_time, db_utils
 
 logger = logging.getLogger(__name__)
 

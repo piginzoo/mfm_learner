@@ -4,7 +4,7 @@ from abc import abstractmethod
 
 from mfm_learner.example.backtest.risk.risk_control import RiskControl
 from mfm_learner.example.backtest.trade_recorder import TradeRecorder
-from utils import utils
+from mfm_learner.utils import utils
 
 utils.init_logger()
 

@@ -1,7 +1,7 @@
-from datasource import datasource_factory
+from mfm_learner.datasource import datasource_factory
 from mfm_learner.example.backtest import data_loader
 from mfm_learner.example.backtest.winrate_analyzer import WinRateAnalyzer, StatObserver
-from utils import utils
+from mfm_learner.utils import utils
 
 """
 测试多只股票的，每天的胜率，

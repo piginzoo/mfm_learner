@@ -1,7 +1,7 @@
 import logging
 
 from mfm_learner.example.backtest.strategies.strategy_base import MultiStocksFactorStrategy
-from utils import utils
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 

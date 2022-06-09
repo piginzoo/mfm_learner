@@ -7,7 +7,7 @@ import logging
 import math
 import time
 
-import utils
+from mfm_learner import utils
 
 utils.init_logger()
 

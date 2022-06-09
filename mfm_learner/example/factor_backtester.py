@@ -9,11 +9,11 @@ from mfm_learner.example.backtest.analyzers.statistics import show_stat
 from mfm_learner.example.backtest.analyzers.winrate_analyzer import WinRateAnalyzer
 from mfm_learner.example.backtest.strategies.strategy_multifactors import MultiFactorStrategy
 from mfm_learner.example.backtest.strategies.strategy_singlefactor import SingleFactorStrategy
-from datasource import datasource_factory, datasource_utils
+from mfm_learner.datasource import datasource_factory, datasource_utils
 from mfm_learner.example import factor_utils
 from mfm_learner.example.backtest import data_loader
 from mfm_learner.example.backtest.analyzers.rebalance_analyzer import RebalanceAnalyzer
-from utils import utils
+from mfm_learner.utils import utils
 
 """
 用factor_tester.py中合成的多因子，做选择股票的策略 ，去选择中证500的股票，跑收益率回测。使用backtrader来做回测框架。

@@ -1,10 +1,10 @@
 import logging
 
-from datasource.impl.akshare_datasource import AKShareDataSource
-from datasource.impl.baostock_datasource import BaostockDataSource
-from datasource.impl.database_datasource import DatabaseDataSource
-from datasource.impl.tushare_datasource import TushareDataSource
-from utils import CONF
+from mfm_learner.datasource.impl.akshare_datasource import AKShareDataSource
+from mfm_learner.datasource.impl.baostock_datasource import BaostockDataSource
+from mfm_learner.datasource.impl.database_datasource import DatabaseDataSource
+from mfm_learner.datasource.impl.tushare_datasource import TushareDataSource
+from mfm_learner.utils import CONF
 
 logger = logging.getLogger(__name__)
 

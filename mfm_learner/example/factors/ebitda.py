@@ -33,10 +33,10 @@ income接口，是提供有效数据，fina_indicator提供的都是None，靠�
 ------------------------------
 目前，基于我只能用tushare的数据，我选择用income接口，然后按照交易日做ffill，我留个 TODO，将来这个指标要做进一步的优化！
 """
-from datasource import datasource_utils
+from mfm_learner.datasource import datasource_utils
 from mfm_learner.example import factor_utils
 from mfm_learner.example.factors.factor import Factor
-from utils import utils
+from mfm_learner.utils import utils
 
 
 class EBITDAFactor(Factor):

@@ -7,7 +7,7 @@ import pandas as pd
 import sqlalchemy
 import tushare
 
-from utils import utils, CONF, db_utils
+from mfm_learner.utils import utils, CONF, db_utils
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,5 @@
 debug/
+logs/
 conf/config.yml
 .venv/
 data/

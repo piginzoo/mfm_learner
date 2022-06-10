@@ -4,11 +4,13 @@
 import argparse
 import datetime
 import logging
+
 import pandas as pd
 import sqlalchemy
 from tqdm import tqdm
+
 from mfm_learner.datasource import datasource_factory, datasource_utils
-from mfm_learner.utils import utils, db_utils
+from mfm_learner.utils import utils, db_utils, multi_processor
 
 logger = logging.getLogger(__name__)
 datasource = datasource_factory.get()
@@ -18,17 +20,30 @@ datasource = datasource_factory.get()
 """
 
 
-def main(code=None,force=False):
+def main(code=None, num=None, force=False, worker=None):
     db_engine = utils.connect_db()
-
     if code is None:
         stock_codes = utils.get_stock_codes(db_engine)
+        if num: stock_codes = stock_codes[:num]
     else:
         stock_codes = [code]
+    if worker:
+        logger.debug("使用多进程进行处理：%d 个进程", worker)
+        multi_processor.execute(stock_codes, worker, run, force=force)
+    else:
+        logger.debug("使用单进程进行处理")
+        run(stock_codes, force=force)
 
+
+def run(stocks, force):
+    utils.init_logger()
+    db_engine = utils.connect_db()
+
+    # 是否强制更新
     if force:
         is_weekly = is_monthly = True
     else:
+        # 检查是否是交易周最后一天、月交易日最后一天（根据交易日历）
         is_weekly = precheck("W")
         is_monthly = precheck("M")
 
@@ -36,8 +51,8 @@ def main(code=None,force=False):
         logger.info("今天 %s 不是周最后交易日和月最后交易日，无需生成数据", utils.date2str(datetime.date.today()))
         return
 
-    pbar = tqdm(total=len(stock_codes))
-    for stock_code in stock_codes:
+    pbar = tqdm(total=len(stocks))
+    for stock_code in stocks:
         df = datasource.daily(stock_code=stock_code)
         df = datasource_utils.reset_index(df, date_only=True, date_format="%Y%m%d")
         df = df.sort_index(ascending=True)
@@ -59,7 +74,7 @@ def precheck(period):
     """
     today = datetime.date.today()
     df = datasource.trade_cal(exchange='SSE', start_date=today, end_date='20990101')
-    df = pd.DataFrame(df,columns=['cal_date'])
+    df = pd.DataFrame(df, columns=['cal_date'])
     df['cal_date'] = pd.to_datetime(df['cal_date'], format="%Y%m%d")
     if pd.Timestamp(today) not in df['cal_date'].unique(): return False
 
@@ -118,13 +133,15 @@ def process(db_engine, code, df_daily, period):
 """
 python -m mfm_learner.utils.tushare_download.resample -c 603233.SH
 python -m mfm_learner.utils.tushare_download.resample -c 603233.SH -f
+python -m mfm_learner.utils.tushare_download.resample -w 3 -n 200 -f
 """
 if __name__ == '__main__':
     utils.init_logger()
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--code', type=str, default=None)
+    parser.add_argument('-n', '--num', type=int, default=1000000000)
+    parser.add_argument('-w', '--worker', type=int, default=None)
     parser.add_argument('-f', '--force', action='store_true', default=False, help="是否强制")
     args = parser.parse_args()
 
-    main(args.code,args.force)
+    main(args.code, args.num,args.force,args.worker)

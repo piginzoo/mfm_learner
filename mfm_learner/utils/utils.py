@@ -2,7 +2,8 @@ import calendar
 import datetime
 import logging
 import warnings
-
+import os
+import time
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from pandas import Series
@@ -161,7 +162,9 @@ def dataframe2series(df):
     return df.iloc[:, 0]
 
 
-def init_logger():
+def init_logger(file=True):
+    print("开始初始化日志：file=%r" % (file))
+
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger('matplotlib.font_manager').disabled = True
@@ -173,9 +176,29 @@ def init_logger():
 
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d P%(process)d: %(message)s')
 
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    handlers = logger.handlers
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level=logging.DEBUG)
+
+    def is_any_handler(handlers, cls):
+        for t in handlers:
+            if type(t) == cls: return True
+        return False
+
+    # 加入控制台
+    if not is_any_handler(root_logger.handlers, logging.StreamHandler):
+        stream_handler = logging.StreamHandler()
+        root_logger.addHandler(stream_handler)
+        print("日志：创建控制台处理器")
+
+    # 加入日志文件
+    if file and not is_any_handler(root_logger.handlers, logging.FileHandler):
+        if not os.path.exists("./logs"): os.makedirs("./logs")
+        filename = "./logs/{}.log".format(time.strftime('%Y%m%d%H%M', time.localtime(time.time())))
+        t_handler = logging.FileHandler(filename)
+        root_logger.addHandler(t_handler)
+        print("日志：创建文件处理器", filename)
+
+    handlers = root_logger.handlers
     for handler in handlers:
         handler.setLevel(level=logging.DEBUG)
         handler.setFormatter(formatter)

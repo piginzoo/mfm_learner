@@ -18,7 +18,7 @@ datasource = datasource_factory.get()
 """
 
 
-def main(code=None):
+def main(code=None,force=False):
     db_engine = utils.connect_db()
 
     if code is None:
@@ -26,8 +26,11 @@ def main(code=None):
     else:
         stock_codes = [code]
 
-    is_weekly = precheck("W")
-    is_monthly = precheck("M")
+    if force:
+        is_weekly = is_monthly = True
+    else:
+        is_weekly = precheck("W")
+        is_monthly = precheck("M")
 
     if not is_weekly and not is_monthly:
         logger.info("今天 %s 不是周最后交易日和月最后交易日，无需生成数据", utils.date2str(datetime.date.today()))
@@ -114,12 +117,14 @@ def process(db_engine, code, df_daily, period):
 
 """
 python -m mfm_learner.utils.tushare_download.resample -c 603233.SH
+python -m mfm_learner.utils.tushare_download.resample -c 603233.SH -f
 """
 if __name__ == '__main__':
     utils.init_logger()
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--code', type=str, default=None)
+    parser.add_argument('-f', '--force', action='store_true', default=False, help="是否强制")
     args = parser.parse_args()
 
-    main(args.code)
+    main(args.code,args.force)

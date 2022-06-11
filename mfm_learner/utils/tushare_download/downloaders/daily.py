@@ -15,7 +15,7 @@ class Daily(BatchDownloader):
 
     def download(self):
         return self.optimized_batch_download(func=tushare.pro_bar,
-                                             multistocks=False,
+                                             multistocks=True,
                                              adj=self.adjust)
 
     def get_table_name(self):

@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from mfm_learner.utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
-logger = logging.gegittLogger(__name__)
+logger = logging.getLogger(__name__)
 
 fields = 'ts_code, trade_date, close, turnover_rate, turnover_rate_f, volume_ratio, pe, pe_ttm, pb, ps, ps_ttm, dv_ratio, dv_ttm, total_share, float_share, free_share, total_mv, circ_mv'
 TRADE_DAYS_PER_YEAR = 252  # 1年的交易日
@@ -79,11 +79,12 @@ class BatchDownloader(BaseDownloader):
                                  start_date=start_date,
                                  end_date=end_date,
                                  **kwargs)
+            # logger.debug("[%d] %s",i,ts_code)
             df_all.append(df)
             # Tushare Exception: 抱歉，您每分钟最多访问该接口400次，
             # 权限的具体详情访问：https://tushare.pro/document/1?doc_id=108
             time.sleep(self.call_interval)
-            pbar.update(i)
+            pbar.update(1)
         pbar.close()
 
         df_all = pd.concat(df_all)

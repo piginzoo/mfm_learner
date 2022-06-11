@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 RETRY = 5  # 尝试几次
 WAIT = 1  # 每次delay时常(秒)
-MAX_PER_SECOND = 200  # 每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整
+MAX_PER_SECOND = 300  # 每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整，为了提取，设置成300次/分钟
 CALL_INTERVAL = 60 / MAX_PER_SECOND  # 150毫秒,1分钟400次
 EALIEST_DATE = '20080101'  # 最早的数据日期
 
@@ -120,6 +120,8 @@ class BaseDownloader():
                 # print(kwargs)
                 df = func(**kwargs)
                 self.retry_count = 0
+                # Tushare Exception: 抱歉，您每分钟最多访问该接口400次，
+                # 权限的具体详情访问：https://tushare.pro/document/1?doc_id=108
                 time.sleep(self.call_interval)
                 return df
             except:

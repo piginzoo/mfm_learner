@@ -81,9 +81,6 @@ class BatchDownloader(BaseDownloader):
                                  **kwargs)
             # logger.debug("[%d] %s",i,ts_code)
             df_all.append(df)
-            # Tushare Exception: 抱歉，您每分钟最多访问该接口400次，
-            # 权限的具体详情访问：https://tushare.pro/document/1?doc_id=108
-            time.sleep(self.call_interval)
             pbar.update(1)
         pbar.close()
 

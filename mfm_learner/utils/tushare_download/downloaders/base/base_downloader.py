@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 RETRY = 5  # 尝试几次
 WAIT = 1  # 每次delay时常(秒)
-MAX_PER_SECOND = 300  # 每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整，为了提取，设置成300次/分钟
-CALL_INTERVAL = 60 / MAX_PER_SECOND  # 150毫秒,1分钟400次
+MAX_PER_SECOND = 300  # https://tushare.pro/document/1?doc_id=290，200元/年的账号默认是200/分钟,考虑到调用开销，设成300次
+CALL_INTERVAL = 60 / MAX_PER_SECOND  # 1分钟,200毫秒,300次
 EALIEST_DATE = '20080101'  # 最早的数据日期
 
 

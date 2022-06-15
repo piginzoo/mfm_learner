@@ -3,7 +3,6 @@ import math
 import os.path
 import time
 
-import pandas as pd
 import sqlalchemy
 import tushare
 
@@ -13,8 +12,9 @@ logger = logging.getLogger(__name__)
 
 RETRY = 5  # 尝试几次
 WAIT = 1  # 每次delay时常(秒)
-MAX_PER_SECOND = 300  # 每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整，为了提取，设置成300次/分钟
-CALL_INTERVAL = 60 / MAX_PER_SECOND  # 150毫秒,1分钟400次
+
+MAX_PER_SECOND = 300  # https://tushare.pro/document/1?doc_id=290 ,每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整，为了提取，设置成300次/分钟
+CALL_INTERVAL = 60 / MAX_PER_SECOND  # 150毫秒,1分钟300次
 EALIEST_DATE = db_utils.EALIEST_DATE
 
 
@@ -48,7 +48,7 @@ class BaseDownloader():
         """
         raise NotImplemented()
 
-    def get_start_date(self,where=None):
+    def get_start_date(self, where=None):
         """
         如果表存在，就返回关键日期字段中，最后的日期，
         这个函数主要用于帮助下载后续日期的数据。
@@ -111,8 +111,8 @@ class BaseDownloader():
             except:
                 logger.exception("调用Tushare函数[%s]失败:%r", str(func), kwargs)
                 sleep = int(math.pow(2, self.retry_count))
-                logger.debug("sleep %d 秒再试", sleep*30)
-                time.sleep(sleep*30)
+                logger.debug("sleep %d 秒再试", sleep * 30)
+                time.sleep(sleep * 30)
                 self.retry_count += 1
         raise RuntimeError("尝试调用Tushare API多次失败......")
 

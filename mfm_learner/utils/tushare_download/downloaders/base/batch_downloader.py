@@ -67,9 +67,10 @@ class BatchDownloader(BaseDownloader):
             stock_codes = [",".join(stocks) for stocks in stock_codes]
             logger.debug("支持多股票下载，共%d个批次，每批次%d只股票同时获取", len(stock_codes), stock_num_once)
 
-        logger.debug("调用[%s]，共%d个批次，下载间隔%d毫秒",
+        logger.debug("调用[%s]，共%d个批次，每分钟下载%.0f次，下载间隔%d毫秒",
                      self.get_table_name(),
                      len(stock_codes),
+                     60/self.call_interval,
                      self.call_interval * 1000)
         df_all = []
         pbar = tqdm(total=len(stock_codes))

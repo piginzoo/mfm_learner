@@ -17,6 +17,14 @@ datasource = datasource_factory.get()
 
 """
 2008~2022，14.5年，754条周数据，174条月数据
+
+判断逻辑：
+    - 挨个股票来查，查每支股票的 "最后日期"
+    - 如果 "最后日期" 在 "当前日期" 的上一个周、月的交易日历范围内，或者，和当前日期一样，就不需要生成了
+    - 如果 "最后日期" 不在 "当前日期" 的上一个周、月的交易日历里，就需要生成，
+      "上一个"很重要，因为当前周期（月、周）尚未结束，那么触发拉取最新的日数据，生成月、周数据
+生成逻辑：
+    直接用[最后日期+1天]~[当前日期]的日数据，生成，不用考虑重复，因为之前的已经过滤了
 """
 
 
@@ -35,56 +43,70 @@ def main(code=None, num=None, force=False, worker=None):
         run(stock_codes, force=force)
 
 
-def run(stocks, force):
+def __period_mapping(period):
+    if "weekly": return "W"
+    if "monthly": return "M"
+
+
+def run(stocks):
     utils.init_logger()
     db_engine = utils.connect_db()
 
-    # 是否强制更新
-    if force:
-        is_weekly = is_monthly = True
-    else:
-        # 检查是否是交易周最后一天、月交易日最后一天（根据交易日历）
-        is_weekly = precheck("W")
-        is_monthly = precheck("M")
-
-    if not is_weekly and not is_monthly:
-        logger.info("今天 %s 不是周最后交易日和月最后交易日，无需生成数据", utils.date2str(datetime.date.today()))
-        return
+    pbar = tqdm(total=len(stocks))
+    df_trade_date_group_by_week = __group_trade_dates_by(__period_mapping('weekly'))  # 交易日期按照周分组
+    for stock_code in stocks:
+        process(db_engine, stock_code, df_trade_date_group_by_week, "weekly")
+        pbar.update(1)
 
     pbar = tqdm(total=len(stocks))
+    df_trade_date_group_by_month = __group_trade_dates_by(__period_mapping('monthly'))  # 交易日期按照月分组
     for stock_code in stocks:
-        df = datasource.daily(stock_code=stock_code)
-        df = datasource_utils.reset_index(df, date_only=True, date_format="%Y%m%d")
-        df = df.sort_index(ascending=True)
-
-        if len(df) == 0:
-            logger.error("股票[%s]数据不存在，无法进行采样，请尽快下载其数据！", stock_code)
-            continue
-
-        if is_weekly: process(db_engine, stock_code, df, "weekly")
-        if is_monthly: process(db_engine, stock_code, df, "monthly")
+        process(db_engine, stock_code, df_trade_date_group_by_month, "monthly")
         pbar.update(1)
 
 
-def precheck(period):
-    """
-    1. 最松：如果今天，不是交易日的月末，或者，周的最后一天就不运行，需要考虑节假日导致周五或者月末休市，所以要参考交易日期
-    TODO: 2. 查看数据库中的每只股票的最后日期，如果这个日期不是上周、上月末的日期，那么，就需要重新生成，
-    :return:
-    """
-    today = datetime.date.today()
-    df = datasource.trade_cal(exchange='SSE', start_date=today, end_date='20990101')
-    df = pd.DataFrame(df, columns=['cal_date'])
-    df['cal_date'] = pd.to_datetime(df['cal_date'], format="%Y%m%d")
-    if pd.Timestamp(today) not in df['cal_date'].unique(): return False
+def __group_trade_dates_by(period):
+    """按照分组"""
 
+    # 读取交易日期
+    df = datasource.trade_cal(exchange='SSE', start_date=db_utils.EALIEST_DATE, end_date=utils.today())
+    # 只保存日期列
+    df = pd.DataFrame(df, columns=['cal_date'])
+    # 转成日期型
+    df['cal_date'] = pd.to_datetime(df['cal_date'], format="%Y%m%d")
+    # 把日期列设成index（因为index才可以用to_period函数）
     df = df[['cal_date']].set_index('cal_date')
+    # 按照周、月的分组，对index进行分组
     df_group = df.groupby(df.index.to_period(period))
-    now = datetime.date.today()
-    for period, dates in df_group:
-        if period.start_time < pd.Timestamp(today) < period.end_time:
-            return dates.index[-1] == pd.Timestamp(now)
-    return False
+    return df_group
+
+
+def __is_already_resampled(code, period, stock_period_latest_date, df_trade_groups):
+    """
+    如果 "最后日期" 在 "当前日期" 的上一个周、月的交易日历范围内，或者，和当前日期一样，就不需要生成了
+    latest_date： 最后日期
+    """
+    # 当前日期，和，股票的最后周|月采样日期一样，那说明已经采样过了
+    today = datetime.date.today()
+    if stock_period_latest_date == today:
+        logger.debug("股票[%s]的周期[%s]的最后日期[%s]，和今天[%s]一样，无需再采样了", code, period, latest_date, today)
+        return True
+
+    # 得到今天对应的上周、上月的那个周期last_period
+    if period == 'W':
+        last_period_date = utils.last_week(utils.today())
+    if period == 'M':
+        last_period_date = utils.last_month(utils.today())
+    last_period = None
+    for period, dates in df_trade_groups:
+        if period.start_time < pd.Timestamp(last_period_date) < period.end_time:
+            logger.debug("")
+            last_period = period
+    assert last_period, '上周的交易周期不可能为空'
+
+    # 看股票的最后日期，是不是在，今天对应的上周、上月的那个周期last_period的范围里
+    # 如果在，说明已经生成了，否则，就说明没生成过，需要生成
+    return period.start_time < pd.Timestamp(utils.str2date(stock_period_latest_date)) < period.end_time
 
 
 def delete_stale(engine, code, table_name):
@@ -98,12 +120,32 @@ def delete_stale(engine, code, table_name):
     db_utils.run_sql(engine, delete_sql)
 
 
-def process(db_engine, code, df_daily, period):
+def get_table_name(period):
+    return f"{period}_hfq"
+
+
+def process(db_engine, code, df_trade_date_group, period):
+    stock_period_latest_date = db_utils.get_start_date(get_table_name(period),
+                                                       'trade_date',
+                                                       db_engine,
+                                                       where=f'ts_code="{code}"')
+
+    # 如果这个股票不需要采样，返回
+    if __is_already_resampled(code, period, stock_period_latest_date, df_trade_date_group):
+        return
+
+    df = datasource.daily(stock_code=code, start_date=stock_period_latest_date, end_date=utils.today())
+    df = datasource_utils.reset_index(df, date_only=True, date_format="%Y%m%d")
+    df = df.sort_index(ascending=True)
+    if len(df) == 0:
+        logger.warning("股票[%s] %s~%s，没有数据！", code, stock_period_latest_date, utils.today())
+        return
+
     # 做一个数据采样：月或者周
     if period == "weekly":
-        df = utils.day2week(df_daily)
+        df = utils.day2week(df)
     elif period == "monthly":
-        df = utils.day2month(df_daily)
+        df = utils.day2month(df)
     else:
         raise ValueError(period)
 
@@ -116,18 +158,17 @@ def process(db_engine, code, df_daily, period):
         'trade_date': sqlalchemy.types.VARCHAR(length=8),
     }
 
-    # 先把这只股票的旧数据删除掉
-    table_name = f"{period}_hfq"
-    delete_stale(db_engine, code, table_name)
-
     # 重新保存新的数据
-    df.to_sql(table_name,
+    df.to_sql(get_table_name(period),
               db_engine,
               index=False,
               if_exists="append",
               dtype=dtype_dic,
               chunksize=1000)
-    logger.debug("导入股票 [%s] %s周期 %d条数据=>db[表%s] ", code, period, len(df), table_name)
+    logger.debug("导入股票 [%s] %s周期 %d条数据=>db[表%s] ", code, period, len(df), get_table_name(period))
+
+    # 保存到数据库中的时候，看看有无索引，如果没有，创建之
+    db_utils.create_db_index(db_engine, get_table_name(period), df)
 
 
 """
@@ -144,4 +185,4 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--force', action='store_true', default=False, help="是否强制")
     args = parser.parse_args()
 
-    main(args.code, args.num,args.force,args.worker)
+    main(args.code, args.num, args.force, args.worker)

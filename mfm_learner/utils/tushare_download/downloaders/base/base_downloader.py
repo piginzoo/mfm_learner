@@ -15,7 +15,7 @@ RETRY = 5  # 尝试几次
 WAIT = 1  # 每次delay时常(秒)
 MAX_PER_SECOND = 300  # 每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整，为了提取，设置成300次/分钟
 CALL_INTERVAL = 60 / MAX_PER_SECOND  # 150毫秒,1分钟400次
-EALIEST_DATE = '20080101'  # 最早的数据日期
+EALIEST_DATE = db_utils.EALIEST_DATE
 
 
 class BaseDownloader():
@@ -55,27 +55,11 @@ class BaseDownloader():
         如果表不存在，返回20080101
         :return:
         """
-
-        if not db_utils.is_table_exist(self.db_engine, self.get_table_name()):
-            logger.debug("表[%s]在数据库中不存在，返回默认最早开始日期[%s]", self.get_table_name(), EALIEST_DATE)
-            return EALIEST_DATE
-
-        table_name = self.get_table_name()
-        date_column_name = self.get_date_column_name()
-        if where:
-            df = pd.read_sql('select max({}) from {} where {}'.format(date_column_name, table_name,where), self.db_engine)
-        else:
-            df = pd.read_sql('select max({}) from {}'.format(date_column_name, table_name), self.db_engine)
-        assert len(df) == 1
-        latest_date = df.iloc[:, 0].item()
-        if latest_date is None:
-            logger.debug("表[%s]中无数据，返回默认最早开始日期[%s]", self.get_table_name(), EALIEST_DATE)
-            return EALIEST_DATE
-
-        # 日期要往后错一天，比DB中的
-        latest_date = utils.tomorrow(latest_date)
-        logger.debug("数据库中表[%s]的最后日期[%s]为：%s", table_name, date_column_name, latest_date)
-        return latest_date
+        return db_utils.get_start_date(
+            self.get_table_name(),
+            self.get_date_column_name(),
+            self.db_engine,
+            where=where)
 
     def to_db(self, df, if_exists='append'):
         """

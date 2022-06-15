@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 def main():
     start = time.time()
+    TradeCalendar().download()
     StockCompany().download()
     StockBasic().download()
-    TradeCalendar().download()
     Daily().download()
     DailyBasic().download()
     IndexDaily(["000001.SH","000905.SH", "000300.SH", "000016.SH"]).download()

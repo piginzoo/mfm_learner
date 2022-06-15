@@ -2,8 +2,8 @@ import logging
 import time
 
 import sqlalchemy
-
-from mfm_learner import utils
+import pandas as pd
+from mfm_learner.utils import utils
 
 EALIEST_DATE = '20080101'  # 最早的数据日期
 logger = logging.getLogger(__name__)

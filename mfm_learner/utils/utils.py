@@ -1,9 +1,10 @@
 import calendar
 import datetime
 import logging
-import warnings
 import os
 import time
+import warnings
+
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from pandas import Series
@@ -99,8 +100,14 @@ def get_yearly_duration(start_date, end_date):
     return scopes
 
 
-def tomorrow(s_date):
+def tomorrow(s_date=None):
+    if s_date is None: s_date = today()
     return future('day', 1, s_date)
+
+
+def yesterday(s_date=None):
+    if s_date is None: s_date = today()
+    return last_day(s_date, 1)
 
 
 def last(date_type, unit, s_date):
@@ -125,7 +132,7 @@ def last_day(s_date, num=1):
 
 def today():
     now = datetime.datetime.now()
-    return datetime.datetime.strftime(now, "%Y%m%d%H%M%S")
+    return datetime.datetime.strftime(now, "%Y%m%d")
 
 
 def future(date_type, unit, s_date):

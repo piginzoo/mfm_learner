@@ -4,6 +4,7 @@
 import argparse
 import datetime
 import logging
+import time
 
 import pandas as pd
 import sqlalchemy
@@ -28,7 +29,8 @@ datasource = datasource_factory.get()
 """
 
 
-def main(code=None, num=None, force=False, worker=None):
+def main(code=None, num=None, worker=None):
+    start = time.time()
     db_engine = utils.connect_db()
     if code is None:
         stock_codes = utils.get_stock_codes(db_engine)
@@ -37,10 +39,12 @@ def main(code=None, num=None, force=False, worker=None):
         stock_codes = [code]
     if worker:
         logger.debug("使用多进程进行处理：%d 个进程", worker)
-        multi_processor.execute(stock_codes, worker, run, force=force)
+        multi_processor.execute(stock_codes, worker, run)
     else:
         logger.debug("使用单进程进行处理")
-        run(stock_codes, force=force)
+        run(stock_codes)
+
+    logger.debug("共耗时: %s ", str(datetime.timedelta(seconds=time.time() - start)))
 
 
 def __period_mapping(period):
@@ -81,32 +85,49 @@ def __group_trade_dates_by(period):
     return df_group
 
 
-def __is_already_resampled(code, period, stock_period_latest_date, df_trade_groups):
+def __need_resample(code, period, stock_period_latest_date, df_trade_groups):
     """
     如果 "最后日期" 在 "当前日期" 的上一个周、月的交易日历范围内，或者，和当前日期一样，就不需要生成了
     latest_date： 最后日期
+    stock_period_latest_date： 股票的周、月的最后一天
+    df_trade_groups：按照周、月对交易日历进行了分组
     """
     # 当前日期，和，股票的最后周|月采样日期一样，那说明已经采样过了
     today = datetime.date.today()
     if stock_period_latest_date == today:
-        logger.debug("股票[%s]的周期[%s]的最后日期[%s]，和今天[%s]一样，无需再采样了", code, period, latest_date, today)
-        return True
+        logger.debug("股票[%s]的周期[%s]的最后日期[%s]，和今天[%s]一样，无需再采样了", code, period, stock_period_latest_date, today)
+        return False
 
     # 得到今天对应的上周、上月的那个周期last_period
-    if period == 'W':
+    if period == 'weekly':
         last_period_date = utils.last_week(utils.today())
-    if period == 'M':
+    elif period == 'monthly':
         last_period_date = utils.last_month(utils.today())
+    else:
+        raise ValueError(period)
     last_period = None
-    for period, dates in df_trade_groups:
-        if period.start_time < pd.Timestamp(last_period_date) < period.end_time:
-            logger.debug("")
-            last_period = period
+    for p, dates in df_trade_groups:
+        if p.start_time < pd.Timestamp(last_period_date) < p.end_time:
+            logger.debug("今天[%s],对应的上%s[%s],对应的周期：%s~%s", utils.today(),
+                         period,
+                         last_period_date,
+                         utils.date2str(p.start_time),
+                         utils.date2str(p.end_time))
+            last_period = p
     assert last_period, '上周的交易周期不可能为空'
 
     # 看股票的最后日期，是不是在，今天对应的上周、上月的那个周期last_period的范围里
     # 如果在，说明已经生成了，否则，就说明没生成过，需要生成
-    return period.start_time < pd.Timestamp(utils.str2date(stock_period_latest_date)) < period.end_time
+    is_between_last_period = last_period.start_time < pd.Timestamp(
+        utils.str2date(stock_period_latest_date)) < last_period.end_time
+    if not is_between_last_period: logger.debug("股票[%s]的%s的最后日期%s，不在%s~%s范围内",
+                                                code,
+                                                period,
+                                                stock_period_latest_date,
+                                                utils.date2str(p.start_time),
+                                                utils.date2str(p.end_time))
+
+    return not is_between_last_period
 
 
 def delete_stale(engine, code, table_name):
@@ -131,8 +152,10 @@ def process(db_engine, code, df_trade_date_group, period):
                                                        where=f'ts_code="{code}"')
 
     # 如果这个股票不需要采样，返回
-    if __is_already_resampled(code, period, stock_period_latest_date, df_trade_date_group):
+    if not __need_resample(code, period, stock_period_latest_date, df_trade_date_group):
         return
+
+    logger.debug("需要对股票[%s]进行采样: %s~%s",code,stock_period_latest_date,utils.today())
 
     df = datasource.daily(stock_code=code, start_date=stock_period_latest_date, end_date=utils.today())
     df = datasource_utils.reset_index(df, date_only=True, date_format="%Y%m%d")
@@ -182,7 +205,6 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--code', type=str, default=None)
     parser.add_argument('-n', '--num', type=int, default=1000000000)
     parser.add_argument('-w', '--worker', type=int, default=None)
-    parser.add_argument('-f', '--force', action='store_true', default=False, help="是否强制")
     args = parser.parse_args()
 
-    main(args.code, args.num, args.force, args.worker)
+    main(args.code, args.num, args.worker)

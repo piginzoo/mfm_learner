@@ -11,6 +11,7 @@ from pandas import Series
 from sqlalchemy import create_engine
 
 from mfm_learner.utils import CONF
+from mfm_learner.utils import utils
 
 logger = logging.getLogger(__name__)
 
@@ -245,3 +246,38 @@ def day2week(df):
     df_result = df_result.droplevel(level=0)
     df_result['pct_chg'] = df_result.close.pct_change()
     return df_result
+
+
+def get_trade_period(the_date, period, datasource):
+    """
+    返回某一天所在的周、月的交易日历中的开始和结束日期
+    比如，我传入是 2022.2.15， 返回是的2022.2.2/2022.2.27（这2日是2月的开始和结束交易日）
+    datasource是传入的
+    the_date：格式是YYYYMMDD
+    period：W 或 M
+    """
+
+    the_date = utils.str2date(the_date)
+
+    # 读取交易日期
+    df = datasource.trade_cal(exchange='SSE', start_date=today, end_date='20990101')
+    # 只保存日期列
+    df = pd.DataFrame(df, columns=['cal_date'])
+    # 转成日期型
+    df['cal_date'] = pd.to_datetime(df['cal_date'], format="%Y%m%d")
+    # 如果今天不是交易日，就不需要生成
+    if pd.Timestamp(the_date) not in df['cal_date'].unique(): return False
+
+    # 把日期列设成index（因为index才可以用to_period函数）
+    df = df[['cal_date']].set_index('cal_date')
+    # 按照周、月的分组，对index进行分组
+    df_group = df.groupby(df.index.to_period(period))
+    # 看传入日期，是否是所在组的，最后一天，即，周最后一天，或者，月最后一天
+    target_period = None
+    for period, dates in df_group:
+        if period.start_time < pd.Timestamp(the_date) < period.end_time:
+            target_period = period
+    if target_period is None:
+        logger.warning("无法找到上个[%s]的开始、结束日期", period)
+        return None, None
+    return period[0], period[-1]

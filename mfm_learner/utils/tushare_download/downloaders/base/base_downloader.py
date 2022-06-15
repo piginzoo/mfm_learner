@@ -1,5 +1,4 @@
 import logging
-import math
 import os.path
 import time
 
@@ -10,11 +9,11 @@ from mfm_learner.utils import utils, CONF, db_utils
 
 logger = logging.getLogger(__name__)
 
-RETRY = 5  # 尝试几次
+RETRY = 6  # 尝试几次：5,10,20,40,80,160,320
 WAIT = 1  # 每次delay时常(秒)
 
-MAX_PER_SECOND = 300  # https://tushare.pro/document/1?doc_id=290 ,每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整，为了提取，设置成300次/分钟
-CALL_INTERVAL = 60 / MAX_PER_SECOND  # 150毫秒,1分钟300次
+INTERVAL_STEP = 5  # https://tushare.pro/document/1?doc_id=290 ,每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整，为了提取，设置成300次/分钟
+
 EALIEST_DATE = db_utils.EALIEST_DATE
 
 
@@ -32,7 +31,7 @@ class BaseDownloader():
         self.retry_count = 0
         self.save_dir = "data/tushare_download"
         if not os.path.exists(self.save_dir): os.makedirs(self.save_dir)
-        self.call_interval = CALL_INTERVAL
+        self.call_interval = INTERVAL_STEP
 
     def get_table_name(self):
         """
@@ -101,19 +100,22 @@ class BaseDownloader():
 
         while self.retry_count < RETRY:
             try:
-                # print(kwargs)
                 df = func(**kwargs)
                 self.retry_count = 0
                 # Tushare Exception: 抱歉，您每分钟最多访问该接口400次，
                 # 权限的具体详情访问：https://tushare.pro/document/1?doc_id=108
-                time.sleep(self.call_interval)
+                time.sleep(self.call_interval/1000)
                 return df
             except:
                 logger.exception("调用Tushare函数[%s]失败:%r", str(func), kwargs)
-                sleep = int(math.pow(2, self.retry_count))
-                logger.debug("sleep %d 秒再试", sleep * 30)
-                time.sleep(sleep * 30)
+                # sleep = int(math.pow(2, self.retry_count))
+                # logger.debug("sleep %d 秒再试", sleep * 30)
+                # time.sleep(sleep * 30)
                 self.retry_count += 1
+                logger.warning("sleep 30 秒再试，间隔时间调整为：%d -> %d", self.call_interval, 2 * self.call_interval)
+                time.sleep(30)
+                self.call_interval *= 2  # 每次间隔时间增加一倍
+
         raise RuntimeError("尝试调用Tushare API多次失败......")
 
     def save(self, name, df):

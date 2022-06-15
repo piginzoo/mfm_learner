@@ -48,8 +48,9 @@ def main(code=None, num=None, worker=None):
 
 
 def __period_mapping(period):
-    if "weekly": return "W"
-    if "monthly": return "M"
+    if period=="weekly": return "W"
+    if period=="monthly": return "M"
+    raise ValueError(period)
 
 
 def run(stocks):
@@ -155,7 +156,7 @@ def process(db_engine, code, df_trade_date_group, period):
     if not __need_resample(code, period, stock_period_latest_date, df_trade_date_group):
         return
 
-    logger.debug("需要对股票[%s]进行采样: %s~%s",code,stock_period_latest_date,utils.today())
+    logger.debug("需要对股票[%s]进行%s周期采样: %s~%s",code,period,stock_period_latest_date,utils.today())
 
     df = datasource.daily(stock_code=code, start_date=stock_period_latest_date, end_date=utils.today())
     df = datasource_utils.reset_index(df, date_only=True, date_format="%Y%m%d")

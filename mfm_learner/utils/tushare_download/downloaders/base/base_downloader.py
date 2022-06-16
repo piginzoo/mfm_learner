@@ -6,15 +6,9 @@ import sqlalchemy
 import tushare
 
 from mfm_learner.utils import utils, CONF, db_utils
+from mfm_learner.utils.tushare_download.conf import INTERVAL_STEP, MAX_RETRY, SLEEP_INTERVAL
 
 logger = logging.getLogger(__name__)
-
-RETRY = 6  # 尝试几次：5,10,20,40,80,160,320
-WAIT = 1  # 每次delay时常(秒)
-
-INTERVAL_STEP = 5  # https://tushare.pro/document/1?doc_id=290 ,每分钟可以访问多少次，200元/年的账号默认是400/分钟，但是大量访问会降级到200/分钟，所以可能要经常手工调整，为了提取，设置成300次/分钟
-
-EALIEST_DATE = db_utils.EALIEST_DATE
 
 
 class BaseDownloader():
@@ -98,13 +92,13 @@ class BaseDownloader():
         还支持5次的不断拉长间隔的重试。
         """
 
-        while self.retry_count < RETRY:
+        while self.retry_count < MAX_RETRY:
             try:
                 df = func(**kwargs)
                 self.retry_count = 0
                 # Tushare Exception: 抱歉，您每分钟最多访问该接口400次，
                 # 权限的具体详情访问：https://tushare.pro/document/1?doc_id=108
-                time.sleep(self.call_interval/1000)
+                time.sleep(self.call_interval / 1000)
                 return df
             except:
                 logger.exception("调用Tushare函数[%s]失败:%r", str(func), kwargs)
@@ -113,7 +107,7 @@ class BaseDownloader():
                 # time.sleep(sleep * 30)
                 self.retry_count += 1
                 logger.warning("sleep 30 秒再试，间隔时间调整为：%d -> %d", self.call_interval, 2 * self.call_interval)
-                time.sleep(30)
+                time.sleep(SLEEP_INTERVAL)
                 self.call_interval *= 2  # 每次间隔时间增加一倍
 
         raise RuntimeError("尝试调用Tushare API多次失败......")

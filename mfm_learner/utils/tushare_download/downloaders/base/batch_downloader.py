@@ -5,9 +5,10 @@ import time
 
 import numpy as np
 import pandas as pd
-from mfm_learner.utils import utils
 from tqdm import tqdm
 
+from mfm_learner.utils import utils
+from mfm_learner.utils.tushare_download.conf import MAX_STOCKS_BATCH, TODAY_TIMING
 from mfm_learner.utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class BatchDownloader(BaseDownloader):
         days = delta.days
         record_num_per_stock = math.floor(days * TRADE_DAYS_PER_YEAR / 365)
         stock_num = math.floor(MAX_RECORDS / record_num_per_stock)
+        stock_num = min(stock_num, MAX_STOCKS_BATCH)  # 2022.6.16, 触发过一个批次2400只的情况，太多了，做一个限制
         logger.debug("下载优化:共%d天,每只股票%d条,每次下载4800条，所以，可以一次可下载%d只股票", days, record_num_per_stock, stock_num)
         return stock_num
 
@@ -56,6 +58,9 @@ class BatchDownloader(BaseDownloader):
         start_time = time.time()
 
         start_date = self.get_start_date()
+
+        if not self.__need_download(start_date): return
+
         end_date = utils.date2str(datetime.datetime.now())
         stock_codes = utils.get_stock_codes(self.db_engine)
 
@@ -97,3 +102,9 @@ class BatchDownloader(BaseDownloader):
                      csv_file_name,
                      time.time() - start_time)
         self.to_db(df_all)
+
+    def __need_download(self, start_date):
+        if utils.today() == start_date and datetime.datetime.now().time() < datetime.time(TODAY_TIMING, 00):
+            logger.info("最后需要更新的日期[%s]是今天，且未到[%d点]，无需下载最新数据", start_date, TODAY_TIMING)
+            return False
+        return True

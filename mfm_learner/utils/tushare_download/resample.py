@@ -26,6 +26,12 @@ datasource = datasource_factory.get()
       "上一个"很重要，因为当前周期（月、周）尚未结束，那么触发拉取最新的日数据，生成月、周数据
 生成逻辑：
     直接用[最后日期+1天]~[当前日期]的日数据，生成，不用考虑重复，因为之前的已经过滤了
+问题：
+    有一个问题，就是我按照周期对日期做分组，然后每个分组内统计OHLC，但是最后一个分组有问题，
+    如果最后一个分组的最后一天不是周五或者月末，其实，这条记录应该不需要生成的，
+    如果生成，会导致最后一条，只有一个半吊子数据，
+    比如月数据：今天是2.8号，本来不应该生成月数据，但是，目前是生成了一个2月数据（2.1~2.8），这个是不对的。
+    解决办法是，在使用日数据（到2.8号的数据）的时候，如果不是月末最后一天，就只生成到上个月，如果是最后一天，就生成本月。
 """
 
 
@@ -48,26 +54,33 @@ def main(code=None, num=None, worker=None):
 
 
 def __period_mapping(period):
-    if period=="weekly": return "W"
-    if period=="monthly": return "M"
+    """根据weekly=>W，W是按照index分组的时候用"""
+    if period == "weekly": return "W"
+    if period == "monthly": return "M"
     raise ValueError(period)
 
 
 def run(stocks):
     utils.init_logger()
     db_engine = utils.connect_db()
+    run_by_period(stocks, 'weekly', db_engine)
+    run_by_period(stocks, 'monthly', db_engine)
+
+
+def run_by_period(stocks, s_period, db_engine):
+    # 找到今天，对应的合适的时间期间
 
     pbar = tqdm(total=len(stocks))
-    df_trade_date_group_by_week = __group_trade_dates_by(__period_mapping('weekly'))  # 交易日期按照周分组
+    df_all = []
+    df_trade_date_group = __group_trade_dates_by(__period_mapping(s_period))  # 交易日期按照周分组
+    target_period = get_last_period(s_period, df_trade_date_group)
     for stock_code in stocks:
-        process(db_engine, stock_code, df_trade_date_group_by_week, "weekly")
+        df = process(db_engine, stock_code, target_period, s_period)
+        if df is not None: df_all.append(df)
         pbar.update(1)
-
-    pbar = tqdm(total=len(stocks))
-    df_trade_date_group_by_month = __group_trade_dates_by(__period_mapping('monthly'))  # 交易日期按照月分组
-    for stock_code in stocks:
-        process(db_engine, stock_code, df_trade_date_group_by_month, "monthly")
-        pbar.update(1)
+    if len(df_all) > 0:
+        df_all = pd.concat(df_all)
+        save_db(df_all, s_period, db_engine)
 
 
 def __group_trade_dates_by(period):
@@ -86,84 +99,110 @@ def __group_trade_dates_by(period):
     return df_group
 
 
-def __need_resample(code, period, stock_period_latest_date, df_trade_groups):
+def get_last_period(period, df_trade_groups):
     """
-    如果 "最后日期" 在 "当前日期" 的上一个周、月的交易日历范围内，或者，和当前日期一样，就不需要生成了
-    latest_date： 最后日期
-    stock_period_latest_date： 股票的周、月的最后一天
-    df_trade_groups：按照周、月对交易日历进行了分组
+    按照今天的日子，寻找，最后的周期，
+    如果今天是周期的最后一天，返回包含今天的周期，
+    否则，返回上个周期
     """
-    # 当前日期，和，股票的最后周|月采样日期一样，那说明已经采样过了
-    today = datetime.date.today()
-    if stock_period_latest_date == today:
-        logger.debug("股票[%s]的周期[%s]的最后日期[%s]，和今天[%s]一样，无需再采样了", code, period, stock_period_latest_date, today)
-        return False
 
-    # 得到今天对应的上周、上月的那个周期last_period
-    if period == 'weekly':
-        last_period_date = utils.last_week(utils.today())
-    elif period == 'monthly':
-        last_period_date = utils.last_month(utils.today())
+    # 看今天是不是周期的最后一天
+    this_period = get_period(period, df_trade_groups, 'this')
+    if utils.today() == utils.date2str(this_period.end_time):
+        logger.debug("今天[%s]是%s周期最后一天，采样周期为[%s~%s]",
+                     utils.today(),
+                     period,
+                     utils.date2str(this_period.start_time),
+                     utils.date2str(this_period.end_time))
+        return this_period
+
+    # 看最后的日期，是不是在
+    last_period = get_period(period, df_trade_groups, 'last')
+    logger.debug("今天[%s]不是%s最后一天，采样周期为上周期[%s~%s]",
+                 utils.today(),
+                 period,
+                 utils.date2str(last_period.start_time),
+                 utils.date2str(last_period.end_time))
+    return last_period
+
+
+def get_period(period, df_trade_groups, this_or_last):
+    """
+    用来得到当前日期，对应的交易日期周期（period，是一个期间）；或者上一个周期（由this_or_last=='last')
+    :param df_trade_groups: 交易日历表，已经按照周期分了组
+    :param period: weekly 还是 monthly
+    :param this_or_last: this 还是 last
+    :return:
+    """
+
+    if this_or_last == 'this':
+        the_date = utils.today()
+    elif this_or_last == 'last':
+        if period == 'weekly':
+            the_date = utils.last_week(utils.today())
+        elif period == 'monthly':
+            the_date = utils.last_month(utils.today())
+        else:
+            raise ValueError(period)
     else:
-        raise ValueError(period)
+        raise ValueError(this_or_last)
+
+    # 把交易日期，按照周期分组了，每周期（周、月）的在一组
     last_period = None
     for p, dates in df_trade_groups:
-        if p.start_time < pd.Timestamp(last_period_date) < p.end_time:
-            logger.debug("今天[%s],对应的上%s[%s],对应的周期：%s~%s", utils.today(),
-                         period,
-                         last_period_date,
-                         utils.date2str(p.start_time),
-                         utils.date2str(p.end_time))
+        if p.start_time < pd.Timestamp(the_date) < p.end_time:
+            # 找到包含指定日期的一组
             last_period = p
-    assert last_period, '上周的交易周期不可能为空'
-
-    # 看股票的最后日期，是不是在，今天对应的上周、上月的那个周期last_period的范围里
-    # 如果在，说明已经生成了，否则，就说明没生成过，需要生成
-    is_between_last_period = last_period.start_time < pd.Timestamp(
-        utils.str2date(stock_period_latest_date)) < last_period.end_time
-    if not is_between_last_period: logger.debug("股票[%s]的%s的最后日期%s，不在%s~%s范围内",
-                                                code,
-                                                period,
-                                                stock_period_latest_date,
-                                                utils.date2str(p.start_time),
-                                                utils.date2str(p.end_time))
-
-    return not is_between_last_period
+    assert last_period, '查找的交易周期不可能为空'
+    return last_period
 
 
-def delete_stale(engine, code, table_name):
-    delete_sql = f"""
-        delete from {table_name} 
-        where 
-            ts_code='{code}'
-    """
-    if not db_utils.is_table_exist(engine, table_name): return
-    # logger.debug("从%s中删除%s的旧数据", table_name, code)
-    db_utils.run_sql(engine, delete_sql)
+# def delete_stale(engine, code, table_name):
+#     delete_sql = f"""
+#         delete from {table_name}
+#         where
+#             ts_code='{code}'
+#     """
+#     if not db_utils.is_table_exist(engine, table_name): return
+#     # logger.debug("从%s中删除%s的旧数据", table_name, code)
+#     db_utils.run_sql(engine, delete_sql)
 
 
 def get_table_name(period):
     return f"{period}_hfq"
 
 
-def process(db_engine, code, df_trade_date_group, period):
-    stock_period_latest_date = db_utils.get_start_date(get_table_name(period),
-                                                       'trade_date',
-                                                       db_engine,
-                                                       where=f'ts_code="{code}"')
+def process(db_engine, code, target_period, period):
+    # 得到这只股票，在采样表中的，最新日期
+    stock_period_latest_date = db_utils.get_last_date(get_table_name(period),
+                                                      'trade_date',
+                                                      db_engine,
+                                                      where=f'ts_code="{code}"')
 
-    # 如果这个股票不需要采样，返回
-    if not __need_resample(code, period, stock_period_latest_date, df_trade_date_group):
-        return
+    # 看这只股票的这个周期的最后的日期，是不是在目标周期target_period，里面
+    # 在的话，说明这个周期的数据已经采样过了，无需再采样了；否则，采
+    is_between_the_period = target_period.start_time <= \
+                            pd.Timestamp(utils.str2date(stock_period_latest_date)) \
+                            <= target_period.end_time
+    if is_between_the_period:
+        logger.debug("股票[%s]%s周期最后日期为[%s]，表明%s~%s已采样过，无需再采样",
+                     code,
+                     period,
+                     stock_period_latest_date,
+                     utils.date2str(target_period.start_time),
+                     utils.date2str(target_period.end_time))
+        return None
 
-    logger.debug("需要对股票[%s]进行%s周期采样: %s~%s",code,period,stock_period_latest_date,utils.today())
-
-    df = datasource.daily(stock_code=code, start_date=stock_period_latest_date, end_date=utils.today())
+    # 按照开始日期=数据库中股票的最后一天，结束日期=确定的采样周期的最后一天，去检索日频数据
+    start_date = utils.tomorrow(stock_period_latest_date)
+    end_date = utils.date2str(target_period.end_time)
+    logger.debug("需要对股票[%s]进行%s周期采样: %s~%s", code, period, start_date, end_date)
+    df = datasource.daily(stock_code=code, start_date=start_date, end_date=end_date)
     df = datasource_utils.reset_index(df, date_only=True, date_format="%Y%m%d")
     df = df.sort_index(ascending=True)
     if len(df) == 0:
-        logger.warning("股票[%s] %s~%s，没有数据！", code, stock_period_latest_date, utils.today())
-        return
+        logger.warning("股票[%s] %s~%s，没有数据！", code, start_date, end_date)
+        return None
 
     # 做一个数据采样：月或者周
     if period == "weekly":
@@ -173,6 +212,10 @@ def process(db_engine, code, df_trade_date_group, period):
     else:
         raise ValueError(period)
 
+    return df
+
+
+def save_db(df, period, db_engine):
     # 要把之前统一为backtrader的格式，还原会tushare本身的命名
     df = df.reset_index()
     df = df.rename(columns={'vol': 'volume', 'code': 'ts_code', 'datetime': 'trade_date'})  # 列名改回去，尊崇daliy_hdf的列名
@@ -189,7 +232,7 @@ def process(db_engine, code, df_trade_date_group, period):
               if_exists="append",
               dtype=dtype_dic,
               chunksize=1000)
-    logger.debug("导入股票 [%s] %s周期 %d条数据=>db[表%s] ", code, period, len(df), get_table_name(period))
+    logger.debug("保存%d条%s周期采样数据=>db[表%s] ", len(df), period, get_table_name(period))
 
     # 保存到数据库中的时候，看看有无索引，如果没有，创建之
     db_utils.create_db_index(db_engine, get_table_name(period), df)

@@ -38,8 +38,9 @@ class BatchDownloader(BaseDownloader):
         """
         delta = utils.str2date(end_date) - utils.str2date(start_date)
         days = delta.days
-        record_num_per_stock = math.floor(days * TRADE_DAYS_PER_YEAR / 365)
-        stock_num = math.floor(MAX_RECORDS / record_num_per_stock)
+        logger.debug("需要下载%d天的数据",days)
+        record_num_per_stock = math.ceil(days * TRADE_DAYS_PER_YEAR / 365)
+        stock_num = math.ceil(MAX_RECORDS / record_num_per_stock)
         stock_num = min(stock_num, MAX_STOCKS_BATCH)  # 2022.6.16, 触发过一个批次2400只的情况，太多了，做一个限制
         logger.debug("下载优化:共%d天,每只股票%d条,每次下载4800条，所以，可以一次可下载%d只股票", days, record_num_per_stock, stock_num)
         return stock_num

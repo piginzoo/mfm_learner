@@ -4,6 +4,7 @@
 from mfm_learner.utils import utils
 from mfm_learner.utils.tushare_download.downloaders.daily import Daily
 from mfm_learner.utils.tushare_download.downloaders.daily_basic import DailyBasic
+from mfm_learner.utils.tushare_download.downloaders.daily_hfq import DailyHFQ
 from mfm_learner.utils.tushare_download.downloaders.fina_indicator import FinanceIndicator
 from mfm_learner.utils.tushare_download.downloaders.index_daily import IndexDaily
 from mfm_learner.utils.tushare_download.downloaders.index_weight import IndexWeight
@@ -20,6 +21,7 @@ def main():
     StockCompany().download()
     StockBasic().download()
     Daily().download()
+    DailyHFQ().download()
     DailyBasic().download()
     IndexDaily(["000001.SH","000905.SH", "000300.SH", "000016.SH"]).download()
     # 目前这2个数据不需要使用

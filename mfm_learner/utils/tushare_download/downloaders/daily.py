@@ -18,7 +18,7 @@ class Daily(BatchDownloader):
         self.table_name = "daily"
 
     def download(self):
-        return self.optimized_batch_download(func=tushare.daily,multistocks=True)
+        return self.optimized_batch_download(func=self.pro.daily,multistocks=True)
 
     def get_table_name(self):
         return self.table_name

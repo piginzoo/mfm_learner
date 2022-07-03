@@ -90,7 +90,7 @@ def run_by_period(stocks, s_period, end_date, db_engine):
     logger.debug("包含日期[%s]的[%s]周期为：%r", end_date, s_period, target_period)
 
     if target_period is None: return
-    
+
     # 处理每只股票
     for stock_code in stocks:
         df = process(db_engine, stock_code, target_period, s_period)
@@ -181,6 +181,7 @@ def find_period_contain_the_day(period, end_date, df_trade_groups, this_or_last)
             # 找到包含指定日期的一组
             last_period = p
     if last_period is None:
+        import pdb;pdb.set_trace()
         logger.warning(f'查找的交易周期不可能为空，日期[{the_date}] 不在任何一个周期里：{df_trade_groups}')
 
     return last_period

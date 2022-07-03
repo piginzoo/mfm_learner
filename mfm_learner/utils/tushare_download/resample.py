@@ -60,11 +60,11 @@ def __period_mapping(period):
     raise ValueError(period)
 
 
-def run(stocks,end_date):
+def run(stocks, end_date):
     utils.init_logger()
     db_engine = utils.connect_db()
-    run_by_period(stocks, 'weekly', end_date,db_engine)
-    run_by_period(stocks, 'monthly', end_date,db_engine)
+    run_by_period(stocks, 'weekly', end_date, db_engine)
+    run_by_period(stocks, 'monthly', end_date, db_engine)
 
 
 def run_by_period(stocks, s_period, end_date, db_engine):
@@ -72,8 +72,8 @@ def run_by_period(stocks, s_period, end_date, db_engine):
 
     pbar = tqdm(total=len(stocks))
     df_all = []
-    df_trade_date_group = __group_trade_dates_by(__period_mapping(s_period),end_date)  # 交易日期按照周分组
-    target_period = get_last_period(s_period, df_trade_date_group)
+    df_trade_date_group = __group_trade_dates_by(__period_mapping(s_period), end_date)  # 交易日期按照周分组
+    target_period = get_last_period(s_period, end_date, df_trade_date_group)
     for stock_code in stocks:
         df = process(db_engine, stock_code, target_period, s_period)
         if df is not None: df_all.append(df)
@@ -83,7 +83,7 @@ def run_by_period(stocks, s_period, end_date, db_engine):
         save_db(df_all, s_period, db_engine)
 
 
-def __group_trade_dates_by(period,end_date):
+def __group_trade_dates_by(period, end_date):
     """按照分组"""
 
     # 读取交易日期
@@ -108,7 +108,7 @@ def get_last_period(period, end_date, df_trade_groups):
 
     # 看今天是不是周期的最后一天
     this_period = get_period(period, df_trade_groups, 'this')
-    if end_date== utils.date2str(this_period.end_time):
+    if end_date == utils.date2str(this_period.end_time):
         logger.debug("目标日[%s]是%s周期最后一天，采样周期为[%s~%s]",
                      end_date,
                      period,

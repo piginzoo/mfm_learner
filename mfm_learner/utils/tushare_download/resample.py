@@ -177,12 +177,11 @@ def find_period_contain_the_day(period, end_date, df_trade_groups, this_or_last)
     # 看索引中包含目标日期（the_date)的那组（那组是一个period对象）
     last_period = None
     for p, dates in df_trade_groups:
-        if p.start_time < pd.Timestamp(the_date) < p.end_time:
+        if p.start_time <= pd.Timestamp(the_date) <= p.end_time:
             # 找到包含指定日期的一组
             last_period = p
-    if last_period is None:
-        import pdb;pdb.set_trace()
-        logger.warning(f'查找的交易周期不可能为空，日期[{the_date}] 不在任何一个周期里：{df_trade_groups}')
+
+    assert last_period, f'查找的交易周期不可能为空，日期[{the_date}] 不在任何一个周期里'
 
     return last_period
 

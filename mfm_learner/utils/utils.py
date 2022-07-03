@@ -233,7 +233,8 @@ def day2month(df):
     """
     # 按照日期索引，进行分组
     df_result = df.groupby(df.index.to_period('M')).apply(__calc_OHLC_in_group)
-    # df_result = df_result.droplevel(level=0) 2022.7.3，不需要drop了，不知道为何，注释掉了先
+    if len(df_result.index.names)>1:
+        df_result = df_result.droplevel(level=0)
     df_result['pct_chg'] = df_result.close.pct_change()
     return df_result
 
@@ -241,10 +242,17 @@ def day2month(df):
 def day2week(df):
     """
     返回，数据中，每周，最后一天的数据
+
+    使用分组groupby返回的结果中多出一列，所以要用dropLevel 来drop掉
+                                           code      open      high       low  ...   change   pct_chg      volume       amount
+    datetime              datetime                                             ...
+    2007-12-31/2008-01-06 2008-01-04  000636.SZ  201.0078  224.9373  201.0078  ...  -1.4360       NaN   352571.00   479689.500
+    2008-01-07/2008-01-13 2008-01-11  000636.SZ  217.7585  223.1825  201.0078  ...  -6.5400 -0.027086   803621.33  1067058.340
     """
     # to_period是转成
     df_result = df.groupby(df.index.to_period('W')).apply(__calc_OHLC_in_group)
-    # df_result = df_result.droplevel(level=0)
+    if len(df_result.index.names)>1:
+        df_result = df_result.droplevel(level=0) # 多出一列datetime，所以要drop掉
     df_result['pct_chg'] = df_result.close.pct_change()
     return df_result
 

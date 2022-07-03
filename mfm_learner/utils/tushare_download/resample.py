@@ -234,13 +234,13 @@ def process(db_engine, code, target_period, s_period):
 
     # 做一个数据采样：月或者周
     if s_period == "weekly":
-        df = utils.day2week(df)
+        df_sampled = utils.day2week(df)
     elif s_period == "monthly":
-        df = utils.day2month(df)
+        df_sampled = utils.day2month(df)
     else:
         raise ValueError(s_period)
 
-    return df
+    return df_sampled
 
 
 def save_db(df, period, db_engine):

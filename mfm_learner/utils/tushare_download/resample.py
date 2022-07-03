@@ -45,7 +45,7 @@ def main(code=None, end_date=None, num=None, worker=None):
         stock_codes = [code]
     if worker:
         logger.debug("使用多进程进行处理：%d 个进程", worker)
-        multi_processor.execute(stock_codes, worker, run, end_date)
+        multi_processor.execute(stock_codes, worker, run, end_date=end_date)
     else:
         logger.debug("使用单进程进行处理")
         run(stock_codes, end_date)

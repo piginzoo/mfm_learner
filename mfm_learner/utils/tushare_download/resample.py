@@ -35,7 +35,7 @@ datasource = datasource_factory.get()
 """
 
 
-def main(code=None, num=None, worker=None):
+def main(code=None, end_date=None, num=None, worker=None):
     start = time.time()
     db_engine = utils.connect_db()
     if code is None:
@@ -45,10 +45,10 @@ def main(code=None, num=None, worker=None):
         stock_codes = [code]
     if worker:
         logger.debug("使用多进程进行处理：%d 个进程", worker)
-        multi_processor.execute(stock_codes, worker, run)
+        multi_processor.execute(stock_codes, worker, run, end_date)
     else:
         logger.debug("使用单进程进行处理")
-        run(stock_codes)
+        run(stock_codes, end_date)
 
     logger.debug("共耗时: %s ", str(datetime.timedelta(seconds=time.time() - start)))
 
@@ -60,19 +60,19 @@ def __period_mapping(period):
     raise ValueError(period)
 
 
-def run(stocks):
+def run(stocks,end_date):
     utils.init_logger()
     db_engine = utils.connect_db()
-    run_by_period(stocks, 'weekly', db_engine)
-    run_by_period(stocks, 'monthly', db_engine)
+    run_by_period(stocks, 'weekly', end_date,db_engine)
+    run_by_period(stocks, 'monthly', end_date,db_engine)
 
 
-def run_by_period(stocks, s_period, db_engine):
+def run_by_period(stocks, s_period, end_date, db_engine):
     # 找到今天，对应的合适的时间期间
 
     pbar = tqdm(total=len(stocks))
     df_all = []
-    df_trade_date_group = __group_trade_dates_by(__period_mapping(s_period))  # 交易日期按照周分组
+    df_trade_date_group = __group_trade_dates_by(__period_mapping(s_period),end_date)  # 交易日期按照周分组
     target_period = get_last_period(s_period, df_trade_date_group)
     for stock_code in stocks:
         df = process(db_engine, stock_code, target_period, s_period)
@@ -83,11 +83,11 @@ def run_by_period(stocks, s_period, db_engine):
         save_db(df_all, s_period, db_engine)
 
 
-def __group_trade_dates_by(period):
+def __group_trade_dates_by(period,end_date):
     """按照分组"""
 
     # 读取交易日期
-    df = datasource.trade_cal(exchange='SSE', start_date=db_utils.EALIEST_DATE, end_date=utils.today())
+    df = datasource.trade_cal(exchange='SSE', start_date=db_utils.EALIEST_DATE, end_date=end_date)
     # 只保存日期列
     df = pd.DataFrame(df, columns=['cal_date'])
     # 转成日期型
@@ -99,7 +99,7 @@ def __group_trade_dates_by(period):
     return df_group
 
 
-def get_last_period(period, df_trade_groups):
+def get_last_period(period, end_date, df_trade_groups):
     """
     按照今天的日子，寻找，最后的周期，
     如果今天是周期的最后一天，返回包含今天的周期，
@@ -108,9 +108,9 @@ def get_last_period(period, df_trade_groups):
 
     # 看今天是不是周期的最后一天
     this_period = get_period(period, df_trade_groups, 'this')
-    if utils.today() == utils.date2str(this_period.end_time):
-        logger.debug("今天[%s]是%s周期最后一天，采样周期为[%s~%s]",
-                     utils.today(),
+    if end_date== utils.date2str(this_period.end_time):
+        logger.debug("目标日[%s]是%s周期最后一天，采样周期为[%s~%s]",
+                     end_date,
                      period,
                      utils.date2str(this_period.start_time),
                      utils.date2str(this_period.end_time))
@@ -118,15 +118,15 @@ def get_last_period(period, df_trade_groups):
 
     # 看最后的日期，是不是在
     last_period = get_period(period, df_trade_groups, 'last')
-    logger.debug("今天[%s]不是%s最后一天，采样周期为上周期[%s~%s]",
-                 utils.today(),
+    logger.debug("目标日[%s]不是%s最后一天，采样周期为上周期[%s~%s]",
+                 end_date,
                  period,
                  utils.date2str(last_period.start_time),
                  utils.date2str(last_period.end_time))
     return last_period
 
 
-def get_period(period, df_trade_groups, this_or_last):
+def get_period(period, end_date, df_trade_groups, this_or_last):
     """
     用来得到当前日期，对应的交易日期周期（period，是一个期间）；或者上一个周期（由this_or_last=='last')
     :param df_trade_groups: 交易日历表，已经按照周期分了组
@@ -136,12 +136,12 @@ def get_period(period, df_trade_groups, this_or_last):
     """
 
     if this_or_last == 'this':
-        the_date = utils.today()
+        the_date = end_date
     elif this_or_last == 'last':
         if period == 'weekly':
-            the_date = utils.last_week(utils.today())
+            the_date = utils.last_week(end_date)
         elif period == 'monthly':
-            the_date = utils.last_month(utils.today())
+            the_date = utils.last_month(end_date)
         else:
             raise ValueError(period)
     else:
@@ -247,8 +247,9 @@ if __name__ == '__main__':
     utils.init_logger()
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--code', type=str, default=None)
+    parser.add_argument('-e', '--end_date', type=str, default=utils.today(), help="实盘测试目标日（不一定是今天）")
     parser.add_argument('-n', '--num', type=int, default=1000000000)
     parser.add_argument('-w', '--worker', type=int, default=None)
     args = parser.parse_args()
 
-    main(args.code, args.num, args.worker)
+    main(args.code, args.end_date, args.num, args.worker)

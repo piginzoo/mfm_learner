@@ -107,7 +107,7 @@ def get_last_period(period, end_date, df_trade_groups):
     """
 
     # 看今天是不是周期的最后一天
-    this_period = get_period(period, df_trade_groups, 'this')
+    this_period = get_period(period, end_date, df_trade_groups, 'this')
     if end_date == utils.date2str(this_period.end_time):
         logger.debug("目标日[%s]是%s周期最后一天，采样周期为[%s~%s]",
                      end_date,
@@ -117,7 +117,7 @@ def get_last_period(period, end_date, df_trade_groups):
         return this_period
 
     # 看最后的日期，是不是在
-    last_period = get_period(period, df_trade_groups, 'last')
+    last_period = get_period(period, end_date, df_trade_groups, 'last')
     logger.debug("目标日[%s]不是%s最后一天，采样周期为上周期[%s~%s]",
                  end_date,
                  period,

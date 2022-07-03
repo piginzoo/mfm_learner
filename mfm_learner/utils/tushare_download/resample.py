@@ -127,7 +127,7 @@ def get_last_period(s_period, end_date, df_trade_groups, df_calendar):
     # 20220703 bugfix，piginzoo，需要用交易日来找周期，否则，容易找到上个周期去
     # 比如end_date是7.2（周六），那么，返回的weekly周期应该是6.27~7.3。
     nearest_trade_day_of_end_date = utils.get_last_trade_date(end_date, df_calendar)
-    nearest_trade_day_of_period_end = utils.get_last_trade_date(utils.date2str(this_period.end_time),df_calendar)
+    nearest_trade_day_of_period_end = utils.get_last_trade_date(utils.date2str(this_period.end_time), df_calendar)
 
     if nearest_trade_day_of_end_date == nearest_trade_day_of_period_end:
         logger.debug("目标日[%s]对应的交易日[%s]是%s周期最后一个交易日，采样周期为[%s~%s]",
@@ -195,9 +195,9 @@ def get_table_name(period):
     return f"{period}_hfq"
 
 
-def process(db_engine, code, target_period, period):
+def process(db_engine, code, target_period, s_period):
     # 得到这只股票，在采样表（weekly_hfq,monthly_hfq）中的，最新的数据日期
-    stock_period_latest_date = db_utils.get_last_date(get_table_name(period),
+    stock_period_latest_date = db_utils.get_last_date(get_table_name(s_period),
                                                       'trade_date',
                                                       db_engine,
                                                       where=f'ts_code="{code}"')
@@ -210,16 +210,21 @@ def process(db_engine, code, target_period, period):
     if is_between_the_period:
         logger.debug("股票[%s]%s周期最后日期为[%s]，表明%s~%s已采样过，无需再采样",
                      code,
-                     period,
+                     s_period,
                      stock_period_latest_date,
                      utils.date2str(target_period.start_time),
                      utils.date2str(target_period.end_time))
         return None
 
     # 按照开始日期=数据库中股票的最后一天，结束日期=确定的采样周期的最后一天，去检索日频数据
-    start_date = utils.tomorrow(stock_period_latest_date)
-    end_date = utils.date2str(target_period.end_time)
-    logger.debug("需要对股票[%s]进行%s周期采样: %s~%s", code, period, start_date, end_date)
+    start_date = utils.tomorrow(stock_period_latest_date)  # 数据库里最后的日子
+    end_date = utils.date2str(target_period.end_time)  # 周期的结束的日子
+    if start_date > end_date:
+        logger.warning("股票[%s]在库中最新的日期，比目标周期[%r]的结束日还新，[%s]数据无需生成",
+                       code, target_period, s_period)
+        return None
+
+    logger.debug("需要对股票[%s]进行%s周期采样: %s~%s", code, s_period, start_date, end_date)
     df = datasource.daily(stock_code=code, start_date=start_date, end_date=end_date)
     df = datasource_utils.reset_index(df, date_only=True, date_format="%Y%m%d")
     df = df.sort_index(ascending=True)
@@ -228,14 +233,12 @@ def process(db_engine, code, target_period, period):
         return None
 
     # 做一个数据采样：月或者周
-    print(df)
-
-    if period == "weekly":
+    if s_period == "weekly":
         df = utils.day2week(df)
-    elif period == "monthly":
+    elif s_period == "monthly":
         df = utils.day2month(df)
     else:
-        raise ValueError(period)
+        raise ValueError(s_period)
 
     return df
 

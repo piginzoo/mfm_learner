@@ -176,7 +176,7 @@ def find_period_contain_the_day(period, end_date, df_trade_groups, this_or_last)
         if p.start_time < pd.Timestamp(the_date) < p.end_time:
             # 找到包含指定日期的一组
             last_period = p
-    assert last_period, '查找的交易周期不可能为空'
+    assert last_period, f'查找的交易周期不可能为空，日期[{the_date}]'
     return last_period
 
 

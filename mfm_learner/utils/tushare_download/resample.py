@@ -62,18 +62,33 @@ def __period_mapping(period):
 
 def run(stocks, end_date):
     utils.init_logger()
-    db_engine = utils.connect_db()
+    db_engine = utils.connect_db()  # 重新获得db_engine，多进程不能共享db连接
     run_by_period(stocks, 'weekly', end_date, db_engine)
     run_by_period(stocks, 'monthly', end_date, db_engine)
 
 
 def run_by_period(stocks, s_period, end_date, db_engine):
+    """
+    s_periond: weekly|monthly
+    :param stocks:
+    :param s_period:
+    :param end_date:
+    :param db_engine:
+    :return:
+    """
     # 找到今天，对应的合适的时间期间
 
     pbar = tqdm(total=len(stocks))
     df_all = []
-    df_trade_date_group = __group_trade_dates_by(__period_mapping(s_period), end_date)  # 交易日期按照周分组
-    target_period = get_last_period(s_period, end_date, df_trade_date_group)
+
+    # 读取交易日期
+    df_calendar = datasource.trade_cal(exchange='SSE', start_date=db_utils.EALIEST_DATE, end_date=end_date)
+    # 安州周期(weekly|monthly)得到交易日期的分组
+    df_trade_date_group = __group_trade_dates_by(df_calendar, __period_mapping(s_period))  # 交易日期按照周分组
+    # 按照s_period的类型，找到包含end_date的周期（月|周）
+    target_period = get_last_period(s_period, end_date, df_trade_date_group, df_calendar)
+    logger.debug("包含日期[%s]的[%s]周期为：%r", end_date, s_period, target_period)
+    # 处理每只股票
     for stock_code in stocks:
         df = process(db_engine, stock_code, target_period, s_period)
         if df is not None: df_all.append(df)
@@ -83,13 +98,11 @@ def run_by_period(stocks, s_period, end_date, db_engine):
         save_db(df_all, s_period, db_engine)
 
 
-def __group_trade_dates_by(period, end_date):
+def __group_trade_dates_by(df_calendar, period):
     """按照分组"""
 
-    # 读取交易日期
-    df = datasource.trade_cal(exchange='SSE', start_date=db_utils.EALIEST_DATE, end_date=end_date)
     # 只保存日期列
-    df = pd.DataFrame(df, columns=['cal_date'])
+    df = pd.DataFrame(df_calendar, columns=['cal_date'])
     # 转成日期型
     df['cal_date'] = pd.to_datetime(df['cal_date'], format="%Y%m%d")
     # 把日期列设成index（因为index才可以用to_period函数）
@@ -99,34 +112,43 @@ def __group_trade_dates_by(period, end_date):
     return df_group
 
 
-def get_last_period(period, end_date, df_trade_groups):
+def get_last_period(s_period, end_date, df_trade_groups, df_calendar):
     """
-    按照今天的日子，寻找，最后的周期，
+    按照今天的日子，寻找，最后的周期(最后一周、最后一个月）
     如果今天是周期的最后一天，返回包含今天的周期，
     否则，返回上个周期
+    s_period：weekly|monthly
+    df_trade_groups：已经按weekly或者monthly周期，分组好的dataframe交易数据
     """
 
-    # 看今天是不是周期的最后一天
-    this_period = get_period(period, end_date, df_trade_groups, 'this')
-    if end_date == utils.date2str(this_period.end_time):
-        logger.debug("目标日[%s]是%s周期最后一天，采样周期为[%s~%s]",
+    # 看今天是不是周期的最后一天（从交易数据的日期索引中获得）
+    this_period = find_period_contain_the_day(s_period, end_date, df_trade_groups, 'this')
+
+    # 20220703 bugfix，piginzoo，需要用交易日来找周期，否则，容易找到上个周期去
+    # 比如end_date是7.2（周六），那么，返回的weekly周期应该是6.27~7.3。
+    nearest_trade_day_of_end_date = utils.get_last_trade_date(end_date, df_calendar)
+    nearest_trade_day_of_period_end = utils.get_last_trade_date(utils.date2str(this_period.end_time),df_calendar)
+
+    if nearest_trade_day_of_end_date == nearest_trade_day_of_period_end:
+        logger.debug("目标日[%s]对应的交易日[%s]是%s周期最后一个交易日，采样周期为[%s~%s]",
                      end_date,
-                     period,
+                     nearest_trade_day_of_end_date,
+                     s_period,
                      utils.date2str(this_period.start_time),
                      utils.date2str(this_period.end_time))
         return this_period
 
     # 看最后的日期，是不是在
-    last_period = get_period(period, end_date, df_trade_groups, 'last')
-    logger.debug("目标日[%s]不是%s最后一天，采样周期为上周期[%s~%s]",
+    last_period = find_period_contain_the_day(s_period, end_date, df_trade_groups, 'last')
+    logger.debug("目标日[%s]不是%s最后一个交易日，采样周期确定为上周期[%s~%s]",
                  end_date,
-                 period,
+                 s_period,
                  utils.date2str(last_period.start_time),
                  utils.date2str(last_period.end_time))
     return last_period
 
 
-def get_period(period, end_date, df_trade_groups, this_or_last):
+def find_period_contain_the_day(period, end_date, df_trade_groups, this_or_last):
     """
     用来得到当前日期，对应的交易日期周期（period，是一个期间）；或者上一个周期（由this_or_last=='last')
     :param df_trade_groups: 交易日历表，已经按照周期分了组
@@ -148,6 +170,7 @@ def get_period(period, end_date, df_trade_groups, this_or_last):
         raise ValueError(this_or_last)
 
     # 把交易日期，按照周期分组了，每周期（周、月）的在一组
+    # 看索引中包含目标日期（the_date)的那组（那组是一个period对象）
     last_period = None
     for p, dates in df_trade_groups:
         if p.start_time < pd.Timestamp(the_date) < p.end_time:
@@ -173,7 +196,7 @@ def get_table_name(period):
 
 
 def process(db_engine, code, target_period, period):
-    # 得到这只股票，在采样表中的，最新日期
+    # 得到这只股票，在采样表（weekly_hfq,monthly_hfq）中的，最新的数据日期
     stock_period_latest_date = db_utils.get_last_date(get_table_name(period),
                                                       'trade_date',
                                                       db_engine,
@@ -205,6 +228,8 @@ def process(db_engine, code, target_period, period):
         return None
 
     # 做一个数据采样：月或者周
+    print(df)
+
     if period == "weekly":
         df = utils.day2week(df)
     elif period == "monthly":
@@ -239,7 +264,7 @@ def save_db(df, period, db_engine):
 
 
 """
-python -m mfm_learner.utils.tushare_download.resample -c 603233.SH
+python -m mfm_learner.utils.tushare_download.resample -c 300137.SZ -e 20220702
 python -m mfm_learner.utils.tushare_download.resample -c 603233.SH -f
 python -m mfm_learner.utils.tushare_download.resample -w 3 -n 200 -f
 """

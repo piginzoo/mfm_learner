@@ -231,8 +231,9 @@ def day2month(df):
     """
     返回，数据中，每个月，最后一天的数据
     """
+    # 按照日期索引，进行分组
     df_result = df.groupby(df.index.to_period('M')).apply(__calc_OHLC_in_group)
-    df_result = df_result.droplevel(level=0)
+    # df_result = df_result.droplevel(level=0) 2022.7.3，不需要drop了，不知道为何，注释掉了先
     df_result['pct_chg'] = df_result.close.pct_change()
     return df_result
 
@@ -243,7 +244,7 @@ def day2week(df):
     """
     # to_period是转成
     df_result = df.groupby(df.index.to_period('W')).apply(__calc_OHLC_in_group)
-    df_result = df_result.droplevel(level=0)
+    # df_result = df_result.droplevel(level=0)
     df_result['pct_chg'] = df_result.close.pct_change()
     return df_result
 
@@ -281,3 +282,22 @@ def get_trade_period(the_date, period, datasource):
         logger.warning("无法找到上个[%s]的开始、结束日期", period)
         return None, None
     return period[0], period[-1]
+
+
+def get_last_trade_date(end_date, trade_dates):
+    """
+    得到日期范围内的最后的交易日，end_date可能不在交易日里，所以要找一个最近的日子
+    :param df_trade_date: 所有交易日
+    :return: 只保留每个月的最后一个交易日，其他剔除掉
+    """
+    # 反向排序
+    trade_dates = trade_dates.tolist()
+    trade_dates.reverse()
+
+    # 寻找合适的交易日期
+    for trade_date in trade_dates:
+
+        # 从最后一天开始找，如果交易日期(trade_date)比目标日期(end_date)小了，就找到了
+        if trade_date < end_date:
+            return trade_date
+    return None

@@ -88,6 +88,9 @@ def run_by_period(stocks, s_period, end_date, db_engine):
     # 按照s_period的类型，找到包含end_date的周期（月|周）
     target_period = get_last_period(s_period, end_date, df_trade_date_group, df_calendar)
     logger.debug("包含日期[%s]的[%s]周期为：%r", end_date, s_period, target_period)
+
+    if target_period is None: return
+    
     # 处理每只股票
     for stock_code in stocks:
         df = process(db_engine, stock_code, target_period, s_period)
@@ -123,6 +126,7 @@ def get_last_period(s_period, end_date, df_trade_groups, df_calendar):
 
     # 看今天是不是周期的最后一天（从交易数据的日期索引中获得）
     this_period = find_period_contain_the_day(s_period, end_date, df_trade_groups, 'this')
+    if this_period is None: return None
 
     # 20220703 bugfix，piginzoo，需要用交易日来找周期，否则，容易找到上个周期去
     # 比如end_date是7.2（周六），那么，返回的weekly周期应该是6.27~7.3。
@@ -176,7 +180,9 @@ def find_period_contain_the_day(period, end_date, df_trade_groups, this_or_last)
         if p.start_time < pd.Timestamp(the_date) < p.end_time:
             # 找到包含指定日期的一组
             last_period = p
-    assert last_period, f'查找的交易周期不可能为空，日期[{the_date}]'
+    if last_period is None:
+        logger.warning(f'查找的交易周期不可能为空，日期[{the_date}] 不在任何一个周期里：{df_trade_groups}')
+
     return last_period
 
 

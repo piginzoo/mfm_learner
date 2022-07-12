@@ -1,12 +1,12 @@
 import logging
 import tushare
 from mfm_learner.utils import utils
-from mfm_learner.utils.tushare_download.downloaders.base.batch_downloader import BatchDownloader
+from mfm_learner.utils.tushare_download.downloaders.base.batch_stocks_downloader import BatchStocksDownloader
 
 logger = logging.getLogger(__name__)
 
 
-class Daily(BatchDownloader):
+class Daily(BatchStocksDownloader):
 
     """
     下载每日原始交易数据（未复权数据）:
@@ -17,8 +17,8 @@ class Daily(BatchDownloader):
         super().__init__()
         self.table_name = "daily"
 
-    def download(self):
-        return self.optimized_batch_download(func=self.pro.daily,multistocks=True)
+    def get_func(self):
+        return self.pro.daily
 
     def get_table_name(self):
         return self.table_name

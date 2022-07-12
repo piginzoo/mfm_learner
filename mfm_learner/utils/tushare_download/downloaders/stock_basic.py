@@ -1,4 +1,5 @@
 from mfm_learner.utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
+from mfm_learner.utils.tushare_download.downloaders.base.default_downloader import DefaultDownloader
 
 """
 stock_basic
@@ -30,20 +31,12 @@ logger = logging.getLogger(__name__)
 # 查询当前所有正常上市交易的股票列表
 # L 是没有退市的
 
-class StockBasic(BaseDownloader):
+class StockBasic(DefaultDownloader):
     def get_table_name(self):
         return "stock_basic"
 
-    def download(self):
-
-        df_stock_basic = self.pro.stock_basic(exchange='',
-                                         list_status='L',
-                                         fields='ts_code,name,area,industry,market, list_status, list_date, delist_date')
-
-        logger.debug("下载股票基本信息 [%d]条", len(df_stock_basic))
-
-        # 数据量不大，直接全部重新下载，replace数据库中的数据
-        self.to_db(df_stock_basic, if_exists='replace')
+    def get_func(self):
+        return self.pro.stock_basic
 
 
 # python -m mfm_learner.utils.tushare_downloaders.stock_basic

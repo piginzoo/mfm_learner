@@ -34,6 +34,14 @@ class BaseDownloader():
         """
         raise NotImplemented()
 
+    def get_func(self):
+        """
+        用于返回下载用的tushare的api函数
+        :return:
+        """
+        raise NotImplemented()
+
+
     def get_date_column_name(self):
         """
         用于返回需要存到数据库中的表中的关键日期的字段名

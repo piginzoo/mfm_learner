@@ -18,13 +18,20 @@ TRADE_DAYS_PER_YEAR = 252  # 1年的交易日
 MAX_RECORDS = 4800  # 最多一次的下载行数，tushare是5000，稍微降一下到4800
 
 
-class BatchDownloader(BaseDownloader):
+class BatchStocksDownloader(BaseDownloader):
     """
     用于下载所有的股票，一只一只股票的，
     可以支持1只，
     也可以支持多只一起批量下载（为了优化），多只时，要算一下到每次下载多少只股票最合适，
     是按照每年252个交易日来计算的记录数。
     """
+
+    def __init__(self):
+        super().__init__()
+        self.multistocks = True
+
+    def download(self):
+        return self.optimized_batch_download(func=self.get_func(), multistocks=self.multistocks)
 
     def get_stock_codes(self):
         df = pd.read_sql('select * from stock_basic', self.db_engine)
@@ -38,7 +45,7 @@ class BatchDownloader(BaseDownloader):
         """
         delta = utils.str2date(end_date) - utils.str2date(start_date)
         days = delta.days
-        logger.debug("需要下载%d天的数据",days)
+        logger.debug("需要下载%d天的数据", days)
         record_num_per_stock = math.ceil(days * TRADE_DAYS_PER_YEAR / 365)
         stock_num = math.ceil(MAX_RECORDS / record_num_per_stock)
         stock_num = min(stock_num, MAX_STOCKS_BATCH)  # 2022.6.16, 触发过一个批次2400只的情况，太多了，做一个限制

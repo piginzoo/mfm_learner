@@ -1,12 +1,12 @@
 import logging
 import tushare
 from mfm_learner.utils import utils
-from mfm_learner.utils.tushare_download.downloaders.base.batch_downloader import BatchDownloader
+from mfm_learner.utils.tushare_download.downloaders.base.batch_stocks_downloader import BatchStocksDownloader
 
 logger = logging.getLogger(__name__)
 
 
-class DailyHFQ(BatchDownloader):
+class DailyHFQ(BatchStocksDownloader):
 
     """
     下载每日后复权数据，用的是pro_bar接口，为何没有用daily接口呢？

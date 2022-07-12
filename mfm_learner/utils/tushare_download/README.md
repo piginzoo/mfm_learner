@@ -35,7 +35,7 @@
 
 实现一个下载基类，用于完成，控制下载速度，和反复尝试，以及保存到数据库中的基础功能
 
-- [batch_downloader](downloaders/base/batch_downloader.py)
+- [batch_downloader](downloaders/base/batch_stocks_downloader.py)
 
 使用优化完的参数，来下载股票，一次可以支持1只或多只，由参数multistocks决定。
 支持多只的时候，需要使用函数calculate_best_fetch_stock_num，计算到底一次下载几只最优。

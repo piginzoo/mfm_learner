@@ -19,18 +19,8 @@ logger = logging.getLogger(__name__)
 
 class StockCompany(BaseDownloader):
 
-    def download(self):
-        df_SH = self.pro.stock_company(exchange='SSE') # 上交所
-        logger.debug("下载沪市上市公司信息 [%d]条", len(df_SH))
-
-        df_SZ = self.pro.stock_company(exchange='SZSE') # 深交所
-        logger.debug("下载深市上市公司信息 [%d]条", len(df_SZ))
-
-        df = pd.concat([df_SH,df_SZ])
-        logger.debug("合并下载的所有上市公司信息 [%d]条", len(df))
-
-        # 数据量不大，直接全部重新下载，replace数据库中的数据
-        self.to_db(df, if_exists='replace')
+    def get_func(self):
+        return self.pro.stock_company
 
     def get_table_name(self):
         return "stock_company"

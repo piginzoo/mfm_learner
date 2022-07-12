@@ -89,5 +89,5 @@ def get_start_date(table_name,date_column_name, db_engine, where=None):
     latest_date = get_last_date(table_name,date_column_name, db_engine, where)
     # 日期要往后错一天，比DB中的
     latest_date = utils.tomorrow(latest_date)
-    # logger.debug("数据库中表[%s]的最后日期[%s]为：%s", table_name, date_column_name, latest_date)
+    logger.debug("数据库中表[%s]的最后日期[%s]为：%s", table_name, date_column_name, latest_date)
     return latest_date

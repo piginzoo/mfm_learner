@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class PeriodlyDownloader(BaseDownloader):
     """
-    本来是想给index_daily用的，但是，由于他们需要挨个支持每个指数的下载，
+    给index_weight用的，他的数据量巨大，单独写一个给他啊，按照日期每月下载
     """
 
     def get_table_name(self):

@@ -1,18 +1,18 @@
 import logging
 
 from mfm_learner.utils import utils
-from mfm_learner.utils.tushare_download.downloaders.base.batch_downloader import BatchDownloader
+from mfm_learner.utils.tushare_download.downloaders.base.batch_stocks_downloader import BatchStocksDownloader
 
 logger = logging.getLogger(__name__)
 
 
-class FinanceIndicator(BatchDownloader):
+class FinanceIndicator(BatchStocksDownloader):
 
     def __init__(self):
         super().__init__()
 
-    def download(self):
-        return self.optimized_batch_download(func=self.pro.fina_indicator,multistocks=True)
+    def get_func(self):
+        return self.pro.fina_indicator
 
     def get_table_name(self):
         return "fina_indicator"

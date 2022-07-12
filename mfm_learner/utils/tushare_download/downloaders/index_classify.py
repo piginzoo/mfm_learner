@@ -5,7 +5,8 @@ from mfm_learner.utils.tushare_download.downloaders.base.base_downloader import 
 
 logger = logging.getLogger(__name__)
 
-fields = ['index_code','industry_name','parent_code','level','industry_code','is_pub','src']
+fields = ['index_code', 'industry_name', 'parent_code', 'level', 'industry_code', 'is_pub', 'src']
+
 
 class IndexClassify(BaseDownloader):
     """
@@ -17,8 +18,8 @@ class IndexClassify(BaseDownloader):
 
     def download(self):
         df = self.retry_call(func=self.pro.index_classify, fields=fields)
-        logger.debug("下载了行业分类index_classify %d 条",len(df))
-        self.to_db(df,if_exists="replace")
+        logger.debug("下载了行业分类index_classify %d 条", len(df))
+        self.to_db(df, if_exists="replace")
 
 
 # python -m mfm_learner.utils.tushare_download.downloaders.index_classify

@@ -1,6 +1,4 @@
-import pandas as pd
-
-from mfm_learner.utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
+from mfm_learner.utils.tushare_download.downloaders.base.default_downloader import DefaultDownloader
 
 """
 stock_company
@@ -17,7 +15,7 @@ from mfm_learner.utils import utils
 logger = logging.getLogger(__name__)
 
 
-class StockCompany(BaseDownloader):
+class StockCompany(DefaultDownloader):
 
     def get_func(self):
         return self.pro.stock_company

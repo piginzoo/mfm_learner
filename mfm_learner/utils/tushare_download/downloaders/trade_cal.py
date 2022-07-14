@@ -1,12 +1,12 @@
 import logging
 
 from mfm_learner.utils import utils
-from mfm_learner.utils.tushare_download.downloaders.base.base_downloader import BaseDownloader
+from mfm_learner.utils.tushare_download.downloaders.base.default_downloader import DefaultDownloader
 
 logger = logging.getLogger(__name__)
 
 
-class TradeCalendar(BaseDownloader):
+class TradeCalendar(DefaultDownloader):
 
     def get_table_name(self):
         return "trade_cal"

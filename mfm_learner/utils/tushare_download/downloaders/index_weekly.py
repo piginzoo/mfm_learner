@@ -21,7 +21,7 @@ class IndexWeekly(CodeDateDownloader):
         return "trade_date"
 
     def get_func(self):
-        return self.pro.index_daily
+        return self.pro.index_weekly
 
 
 # python -m mfm_learner.utils.tushare_download.downloaders.index_weekly

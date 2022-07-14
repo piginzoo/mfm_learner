@@ -38,6 +38,9 @@ class StockBasic(DefaultDownloader):
     def get_func(self):
         return self.pro.stock_basic
 
+    def get_fields(self):
+        return 'ts_code,name,area,industry,market, list_status, list_date, delist_date'
+
 
 # python -m mfm_learner.utils.tushare_downloaders.stock_basic
 if __name__ == '__main__':

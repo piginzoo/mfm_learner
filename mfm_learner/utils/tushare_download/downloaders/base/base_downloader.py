@@ -41,6 +41,9 @@ class BaseDownloader():
         """
         raise NotImplemented()
 
+    def get_fields(self):
+        return None
+
 
     def get_date_column_name(self):
         """

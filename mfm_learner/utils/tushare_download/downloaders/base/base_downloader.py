@@ -41,6 +41,14 @@ class BaseDownloader():
         """
         raise NotImplemented()
 
+    def get_func_kwargs(self):
+        """
+        用于返回下载用的tushare的api函数所需要的参数
+        :return:
+        """
+        return {}
+
+
     def get_fields(self):
         return None
 

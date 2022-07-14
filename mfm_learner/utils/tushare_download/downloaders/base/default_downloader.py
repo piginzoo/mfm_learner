@@ -10,6 +10,6 @@ class DefaultDownloader(BaseDownloader):
     """
 
     def download(self):
-        df = self.retry_call(func=self.get_func())
+        df = self.retry_call(func=self.get_func(),**self.get_func_kwargs())
         logger.debug("下载了[%s]数据 %d 条", self.get_table_name(), len(df))
         self.to_db(df, if_exists="replace")

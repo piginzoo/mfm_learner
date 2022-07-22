@@ -581,16 +581,16 @@ def __last_year_period_value(df_stock_finance, finance_date_col_name, value_col_
 
 def __calculate_ttm_by_peirod(current_period_value, finance_date):
     PERIOD_DEF = {
-        '0331': 1,
+        '0331': 4,
         '0630': 2,
-        '0930': 3,
+        '0930': 1.33,
     }
 
     periods = PERIOD_DEF.get(finance_date[-4:], None)
     if periods is None:
         logger.warning("无法根据财务日期[%s]得到财务的季度间隔数", finance_date)
         return np.nan
-    return current_period_value * current_period_value
+    return current_period_value * periods
 
 
 def handle_finance_fill(datasource,

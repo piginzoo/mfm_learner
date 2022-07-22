@@ -125,7 +125,7 @@ class BaseDownloader():
                 # logger.debug("sleep %d 秒再试", sleep * 30)
                 # time.sleep(sleep * 30)
                 self.retry_count += 1
-                logger.warning("sleep 30 秒再试，间隔时间(ms)调整为：%d -> %d", self.call_interval, 2 * self.call_interval)
+                logger.warning("sleep 60 秒再试，间隔时间(ms)调整为：%d -> %d", self.call_interval, 2 * self.call_interval)
                 time.sleep(SLEEP_INTERVAL)
                 self.call_interval *= 2  # 每次间隔时间增加一倍
 

@@ -25,5 +25,5 @@ class BalanceSheet(BatchStocksDownloader):
 # python -m mfm_learner.utils.tushare_download.downloaders.balancesheet
 if __name__ == '__main__':
     utils.init_logger()
-    downloader = Income()
+    downloader = BalanceSheet()
     downloader.download()

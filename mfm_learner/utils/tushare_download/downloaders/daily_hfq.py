@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class DailyHFQ(BatchStocksDownloader):
-
     """
     下载每日后复权数据，用的是pro_bar接口，为何没有用daily接口呢？
     因为daily接口不带后复权数据，只有pro_bar可以提供。
@@ -20,11 +19,13 @@ class DailyHFQ(BatchStocksDownloader):
         super().__init__()
         self.adjust = adjust
         self.table_name = "daily_{}".format(adjust)
+        self.multistocks = False  # <-- 必须False，我血的教训，pro_bar不支持多个股票，传入多个会导致重复数据
 
-    def download(self):
-        return self.optimized_batch_download(func=tushare.pro_bar,
-                                             multistocks=False, #<-- 必须False，我血的教训，pro_bar不支持多个股票，传入多个会导致重复数据
-                                             adj=self.adjust)
+    def get_func(self):
+        return tushare.pro_bar
+
+    def get_func_kwargs(self):
+        return {'adj': self.adjust}
 
     def get_table_name(self):
         return self.table_name

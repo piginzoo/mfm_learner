@@ -275,7 +275,7 @@ def save_db(df, period, db_engine):
 """
 python -m mfm_learner.utils.tushare_download.resample -c 300137.SZ -e 20220702
 python -m mfm_learner.utils.tushare_download.resample -c 603233.SH -f
-python -m mfm_learner.utils.tushare_download.resample -w 3 -n 200 -f
+python -m mfm_learner.utils.tushare_download.resample -w 18   -n 200 -f
 """
 if __name__ == '__main__':
     utils.init_logger()

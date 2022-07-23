@@ -2,7 +2,6 @@ import logging
 
 from mfm_learner.utils import utils
 from mfm_learner.utils.tushare_download.downloaders.base.batch_stocks_downloader import BatchStocksDownloader
-from mfm_learner.utils.tushare_download.downloaders.base.code_date_downloader import CodeDateDownloader
 
 logger = logging.getLogger(__name__)
 

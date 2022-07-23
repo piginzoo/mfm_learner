@@ -11,6 +11,7 @@ class CashFlow(BatchStocksDownloader):
 
     def __init__(self):
         super().__init__()
+        self.multistocks = False
 
     def get_func(self):
         return self.pro.cashflow

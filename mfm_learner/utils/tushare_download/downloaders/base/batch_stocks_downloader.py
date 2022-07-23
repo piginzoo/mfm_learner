@@ -31,8 +31,10 @@ class BatchStocksDownloader(BaseDownloader):
         self.multistocks = True
 
     def download(self):
-        return self.optimized_batch_download(func=self.get_func(),
+        start = time.time()
+        self.optimized_batch_download(func=self.get_func(),
                                              multistocks=self.multistocks)
+        logger.debug("共耗时: %s ", str(datetime.timedelta(seconds=time.time() - start)))
 
     def get_stock_codes(self):
         df = pd.read_sql('select * from stock_basic', self.db_engine)

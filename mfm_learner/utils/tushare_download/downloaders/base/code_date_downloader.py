@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 
 import pandas as pd
 
@@ -20,6 +21,7 @@ class CodeDateDownloader(BaseDownloader):
         self.codes = codes
 
     def download(self):
+        start = time.time()
         df_all = []
         for code in self.codes:
             # 这里需要增加一个where条件，逐个code来下载，这样做的原因是因为可能会后续追加其他code
@@ -44,3 +46,4 @@ class CodeDateDownloader(BaseDownloader):
                      len(df_all))
 
         self.to_db(df_all)
+        logger.debug("共耗时: %s ", str(datetime.timedelta(seconds=time.time() - start)))

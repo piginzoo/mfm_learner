@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class CodeDateDownloader(BaseDownloader):
     """
-    这个用于下载限定了股票代码和时间范围的下载，
+    这个用于下载限定了指数代码和时间范围的下载，
     主要用于各类指数数据的下载
     """
 

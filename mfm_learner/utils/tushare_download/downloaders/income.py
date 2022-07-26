@@ -22,8 +22,10 @@ class Income(BatchStocksDownloader):
     def get_date_column_name(self):
         return "ann_date"
 
-
-# python -m mfm_learner.utils.tushare_download.downloaders.income
+"""
+python -m mfm_learner.utils.tushare_download.downloaders.income \
+-f ../mlstock/data/stocks.txt
+"""
 if __name__ == '__main__':
     utils.init_logger()
     downloader = Income()

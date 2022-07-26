@@ -23,7 +23,11 @@ class CashFlow(BatchStocksDownloader):
         return "ann_date"
 
 
-# python -m mfm_learner.utils.tushare_download.downloaders.cashflow
+"""
+python -m mfm_learner.utils.tushare_download.downloaders.cashflow \
+-f ../mlstock/data/stocks.txt
+"""
+
 if __name__ == '__main__':
     utils.init_logger()
     downloader = CashFlow()

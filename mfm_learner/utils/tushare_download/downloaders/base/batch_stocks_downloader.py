@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import logging
 import math
@@ -32,8 +33,13 @@ class BatchStocksDownloader(BaseDownloader):
 
     def download(self):
         start = time.time()
+
+        # 看看参数中是否需要提供股票的列表，如果有，仅下载这些股票，否则下载所有（None)
+        stock_codes = self.get_stocks_from_argument()
+
         self.optimized_batch_download(func=self.get_func(),
-                                             multistocks=self.multistocks)
+                                      stock_codes=stock_codes,
+                                      multistocks=self.multistocks)
         logger.debug("共耗时: %s ", str(datetime.timedelta(seconds=time.time() - start)))
 
     def get_stock_codes(self):
@@ -55,7 +61,7 @@ class BatchStocksDownloader(BaseDownloader):
         logger.debug("下载优化:共%d天,每只股票%d条,每次下载4800条，所以，可以一次可下载%d只股票", days, record_num_per_stock, stock_num)
         return stock_num
 
-    def optimized_batch_download(self, func, multistocks, **kwargs):
+    def optimized_batch_download(self, func, stock_codes, multistocks, **kwargs):
         """
         使用优化完的参数，来下载股票，一次可以支持1只或多只，由参数multistocks决定。
 
@@ -73,7 +79,8 @@ class BatchStocksDownloader(BaseDownloader):
         if not self.__need_download(start_date): return
 
         end_date = utils.date2str(datetime.datetime.now())
-        stock_codes = utils.get_stock_codes(self.db_engine)
+        if stock_codes is None:
+            stock_codes = utils.get_stock_codes(self.db_engine)
 
         logger.debug("准备下载 %s~%s, %d 只股票的基本信息", start_date, end_date, len(stock_codes))
 
@@ -123,3 +130,27 @@ class BatchStocksDownloader(BaseDownloader):
             logger.info("最后需要更新的日期[%s]是今天，且未到[%d点]，无需下载最新数据", start_date, TODAY_TIMING)
             return False
         return True
+
+    def get_stocks_from_argument(self):
+        """这个是为了指定下载少量股票，用于本地调试"""
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-f', '--file', type=str, default=None, help="下载股票列表的文件")
+        parser.add_argument('-c', '--code', type=str, default=None, help="要下载的股票")
+        args = parser.parse_args()
+        stocks = []
+        if args.file:
+            import pandas as pd
+            df = pd.read_csv(args.file)
+            assert len(df.columns) == 1, "导入文件只能有一列，即股票代码"
+            _stocks = df.iloc[:, 0].tolist()
+            logger.debug("加载从[%s]读取的%d只股票代码", args.file, len(_stocks))
+            stocks += _stocks
+
+        if args.code:
+            _stocks = args.code.split(",")
+            stocks += _stocks
+            logger.debug("加载从参数[code]中读取的%d只股票代码", len(_stocks))
+
+        if len(stocks) == 0: return None
+
+        return stocks

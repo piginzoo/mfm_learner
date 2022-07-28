@@ -136,7 +136,9 @@ class BatchStocksDownloader(BaseDownloader):
         parser = argparse.ArgumentParser()
         parser.add_argument('-f', '--file', type=str, default=None, help="下载股票列表的文件")
         parser.add_argument('-c', '--code', type=str, default=None, help="要下载的股票")
-        args = parser.parse_args()
+        # 防止命令行调用这个，比如在realtime.sh中调用，跟参数不一致的情况
+        # 这样命令行有了别的参数传入，只要不是这2个，都忽略
+        args, unknown = parser.parse_known_args()
         stocks = []
         if args.file:
             import pandas as pd

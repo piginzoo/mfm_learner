@@ -103,7 +103,7 @@ class BatchStocksDownloader(BaseDownloader):
                                  end_date=end_date,
                                  **kwargs)
             if len(df) == 0:
-                logger.warning("股票[%d]下载条数为0", ts_code)
+                logger.warning("股票[%s] %s~%s 下载条数为0", ts_code,start_date,end_date)
                 continue
             if i % 100 == 0:
                 logger.debug("下载进度：%d/%d", i, len(stock_codes))

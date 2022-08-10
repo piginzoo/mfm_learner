@@ -76,9 +76,15 @@ class BatchStocksDownloader(BaseDownloader):
 
         start_date = self.get_start_date()
 
+
         if not self.__need_download(start_date): return
 
         end_date = utils.date2str(datetime.datetime.now())
+
+        if start_date > end_date:
+            logger.warning("开始日期%s > 结束日期%s，无需下载", start_date, end_date)
+            return
+
         if stock_codes is None:
             stock_codes = utils.get_stock_codes(self.db_engine)
 

@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import pandas as pd
@@ -18,6 +19,9 @@ class PeriodlyDownloader(BaseDownloader):
 
     def get_date_column_name(self):
         return "trade_date"
+
+    def get_period(self):
+        raise NotImplemented()
 
     def periodly_download(self, func, start_date, end_date, period, **kwargs):
         """
@@ -46,5 +50,26 @@ class PeriodlyDownloader(BaseDownloader):
             logger.debug("下载了%s~%s的%d条数据", start_date, end_date, len(df))
         df_all = pd.concat(df_all)
 
-        logger.debug("合计下载了 %s~%s %d 条数据",  start_date, end_date,len(df_all))
+        logger.debug("合计下载了 %s~%s %d 条数据", start_date, end_date, len(df_all))
         return df_all
+
+    def download(self, save=True, where=None, **kwargs):
+        # 这里需要增加一个where条件，逐个指数来下载，这样做的原因是因为可能会后续追加其他指数
+        start_date = self.get_start_date(where)
+        end_date = utils.date2str(datetime.datetime.now())
+
+        # 按照周期下载
+        df = self.periodly_download(func=self.get_func(),
+                                    start_date=start_date,
+                                    end_date=end_date,
+                                    period=self.get_period(),
+                                    **kwargs)  # week | month
+
+        logger.debug("下载完 %s 数据，%s~%s %d条 ...", self.get_table_name(), start_date, end_date, len(df))
+
+        if save:
+            # 由于各个指数不一致，分别保存
+            self.save(f'{self.get_table_name()}_{start_date}_{end_date}.csv', df)
+            self.to_db(df)
+
+        return df

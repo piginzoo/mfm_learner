@@ -16,6 +16,7 @@ from mfm_learner.utils.tushare_download.downloaders.daily_hfq import DailyHFQ
 from mfm_learner.utils.tushare_download.downloaders.fina_indicator import FinanceIndicator
 from mfm_learner.utils.tushare_download.downloaders.index_daily import IndexDaily
 from mfm_learner.utils.tushare_download.downloaders.index_weight import IndexWeight
+from mfm_learner.utils.tushare_download.downloaders.limit_list import LimitList
 from mfm_learner.utils.tushare_download.downloaders.stk_holdernumber import StockHolderNumber
 from mfm_learner.utils.tushare_download.downloaders.stock_basic import StockBasic
 from mfm_learner.utils.tushare_download.downloaders.stock_company import StockCompany
@@ -26,6 +27,11 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    """
+    仅下载ctazoo用到的数据
+    :return:
+    """
+
     TradeCalendar().download()
     StockCompany().download()
     StockBasic().download()
@@ -36,11 +42,15 @@ def main():
 
 
 def download_all():
+    """
+    下载全量数据
+    :return:
+    """
+
     start = time.time()
 
     main()
 
-    # 目前这2个数据不需要使用
     FinanceIndicator().download()
     IndexWeight(["000001.SH", "000905.SH", "000300.SH", "000016.SH"]).download()
     BalanceSheet().download()
@@ -48,7 +58,8 @@ def download_all():
     CashFlow().download()
     BalanceSheet().download()
     IndexWeekly(["000001.SH", "000905.SH", "000300.SH", "000016.SH"]).download()
-    StockHolderNumber().downlaod()
+    StockHolderNumber().download()
+    LimitList().download()
 
     logger.debug("下载所有的最新数据，共耗时: %s ", str(datetime.timedelta(seconds=time.time() - start)))
 

@@ -5,7 +5,7 @@ import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from tqdm import tqdm
 
-from conf import DATE_COLUMNS
+from mfm_learner.conf import DATE_COLUMNS
 from mfm_learner.datasource import datasource_factory as ds_factory
 from mfm_learner.utils import CONF, utils
 

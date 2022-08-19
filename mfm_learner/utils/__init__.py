@@ -4,7 +4,7 @@ import time
 
 import yaml
 
-import conf
+from mfm_learner import conf
 
 logger = logging.getLogger("函数耗时")
 

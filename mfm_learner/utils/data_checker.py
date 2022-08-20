@@ -67,8 +67,6 @@ def check_data(datas, df_basic, year_count):
 
 
 def check(df_stock, df_basic, year_count):
-    import pdb;
-    pdb.set_trace()
 
     list_date = df_basic[df_basic.ts_code == df_stock.name].list_date
     list_date = list_date.iloc[0]
@@ -95,7 +93,8 @@ def check(df_stock, df_basic, year_count):
     if len(df_error) == 0:
         return True
 
-    logger.error("股票[%s]的数据有问题，不正常的年月：\n%r", df_error)
+    logger.error("股票[%s]的数据有问题，不正常的年月：\n%r",df_stock.name, df_error)
+    return False
 
 
 # python -m mfm_learner.utils.data_checker

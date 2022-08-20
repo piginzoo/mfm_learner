@@ -10,6 +10,10 @@ fields = 'ts_code, trade_date, close, turnover_rate, turnover_rate_f, volume_rat
 
 class DailyBasic(BatchStocksDownloader):
 
+    def __init__(self):
+        super().__init__()
+        self.multistocks = False
+
     def get_func(self):
         return self.pro.daily_basic
 

@@ -42,6 +42,11 @@ quarter_date = [
 
 db_engine = utils.connect_db()
 
+"""
+用来检查所有的数据，看看缺失情况，按照月统计，颗粒度不再细了
+- [ ] 查停牌信息，这样可以忽略那些停牌日的统计
+- [ ] 
+"""
 
 def load(data):
     start_time = time.time()

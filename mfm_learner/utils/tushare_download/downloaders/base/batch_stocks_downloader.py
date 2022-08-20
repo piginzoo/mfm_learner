@@ -74,27 +74,23 @@ class BatchStocksDownloader(BaseDownloader):
         """
         start_time = time.time()
 
-        start_date = self.get_start_date()
-
-
-        if not self.__need_download(start_date): return
-
-        end_date = utils.date2str(datetime.datetime.now())
-
-        if start_date > end_date:
-            logger.warning("开始日期%s > 结束日期%s，无需下载", start_date, end_date)
-            return
-
         if stock_codes is None:
             stock_codes = utils.get_stock_codes(self.db_engine)
 
-        logger.debug("准备下载 %s~%s, %d 只股票的基本信息", start_date, end_date, len(stock_codes))
-
+        end_date = utils.date2str(datetime.datetime.now())
         if multistocks:
+            # 如果是需要多只股票一起下载，去看下库中所有股票的最新日期，粗略估计算是所有的股票的起始日期
+            # 但其实，每只股票下载的时候，还会去找自己的真正最后的更新日期
+            start_date = self.get_start_date()
             stock_num_once = self.calculate_best_fetch_stock_num(start_date, end_date)
             stock_codes = np.array_split(stock_codes, math.ceil(len(stock_codes) / stock_num_once))  # 定义几组
             stock_codes = [",".join(stocks) for stocks in stock_codes]
-            logger.debug("支持多股票下载，共%d个批次，每批次%d只股票同时获取", len(stock_codes), stock_num_once)
+            logger.debug("支持多股票下载，下载 %s~%s 的%d只股票，粗略估算：共%d个批次，每批次%d只股票同时获取",
+                         start_date,
+                         end_date,
+                         len(stock_codes),
+                         len(stock_codes),
+                         stock_num_once)
 
         logger.debug("调用[%s]，共%d个批次，下载间隔%.0f毫秒",
                      self.get_table_name(),
@@ -103,6 +99,17 @@ class BatchStocksDownloader(BaseDownloader):
         df_all = []
         pbar = tqdm(total=len(stock_codes))
         for i, ts_code in enumerate(stock_codes):
+
+            start_date = self.get_start_date(where=f"ts_code='{ts_code}'")
+
+            if not self.__need_download(start_date):
+                logger.debug("股票[%s]已经是最新数据，无需下载")
+                continue
+
+            if start_date > end_date:
+                logger.warning("股票[%s] 开始日期%s > 结束日期%s，无需下载", ts_code, start_date, end_date)
+                return
+
             df = self.retry_call(func=func,
                                  ts_code=ts_code,
                                  start_date=start_date,

@@ -69,9 +69,13 @@ def check_data(datas, df_basic, year_count):
 def check(df_stock, df_basic, year_count):
 
     list_date = df_basic[df_basic.ts_code == df_stock.name].list_date
-    list_date = list_date.iloc[0]
-    # 我们的数据是从2008之后的
-    if list_date < '20080101': list_date = '20080101'
+    if len(list_date)==0:
+        logger.error("无法找到股票[%s]的上市日期,basic表中数据缺失",df_stock.name)
+        list_date = '20080101'
+    else:
+        list_date = list_date.iloc[0]
+        # 我们的数据是从2008之后的
+        if list_date < '20080101': list_date = '20080101'
 
     start_date = df_stock.iloc[0].trade_date
 

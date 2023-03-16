@@ -133,19 +133,20 @@ class BatchStocksDownloader(BaseDownloader):
             pbar.update(1)
         pbar.close()
 
-        df_all = pd.concat(df_all)
+        if len(df_all)>0:
+            df_all = pd.concat(df_all)
 
-        csv_file_name = "{}_{}_{}.csv".format(self.get_table_name(), start_date, end_date)
-        self.save(df=df_all, name=csv_file_name)
+            csv_file_name = "{}_{}_{}.csv".format(self.get_table_name(), start_date, end_date)
+            self.save(df=df_all, name=csv_file_name)
 
-        logger.debug("下载了 %s~%s, %d只股票的%d条数据=>%s, %.2f秒",
-                     start_date,
-                     end_date,
-                     len(stock_codes),
-                     len(df_all),
-                     csv_file_name,
-                     time.time() - start_time)
-        self.to_db(df_all)
+            logger.debug("下载了 %s~%s, %d只股票的%d条数据=>%s, %.2f秒",
+                         start_date,
+                         end_date,
+                         len(stock_codes),
+                         len(df_all),
+                         csv_file_name,
+                         time.time() - start_time)
+            self.to_db(df_all)
 
     def __need_download(self, start_date):
         if utils.today() == start_date and datetime.datetime.now().time() < datetime.time(TODAY_TIMING, 00):

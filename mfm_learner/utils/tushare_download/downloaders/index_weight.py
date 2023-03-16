@@ -21,27 +21,32 @@ class IndexWeight(PeriodlyDownloader):
     def get_date_column_name(self):
         return "trade_date"
 
-    # 不行，年还是范围太大，我观察，1那年有5000+，所以还是超级录了，改为每月
-    def get_period(self):
-        return 'month'
-
     def download(self):
         df_all = []
 
         for index_code in self.index_codes:
             # 这里需要增加一个where条件，逐个指数来下载，这样做的原因是因为可能会后续追加其他指数
-            df = super().download(save=False,
-                                where=f"index_code='{index_code}'",
-                                index_code=index_code)
+            start_date = self.get_start_date(where=f"index_code='{index_code}'")
+            end_date = utils.date2str(datetime.datetime.now())
+
+            # 不行，年还是范围太大，我观察，1那年有5000+，所以还是超级录了，改为每月
+            df = self.periodly_download(func=self.pro.index_weight,
+                                        start_date=start_date,
+                                        end_date=end_date,
+                                        period='month',
+                                        index_code=index_code)
+
             # 由于各个指数不一致，分别保存
             self.save(f'{self.get_table_name()}_{index_code}_{start_date}_{end_date}.csv', df)
             logger.debug("下载完 指数成分数据，[%s] %s~%s %d条 ...", index_code, start_date, end_date, len(df))
 
             df_all.append(df)
 
-        # 合并并保存
         df_all = pd.concat(df_all)
-        logger.debug("下载完所有指数成分数据 %r %d 条", self.index_codes, len(df_all))
+        logger.debug("下载完所有指数成分数据 %r %d 条",
+                     self.index_codes,
+                     len(df_all))
+
         self.to_db(df_all)
 
 

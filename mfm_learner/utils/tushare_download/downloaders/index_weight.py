@@ -30,7 +30,7 @@ class IndexWeight(PeriodlyDownloader):
 
         for index_code in self.index_codes:
             # 这里需要增加一个where条件，逐个指数来下载，这样做的原因是因为可能会后续追加其他指数
-            df = super.download(save=False,
+            df = self.download(save=False,
                                 where=f"index_code='{index_code}'",
                                 index_code=index_code)
             # 由于各个指数不一致，分别保存

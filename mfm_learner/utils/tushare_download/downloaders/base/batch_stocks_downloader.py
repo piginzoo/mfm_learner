@@ -55,6 +55,10 @@ class BatchStocksDownloader(BaseDownloader):
         delta = utils.str2date(end_date) - utils.str2date(start_date)
         days = delta.days
         logger.debug("需要下载%d天的数据", days)
+
+        if days == 0:
+            return 0
+
         record_num_per_stock = math.ceil(days * TRADE_DAYS_PER_YEAR / 365)
         stock_num = math.ceil(MAX_RECORDS / record_num_per_stock)
         stock_num = min(stock_num, MAX_STOCKS_BATCH)  # 2022.6.16, 触发过一个批次2400只的情况，太多了，做一个限制
@@ -83,6 +87,11 @@ class BatchStocksDownloader(BaseDownloader):
             # 但其实，每只股票下载的时候，还会去找自己的真正最后的更新日期
             start_date = self.get_start_date()
             stock_num_once = self.calculate_best_fetch_stock_num(start_date, end_date)
+
+            if stock_num_once ==0:
+                logger.info("[多股票同同时下载] 因为已经是截止到今天的数据了，无需下载")
+                stock_codes=[]
+
             stock_codes = np.array_split(stock_codes, math.ceil(len(stock_codes) / stock_num_once))  # 定义几组
             stock_codes = [",".join(stocks) for stocks in stock_codes]
             logger.debug("支持多股票下载，下载 %s~%s 的%d只股票，粗略估算：共%d个批次，每批次%d只股票同时获取",

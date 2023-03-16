@@ -57,7 +57,7 @@ class BatchStocksDownloader(BaseDownloader):
         logger.debug("需要下载%d天的数据", days)
 
         if days <= 0: return 0
-        
+
         record_num_per_stock = math.ceil(days * TRADE_DAYS_PER_YEAR / 365)
 
         stock_num = math.ceil(MAX_RECORDS / record_num_per_stock)
@@ -150,7 +150,8 @@ class BatchStocksDownloader(BaseDownloader):
 
     def __need_download(self, code, start_date):
         if utils.today() == start_date and datetime.datetime.now().time() < datetime.time(TODAY_TIMING, 00):
-            logger.info("最后需要更新的日期[%s]是今天，且未到[%d点]，无需下载最新数据", code, start_date, TODAY_TIMING)
+            logger.info("最后需要更新的日期[%s]是今天[%s]，且未到[%d点]，无需下载最新数据",
+                        code, start_date, TODAY_TIMING)
             return False
         return True
 

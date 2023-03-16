@@ -91,10 +91,10 @@ class BatchStocksDownloader(BaseDownloader):
             if stock_num_once ==0:
                 logger.info("[多股票同同时下载] 因为已经是截止到今天的数据了，无需下载")
                 stock_codes=[]
-
-            stock_codes = np.array_split(stock_codes, math.ceil(len(stock_codes) / stock_num_once))  # 定义几组
-            stock_codes = [",".join(stocks) for stocks in stock_codes]
-            logger.debug("支持多股票下载，下载 %s~%s 的%d只股票，粗略估算：共%d个批次，每批次%d只股票同时获取",
+            else:
+                stock_codes = np.array_split(stock_codes, math.ceil(len(stock_codes) / stock_num_once))  # 定义几组
+                stock_codes = [",".join(stocks) for stocks in stock_codes]
+                logger.debug("支持多股票下载，下载 %s~%s 的%d只股票，粗略估算：共%d个批次，每批次%d只股票同时获取",
                          start_date,
                          end_date,
                          len(stock_codes),

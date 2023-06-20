@@ -17,6 +17,7 @@ from mfm_learner.utils.tushare_download.downloaders.fina_indicator import Financ
 from mfm_learner.utils.tushare_download.downloaders.index_daily import IndexDaily
 from mfm_learner.utils.tushare_download.downloaders.index_weight import IndexWeight
 from mfm_learner.utils.tushare_download.downloaders.limit_list import LimitList
+from mfm_learner.utils.tushare_download.downloaders.moneyflow import MoneyFlow
 from mfm_learner.utils.tushare_download.downloaders.stk_holdernumber import StockHolderNumber
 from mfm_learner.utils.tushare_download.downloaders.stock_basic import StockBasic
 from mfm_learner.utils.tushare_download.downloaders.stock_company import StockCompany
@@ -38,6 +39,7 @@ def main():
     Daily().download()
     DailyHFQ().download()
     DailyBasic().download()
+    MoneyFlow().download()
     IndexDaily(["000001.SH", "000905.SH", "000300.SH", "000016.SH"]).download()
 
 
